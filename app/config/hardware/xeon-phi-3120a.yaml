@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "profile_id": "xeon-phi-3120a",
+  "card_model": "Intel Xeon Phi 3120A class",
+  "expected_cores": 57,
+  "gddr_capacity_mib": 6144,
+  "gddr_min_mib": 5500,
+  "gddr_max_mib": 6144,
+  "safe_memory_budget_mib": 4096,
+  "os_reserve_mib": 1024,
+  "available_reserve_mib": 256,
+  "thread_candidates": [
+    56,
+    112,
+    168,
+    224
+  ],
+  "cooling_type": "active",
+  "thermal_warn_c": 75,
+  "thermal_stop_c": 85,
+  "sku_pattern": "3120|3140",
+  "phase3_threads": 56,
+  "build_jobs_default": 4,
+  "build_jobs_max": 4
+}

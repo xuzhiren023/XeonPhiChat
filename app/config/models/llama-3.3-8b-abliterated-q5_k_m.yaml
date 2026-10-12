@@ -1,0 +1,38 @@
+{
+  "id": "llama-3.3-8b-abliterated-q5_k_m",
+  "label": "Llama 3.3-8B Abliterated Q5_K_M (7120P; experimental)",
+  "architecture": "llama",
+  "repository": "SicariusSicariiStuff/Llama-3.3-8B-Instruct-128K_Abliterated_GGUF",
+  "revision": "5f9a329f2574257ddc032c5cd22147aad3e9ff40",
+  "filename": "Llama-3.3_8B_Abliterated-Q5_K_M.gguf",
+  "file_size_bytes": 5732992160,
+  "sha256": "4b809d3457a6b7e3ab6c985353fd00113150bf44d69dcc4a1310ce8bf719936d",
+  "estimated_peak_runtime_mib": 1536,
+  "minimum_memory_mib": 7168,
+  "target_profiles": [
+    "xeon-phi-7120p"
+  ],
+  "upstream_repository": "SicariusSicariiStuff/Llama-3.3-8B-Instruct-128K_Abliterated",
+  "description": "7120P Q5_K_M target. Q5 and Q6 weight dots use IMCI in runtime 1.4.2. 2K context; native validation and speed measurements pending.",
+  "schema_version": 3,
+  "quantization": "Q5_K_M",
+  "context_tokens": 2048,
+  "chat_template": "gguf_metadata",
+  "memory_mode": "shared_mmap",
+  "runtime_family": "modern-knc",
+  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "availability": "experimental_native",
+  "native_acceptance": false,
+  "hash_provenance": "Complete GGUF downloaded and SHA-256 verified locally; PhiChat verifies new/changed local files before chat.",
+  "memory_budget_note": "2K context, batch 32, F16 KV 256 MiB; additional runtime budget 1536 MiB; native peak pending.",
+  "inference_command": "llama/phi-modern",
+  "model_path": "models/Llama-3.3_8B_Abliterated-Q5_K_M.gguf",
+  "upstream_revision": "52830094ce6105e675e4b61ebe3d1d9847bb76cd",
+  "stop_token_ids": [
+    128001,
+    128008,
+    128009
+  ],
+  "required_runtime_version": "1.4.1",
+  "recommended_profile": "xeon-phi-7120p"
+}

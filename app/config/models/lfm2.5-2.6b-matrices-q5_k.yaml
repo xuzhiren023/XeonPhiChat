@@ -1,0 +1,42 @@
+{
+  "id": "lfm2.5-2.6b-matrices-q5_k",
+  "label": "LFM2.5 2.6B Q5_K",
+  "architecture": "lfm2",
+  "repository": "LiquidAI/LFM2.5-2.6B-GGUF",
+  "revision": "e7caca5d835a3901a8e0d63e94009429bafafdfc",
+  "filename": "LFM2.5-2.6B-MATRICES-Q5_K.gguf",
+  "file_size_bytes": 1863428096,
+  "sha256": "f709163f35e4335331f0cb27a3498541dc3879ed18bab398e8b6093887b04f57",
+  "estimated_peak_runtime_mib": 1536,
+  "minimum_memory_mib": 3584,
+  "target_profiles": [
+    "xeon-phi-7120p"
+  ],
+  "upstream_repository": "LiquidAI/LFM2.5-2.6B",
+  "description": "Locally generated Q5_K matrices. Normalization/RoPE remain F32; LFM short convolutions also remain F32. Uses the optimized 7120P runtime.",
+  "schema_version": 3,
+  "quantization": "Q5_K matrices",
+  "context_tokens": 2048,
+  "chat_template": "gguf_metadata",
+  "memory_mode": "shared_mmap",
+  "runtime_family": "modern-knc",
+  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "availability": "experimental_native",
+  "native_acceptance": false,
+  "hash_provenance": "Pinned local quantization receipt; verified complete GGUF on Load.",
+  "memory_budget_note": "Baseline runtime estimate plus automatic GGUF/card-derived allocation; native acceptance tracked separately.",
+  "inference_command": "llama/phi-modern",
+  "model_path": "models/uniform-q5-k/LFM2.5-2.6B-MATRICES-Q5_K.gguf",
+  "recommended_profile": "xeon-phi-7120p",
+  "local_only": true,
+  "required_runtime_feature": "q5-balanced-pf64-v1",
+  "tensor_counts": {
+    "Q5_K": 167,
+    "F32": 99
+  },
+  "f32_exceptions": {
+    "normalization": 77,
+    "short_convolution": 22
+  },
+  "quantizer_commit": "23b0202a189c44a54625aadcb37a946dd1d6278d"
+}

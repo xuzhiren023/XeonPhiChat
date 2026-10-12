@@ -1,0 +1,49 @@
+{
+  "id": "llama-3.3-8b-abliterated-matrices-q5_k",
+  "label": "Llama 3.3 8B Abliterated Q5_K",
+  "architecture": "llama",
+  "repository": "SicariusSicariiStuff/Llama-3.3-8B-Instruct-128K_Abliterated",
+  "revision": "52830094ce6105e675e4b61ebe3d1d9847bb76cd",
+  "filename": "Llama-3.3-8B-Instruct-128K_Abliterated-MATRICES-Q5_K.gguf",
+  "file_size_bytes": 5529527392,
+  "sha256": "80406046114a144d712c5455d803f88679920aec6d738eb656e9fbe87a14928a",
+  "estimated_peak_runtime_mib": 1536,
+  "minimum_memory_mib": 7168,
+  "target_profiles": [
+    "xeon-phi-7120p"
+  ],
+  "upstream_repository": "SicariusSicariiStuff/Llama-3.3-8B-Instruct-128K_Abliterated",
+  "description": "Locally generated Q5_K matrices. Normalization/RoPE remain F32; LFM short convolutions also remain F32. Uses the optimized 7120P runtime.",
+  "schema_version": 3,
+  "quantization": "Q5_K matrices",
+  "context_tokens": 2048,
+  "chat_template": "gguf_metadata",
+  "memory_mode": "shared_mmap",
+  "runtime_family": "modern-knc",
+  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "availability": "experimental_native",
+  "native_acceptance": false,
+  "hash_provenance": "Pinned local quantization receipt; verified complete GGUF on Load.",
+  "memory_budget_note": "Baseline runtime estimate plus automatic GGUF/card-derived allocation; native acceptance tracked separately.",
+  "inference_command": "llama/phi-modern",
+  "model_path": "models/uniform-q5-k/Llama-3.3-8B-Instruct-128K_Abliterated-MATRICES-Q5_K.gguf",
+  "upstream_revision": "52830094ce6105e675e4b61ebe3d1d9847bb76cd",
+  "stop_token_ids": [
+    128001,
+    128008,
+    128009
+  ],
+  "required_runtime_version": "1.4.1",
+  "recommended_profile": "xeon-phi-7120p",
+  "local_only": true,
+  "required_runtime_feature": "q5-balanced-pf64-v1",
+  "tensor_counts": {
+    "Q5_K": 226,
+    "F32": 66
+  },
+  "f32_exceptions": {
+    "normalization": 65,
+    "rope": 1
+  },
+  "quantizer_commit": "23b0202a189c44a54625aadcb37a946dd1d6278d"
+}

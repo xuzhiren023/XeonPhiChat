@@ -1,0 +1,6 @@
+../toolchain-root/gcc-5.1.1-knc/libgomp/configure --build=x86_64-linux-gnu --host=k1om-mpss-linux --target=k1om-mpss-linux --prefix=/opt/mpss/3.8.6/sysroots/k1om-mpss-linux/usr --libdir=/opt/mpss/3.8.6/sysroots/k1om-mpss-linux/usr/lib64 --disable-multilib --disable-nls --enable-shared --enable-static CC=/usr/linux-k1om-4.7/bin/x86_64-k1om-linux-gcc CXX=/usr/linux-k1om-4.7/bin/x86_64-k1om-linux-g++ AR=/opt/mpss/3.8.6/sysroots/x86_64-mpsssdk-linux/usr/bin/k1om-mpss-linux/k1om-mpss-linux-ar RANLIB=/opt/mpss/3.8.6/sysroots/x86_64-mpsssdk-linux/usr/bin/k1om-mpss-linux/k1om-mpss-linux-ranlib CFLAGS=-O2 -mknc
+
+Note: CFLAGS was passed as one argument: CFLAGS='-O2 -mknc'.
+
+Final library relink: make libgomp.la LIBS='-lrt -ldl'
+Final installation: make install-toolexeclibLTLIBRARIES LIBS='-lrt -ldl'

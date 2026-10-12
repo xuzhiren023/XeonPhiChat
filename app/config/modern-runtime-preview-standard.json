@@ -1,0 +1,17 @@
+{
+  "version": "1.4.2",
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "kernel_version": "0.2.1",
+  "payloads": [
+    {
+      "profile": "xeon-phi-7120p",
+      "file": "runtime-7120P.tar",
+      "sha256": "33780acc559f63d0dcce03e0e1a9efad2d3922aad45e09a0fc9f3341fc74b488",
+      "bytes": 42383360,
+      "runtime_id": "phichat142-modern-3673c2e612bc757d",
+      "main_sha256": "e2c23c41dcd8af2bb5d03b934f8f4778facb8de606413a6d259916a755b45750"
+    }
+  ],
+  "repair_version": "q5-repair-r1+auto-resources-v1"
+}

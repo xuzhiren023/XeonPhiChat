@@ -1,0 +1,623 @@
+{
+  "schema_version": 1,
+  "method": "copy",
+  "source_repository": "XeonPhiLLM",
+  "source_release": "1.5.0",
+  "originals_preserved": true,
+  "copied_files": [
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/BackendClient.ps1",
+      "destination": "app/lib/BackendClient.ps1",
+      "source_sha256": "3845bbfd3cfca529976741c98263a48bd753109c4e8b7edb2a9a1073b53d5518",
+      "migrated_sha256": "be865b79e23e055c9d32be33ccbc11f6345ad4d7655f7a0d762b09baf6b96a48"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/CapturedProcess.ps1",
+      "destination": "app/lib/CapturedProcess.ps1",
+      "source_sha256": "c259ffaa2236c78a4ccde8954cd2c56f5bed12dc722d16f5e47f01054aa7a2aa",
+      "migrated_sha256": "c259ffaa2236c78a4ccde8954cd2c56f5bed12dc722d16f5e47f01054aa7a2aa"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/ChatCore.ps1",
+      "destination": "app/lib/ChatCore.ps1",
+      "source_sha256": "d9ec4ee7ec4006f979bfd21200ca31c7f7240ceda5337d11b640052cfc52f19b",
+      "migrated_sha256": "d9ec4ee7ec4006f979bfd21200ca31c7f7240ceda5337d11b640052cfc52f19b"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/ChatInsights.ps1",
+      "destination": "app/lib/ChatInsights.ps1",
+      "source_sha256": "7fcc4cbd90db355fe18f2f41ea77ee72a3f7b8560abee7831da52e49e3b2f61d",
+      "migrated_sha256": "7fcc4cbd90db355fe18f2f41ea77ee72a3f7b8560abee7831da52e49e3b2f61d"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/ChatSessions.ps1",
+      "destination": "app/lib/ChatSessions.ps1",
+      "source_sha256": "5eeb6f68a0b6bcea2fc21973b81393853f7e467436125743ae21cf9305078998",
+      "migrated_sha256": "5eeb6f68a0b6bcea2fc21973b81393853f7e467436125743ae21cf9305078998"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/ChatView.ps1",
+      "destination": "app/lib/ChatView.ps1",
+      "source_sha256": "b6b03f05465649afb4526b319120c8fb6dcc9ba85cc27c7c3c496b47b4516eb5",
+      "migrated_sha256": "b6b03f05465649afb4526b319120c8fb6dcc9ba85cc27c7c3c496b47b4516eb5"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Connection.ps1",
+      "destination": "app/lib/Connection.ps1",
+      "source_sha256": "11b54829983d9995fb47df8bb0c08da3991e04e391d956432bb35adfc7ac621d",
+      "migrated_sha256": "ac5a3659ed8c80071a38f6059da76e721b0df875692e1c255ad4b73724ddf3fd"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Context.ps1",
+      "destination": "app/lib/Context.ps1",
+      "source_sha256": "e2cd12e063de4b1fb90a4d4f3ffe608c19585a2c2f534f36a31cee9a662fb985",
+      "migrated_sha256": "e2cd12e063de4b1fb90a4d4f3ffe608c19585a2c2f534f36a31cee9a662fb985"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/DownloadProgress.cs",
+      "destination": "app/lib/DownloadProgress.cs",
+      "source_sha256": "d41c4f168517ffb534c2ec27b9ce557fc3e7607dab4284db0b98f6e33a4708a2",
+      "migrated_sha256": "d41c4f168517ffb534c2ec27b9ce557fc3e7607dab4284db0b98f6e33a4708a2"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Forecast.ps1",
+      "destination": "app/lib/Forecast.ps1",
+      "source_sha256": "2c73f1e040fd6f80c013b3e91557d01c73f50bcd0c47adb6d58733d982c5364e",
+      "migrated_sha256": "2c73f1e040fd6f80c013b3e91557d01c73f50bcd0c47adb6d58733d982c5364e"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/GccRuntime.ps1",
+      "destination": "app/lib/GccRuntime.ps1",
+      "source_sha256": "4ef5f36e6006565a1c2ef4a16f2aef1afac7bb16d1c3941240fe6c3b1b8f64fb",
+      "migrated_sha256": "4ef5f36e6006565a1c2ef4a16f2aef1afac7bb16d1c3941240fe6c3b1b8f64fb"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/GgufResources.cs",
+      "destination": "app/lib/GgufResources.cs",
+      "source_sha256": "6cefc754277ee858e2d8e05a00a647a0a46758fadb00ae9992f4ebf87a3ca0f2",
+      "migrated_sha256": "6cefc754277ee858e2d8e05a00a647a0a46758fadb00ae9992f4ebf87a3ca0f2"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Hardware.ps1",
+      "destination": "app/lib/Hardware.ps1",
+      "source_sha256": "3aa4b31299c43e9a0d6633e16cb119d2b98666189a3ca4d9869517150618043e",
+      "migrated_sha256": "3aa4b31299c43e9a0d6633e16cb119d2b98666189a3ca4d9869517150618043e"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/JobProtocol.ps1",
+      "destination": "app/lib/JobProtocol.ps1",
+      "source_sha256": "4007b50d3899b1a3566d2042a0d18cddc4af1a7b1fb7aba5690de3a708447075",
+      "migrated_sha256": "4007b50d3899b1a3566d2042a0d18cddc4af1a7b1fb7aba5690de3a708447075"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/LiveText.cs",
+      "destination": "app/lib/LiveText.cs",
+      "source_sha256": "1575b3f48fe5abd1673901b405b6efb6bc8008537bd3f840d2aad0701fde2385",
+      "migrated_sha256": "1575b3f48fe5abd1673901b405b6efb6bc8008537bd3f840d2aad0701fde2385"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Memory.ps1",
+      "destination": "app/lib/Memory.ps1",
+      "source_sha256": "64b40169ebda5c7e2899d21c97e4f835613014c986dbcb0dfebf7d97023a2fe2",
+      "migrated_sha256": "64b40169ebda5c7e2899d21c97e4f835613014c986dbcb0dfebf7d97023a2fe2"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/ModelCache.ps1",
+      "destination": "app/lib/ModelCache.ps1",
+      "source_sha256": "c16c3c2b24da200a28674640adcb367f07513a93fc360aaae74eefcf6c2eca20",
+      "migrated_sha256": "56ab3f7114d3bc9485e866c00cf554b77203ef8b6964f47f71f84c9d2bb0c449"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/ModernRuntime.ps1",
+      "destination": "app/lib/ModernRuntime.ps1",
+      "source_sha256": "bec2b00b518552a32e675f3152f680af24c3b676eb5c65a5d22656f91e87f88b",
+      "migrated_sha256": "23323aa08db46417ef85f0a052856bf14434bb4ca12faf78dad9fc6efa3e1019"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Phase3Core.ps1",
+      "destination": "app/lib/Phase3Core.ps1",
+      "source_sha256": "a3b2b213bb0baa6f299c04b86935efa9149b2780a7ca02a7c50e44494d013d8f",
+      "migrated_sha256": "a3b2b213bb0baa6f299c04b86935efa9149b2780a7ca02a7c50e44494d013d8f"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Preparation.ps1",
+      "destination": "app/lib/Preparation.ps1",
+      "source_sha256": "b55f54a6249ffe534a605274e9eb0284005227289f2bc0642293a55ad5330a73",
+      "migrated_sha256": "b55f54a6249ffe534a605274e9eb0284005227289f2bc0642293a55ad5330a73"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/RuntimeGuard.ps1",
+      "destination": "app/lib/RuntimeGuard.ps1",
+      "source_sha256": "0f856410e0776d24a46b6a2e2071f2f93d504ae641f3d48f9ef597e38686d7bf",
+      "migrated_sha256": "0f856410e0776d24a46b6a2e2071f2f93d504ae641f3d48f9ef597e38686d7bf"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/RuntimeSetup.ps1",
+      "destination": "app/lib/RuntimeSetup.ps1",
+      "source_sha256": "99c12792745cdbcf9581a1c11d28935a9c2a96dabaefdff27d9af338c46a6f3d",
+      "migrated_sha256": "99c12792745cdbcf9581a1c11d28935a9c2a96dabaefdff27d9af338c46a6f3d"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/StateFiles.cs",
+      "destination": "app/lib/StateFiles.cs",
+      "source_sha256": "bb5d9511e160b4a6cd1eab2525bae489e0f4175bd11f6512d698be45ce2f2ad6",
+      "migrated_sha256": "220c5b4b46b1438f49e9ef37db8570ae5ab438abb6b3f08381f747ad93a357c7"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/lib/Transport.ps1",
+      "destination": "app/lib/Transport.ps1",
+      "source_sha256": "ce62ac4e01448768e60e63fa1bbb31004b08d1bad540653043f9a990a0c599f3",
+      "migrated_sha256": "3edb74020afac47db5e4e621f69499d548588b6d44a169455e30396d087dac28"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/chat-worker.sh",
+      "destination": "app/scripts/chat-worker.sh",
+      "source_sha256": "527059df191732d412fb4a3105a00d564b51538bd46ac607ce49327901943c06",
+      "migrated_sha256": "527059df191732d412fb4a3105a00d564b51538bd46ac607ce49327901943c06"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/elf-check.sh",
+      "destination": "app/scripts/elf-check.sh",
+      "source_sha256": "16e0dd00bb3615ba84d03835290a03867e299c341dcdb6555816a96d9b8ea550",
+      "migrated_sha256": "16e0dd00bb3615ba84d03835290a03867e299c341dcdb6555816a96d9b8ea550"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/engine-llama-cli-v1.sh",
+      "destination": "app/scripts/engine-llama-cli-v1.sh",
+      "source_sha256": "64d45f40b81b6576d4780bbb13362e769f56494f189b4e79ce19d274026cc5db",
+      "migrated_sha256": "64d45f40b81b6576d4780bbb13362e769f56494f189b4e79ce19d274026cc5db"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/gcc-runtime-install.sh",
+      "destination": "app/scripts/gcc-runtime-install.sh",
+      "source_sha256": "36c8fd3de7758e111e473cad4c3dbb99d5687d0dd5b71867d2b8f6330fe7023f",
+      "migrated_sha256": "36c8fd3de7758e111e473cad4c3dbb99d5687d0dd5b71867d2b8f6330fe7023f"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/knc-affinity.awk",
+      "destination": "app/scripts/knc-affinity.awk",
+      "source_sha256": "afebdea5f931f9dbe2d88fe7e17eae43a77db2b2590f318fa71ee296c52b5c63",
+      "migrated_sha256": "afebdea5f931f9dbe2d88fe7e17eae43a77db2b2590f318fa71ee296c52b5c63"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/memory-info.awk",
+      "destination": "app/scripts/memory-info.awk",
+      "source_sha256": "9f624ab5f98db21b5844b2dfcf6cf8a9641fe55db0e7cf7461c4703842df8aa5",
+      "migrated_sha256": "9f624ab5f98db21b5844b2dfcf6cf8a9641fe55db0e7cf7461c4703842df8aa5"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/model-cache.sh",
+      "destination": "app/scripts/model-cache.sh",
+      "source_sha256": "3be2391c4f6c624979b0b42e33613395fd9aef2ac18f26e8de86a4986830c8a5",
+      "migrated_sha256": "3be2391c4f6c624979b0b42e33613395fd9aef2ac18f26e8de86a4986830c8a5"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/model-map.awk",
+      "destination": "app/scripts/model-map.awk",
+      "source_sha256": "932fd019df6dd9fee8818c75305bf3c851413f5cdea63769b7d8264c9d5962d7",
+      "migrated_sha256": "932fd019df6dd9fee8818c75305bf3c851413f5cdea63769b7d8264c9d5962d7"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/modern-runtime-install.sh",
+      "destination": "app/scripts/modern-runtime-install.sh",
+      "source_sha256": "de0d563fe9e06d7397041427996b3fba6986f6eff1cdcf6417f2f62bd30ce0e1",
+      "migrated_sha256": "de0d563fe9e06d7397041427996b3fba6986f6eff1cdcf6417f2f62bd30ce0e1"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/optimized-knc-env.sh",
+      "destination": "app/scripts/optimized-knc-env.sh",
+      "source_sha256": "a7a67bc2205b016ffd73b29d65b1515f68660fdbb2dd3d81feb08c6db07116b4",
+      "migrated_sha256": "a7a67bc2205b016ffd73b29d65b1515f68660fdbb2dd3d81feb08c6db07116b4"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/scripts/prompt-count.awk",
+      "destination": "app/scripts/prompt-count.awk",
+      "source_sha256": "9fde108b7a2a26b5cf17b0a1f58c808ba6dc88a51115b5c0b445751ce8714edc",
+      "migrated_sha256": "9fde108b7a2a26b5cf17b0a1f58c808ba6dc88a51115b5c0b445751ce8714edc"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/app.yaml",
+      "destination": "app/config/app.yaml",
+      "source_sha256": "e56b1018b4b0c1dba28d60fe5a179474c7b6003e7c301a01f261ef0f73464330",
+      "migrated_sha256": "e56b1018b4b0c1dba28d60fe5a179474c7b6003e7c301a01f261ef0f73464330"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/gcc-runtime.json",
+      "destination": "app/config/gcc-runtime.json",
+      "source_sha256": "1a9d622100a23feadd8042abebca3bb4d12e02c7559c5ca4a5198ce0a944730e",
+      "migrated_sha256": "1a9d622100a23feadd8042abebca3bb4d12e02c7559c5ca4a5198ce0a944730e"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/modern-runtime-1.4.0.json",
+      "destination": "app/config/modern-runtime-1.4.0.json",
+      "source_sha256": "fdfed84e2cb59e8f39da3f4ef9f3498e7ec8a4c3df29874d88c8209b721f51d9",
+      "migrated_sha256": "fdfed84e2cb59e8f39da3f4ef9f3498e7ec8a4c3df29874d88c8209b721f51d9"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/modern-runtime-1.4.1.json",
+      "destination": "app/config/modern-runtime-1.4.1.json",
+      "source_sha256": "000689a85e80d577b351e07ede202a85000e31ad1af6385d17249eb3fe70265d",
+      "migrated_sha256": "000689a85e80d577b351e07ede202a85000e31ad1af6385d17249eb3fe70265d"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/modern-runtime-1.4.2-original.json",
+      "destination": "app/config/modern-runtime-1.4.2-original.json",
+      "source_sha256": "6b1b64d98990aa788448a4de87984953228d886b40e603289d147d3a6a21e2e1",
+      "migrated_sha256": "6b1b64d98990aa788448a4de87984953228d886b40e603289d147d3a6a21e2e1"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/modern-runtime-preview-standard.json",
+      "destination": "app/config/modern-runtime-preview-standard.json",
+      "source_sha256": "19f1c6625310083dce1f47be380fb341fc5dd4a09536c9bb239a1c2ad9d2832d",
+      "migrated_sha256": "19f1c6625310083dce1f47be380fb341fc5dd4a09536c9bb239a1c2ad9d2832d"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/modern-runtime-q5-repair-r1.json",
+      "destination": "app/config/modern-runtime-q5-repair-r1.json",
+      "source_sha256": "d95ed0e2c79051116441bfd7484bc5a5c28ae75e1b5194fee7a70454f1434f94",
+      "migrated_sha256": "d95ed0e2c79051116441bfd7484bc5a5c28ae75e1b5194fee7a70454f1434f94"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/modern-runtime.json",
+      "destination": "app/config/modern-runtime.json",
+      "source_sha256": "40ab4eb37f8b44abef334ea89f710bc62cefb6423127af3335517eea2cd26f3e",
+      "migrated_sha256": "40ab4eb37f8b44abef334ea89f710bc62cefb6423127af3335517eea2cd26f3e"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/hardware/xeon-phi-3120a.yaml",
+      "destination": "app/config/hardware/xeon-phi-3120a.yaml",
+      "source_sha256": "02213028ab40b86038ab42fd47f4dc58094dac95e485aaf2bc4fc113613b8653",
+      "migrated_sha256": "02213028ab40b86038ab42fd47f4dc58094dac95e485aaf2bc4fc113613b8653"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/hardware/xeon-phi-7120p.yaml",
+      "destination": "app/config/hardware/xeon-phi-7120p.yaml",
+      "source_sha256": "2c48f51e8c1d5672e86c5bf1941f00e66995f7249df7deb5f09262c3663d282b",
+      "migrated_sha256": "2c48f51e8c1d5672e86c5bf1941f00e66995f7249df7deb5f09262c3663d282b"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/lfm2.5-2.6b-matrices-q5_k.yaml",
+      "destination": "app/config/models/lfm2.5-2.6b-matrices-q5_k.yaml",
+      "source_sha256": "128e9eb2c9f71f607140797778bb733e94825631e880625f07dbbb4eb9bcf98e",
+      "migrated_sha256": "128e9eb2c9f71f607140797778bb733e94825631e880625f07dbbb4eb9bcf98e"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/lfm2.5-2.6b-q5_k_m.yaml",
+      "destination": "app/config/models/lfm2.5-2.6b-q5_k_m.yaml",
+      "source_sha256": "0f495d029af0e17064f7380f54ac13a22273f63f5cce143bcdf9704120608cb7",
+      "migrated_sha256": "0f495d029af0e17064f7380f54ac13a22273f63f5cce143bcdf9704120608cb7"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/llama-3.3-8b-abliterated-matrices-q5_k.yaml",
+      "destination": "app/config/models/llama-3.3-8b-abliterated-matrices-q5_k.yaml",
+      "source_sha256": "8d86371324ed5664cc33c1b881aa3413055bd5299740cc82b01b47eea5511a10",
+      "migrated_sha256": "8d86371324ed5664cc33c1b881aa3413055bd5299740cc82b01b47eea5511a10"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/llama-3.3-8b-abliterated-q2_k.yaml",
+      "destination": "app/config/models/llama-3.3-8b-abliterated-q2_k.yaml",
+      "source_sha256": "8d8d185a94db3382d9ce6c5d43fa6bce0ff4b884bbb8687746b38310117288ca",
+      "migrated_sha256": "8d8d185a94db3382d9ce6c5d43fa6bce0ff4b884bbb8687746b38310117288ca"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/llama-3.3-8b-abliterated-q5_k_m.yaml",
+      "destination": "app/config/models/llama-3.3-8b-abliterated-q5_k_m.yaml",
+      "source_sha256": "6b4143b95b15828b30e3f5a2df2ee68a3366db778134b685de11a15e6bfd2f12",
+      "migrated_sha256": "6b4143b95b15828b30e3f5a2df2ee68a3366db778134b685de11a15e6bfd2f12"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/step3-vl-10b-q5_k_m.yaml",
+      "destination": "app/config/models/step3-vl-10b-q5_k_m.yaml",
+      "source_sha256": "6431f3e3930e642c35e4551746de8fd6906ae3fd14165b5fc1f8f7ae0c3fde90",
+      "migrated_sha256": "6431f3e3930e642c35e4551746de8fd6906ae3fd14165b5fc1f8f7ae0c3fde90"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/config/models/tinydolphin-q5_k_m.yaml",
+      "destination": "app/config/models/tinydolphin-q5_k_m.yaml",
+      "source_sha256": "a74a6b66057f99aec19100ab88656b19c14805076ddd089314f1bfc4178c85b3",
+      "migrated_sha256": "a74a6b66057f99aec19100ab88656b19c14805076ddd089314f1bfc4178c85b3"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Run-Tests.ps1",
+      "destination": "app/tests/Run-Tests.ps1",
+      "source_sha256": "98c3bf4addd363e9d2ff869fb04b5beac644c810ef3ea2f4b9da8529f3b6971f",
+      "migrated_sha256": "98c3bf4addd363e9d2ff869fb04b5beac644c810ef3ea2f4b9da8529f3b6971f"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Chat.ps1",
+      "destination": "app/tests/Test-Chat.ps1",
+      "source_sha256": "a9c991f6d1b1ef9e7ed9d55ce72480ea040e894c52c85b50f48199a06b583e36",
+      "migrated_sha256": "a9c991f6d1b1ef9e7ed9d55ce72480ea040e894c52c85b50f48199a06b583e36"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Context.ps1",
+      "destination": "app/tests/Test-Context.ps1",
+      "source_sha256": "908f4708725887cd7e24b23a0857b5e383b69a9b75a469cce21d8a82b15996c4",
+      "migrated_sha256": "908f4708725887cd7e24b23a0857b5e383b69a9b75a469cce21d8a82b15996c4"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Forecast.ps1",
+      "destination": "app/tests/Test-Forecast.ps1",
+      "source_sha256": "f2b68f610571431570b546d95fcc131cdc1b13d2aa58bff97a4cb1c153d0aba2",
+      "migrated_sha256": "f2b68f610571431570b546d95fcc131cdc1b13d2aa58bff97a4cb1c153d0aba2"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-GccRuntime.ps1",
+      "destination": "app/tests/Test-GccRuntime.ps1",
+      "source_sha256": "fcf686739bcfe7b20a708be1858b20cedd2706ec27225687c008fc7a0ae75681",
+      "migrated_sha256": "fcf686739bcfe7b20a708be1858b20cedd2706ec27225687c008fc7a0ae75681"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Hardware.ps1",
+      "destination": "app/tests/Test-Hardware.ps1",
+      "source_sha256": "7e59fadd58c77baebcef9a5a62adbcf0d2497893f22401bcee36debd027d42d9",
+      "migrated_sha256": "7e59fadd58c77baebcef9a5a62adbcf0d2497893f22401bcee36debd027d42d9"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Import.ps1",
+      "destination": "app/tests/Test-Import.ps1",
+      "source_sha256": "5b8833ed851a501d93ddcd970f76745cdd48abdabd16a7a9e6e63f653496888c",
+      "migrated_sha256": "5b8833ed851a501d93ddcd970f76745cdd48abdabd16a7a9e6e63f653496888c"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Llama141.ps1",
+      "destination": "app/tests/Test-Llama141.ps1",
+      "source_sha256": "7413dbb692b8c24003dda9740f82190e47720fff2c83f9b513bc4817b85ae579",
+      "migrated_sha256": "7413dbb692b8c24003dda9740f82190e47720fff2c83f9b513bc4817b85ae579"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Memory.ps1",
+      "destination": "app/tests/Test-Memory.ps1",
+      "source_sha256": "44684e7083f67d3ab0bfbde7a2f76587e75561f7ed6cee970837ee51c1f8c081",
+      "migrated_sha256": "44684e7083f67d3ab0bfbde7a2f76587e75561f7ed6cee970837ee51c1f8c081"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-ModernTransaction.ps1",
+      "destination": "app/tests/Test-ModernTransaction.ps1",
+      "source_sha256": "4554cfe4bf8726b886eb7bff5b5b5b642963c263345540944378779c847af7ab",
+      "migrated_sha256": "4554cfe4bf8726b886eb7bff5b5b5b642963c263345540944378779c847af7ab"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Preparation.ps1",
+      "destination": "app/tests/Test-Preparation.ps1",
+      "source_sha256": "c13103b2fa6494233b3345a44cb20d2b78079ba09554aa0e454515b0532797d2",
+      "migrated_sha256": "c13103b2fa6494233b3345a44cb20d2b78079ba09554aa0e454515b0532797d2"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-RuntimeGuard.ps1",
+      "destination": "app/tests/Test-RuntimeGuard.ps1",
+      "source_sha256": "be08ba127e647f310520d59e760ba7dc5d579a9587a3609ee0a1fa37a3bd3396",
+      "migrated_sha256": "be08ba127e647f310520d59e760ba7dc5d579a9587a3609ee0a1fa37a3bd3396"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-StateFiles.ps1",
+      "destination": "app/tests/Test-StateFiles.ps1",
+      "source_sha256": "a664804c71d27b653e0de23d3799dd1738f85bb1af4cbeaf746b36145af0df64",
+      "migrated_sha256": "044cafaf21b1b38b2498171fbd215513319a8a385004d2b14785a5cdf3138de3"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/Test-Transport.ps1",
+      "destination": "app/tests/Test-Transport.ps1",
+      "source_sha256": "afc2dc7918ce35da3e4ddd1ee473e14bd65d571c54ade41a32089cb940a42d32",
+      "migrated_sha256": "afc2dc7918ce35da3e4ddd1ee473e14bd65d571c54ade41a32089cb940a42d32"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_cache_cleanup.py",
+      "destination": "app/tests/test_cache_cleanup.py",
+      "source_sha256": "a909861e93269c4ffef3580de889bb775057b5227b37c67d092c2af9397ad336",
+      "migrated_sha256": "a909861e93269c4ffef3580de889bb775057b5227b37c67d092c2af9397ad336"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_context.py",
+      "destination": "app/tests/test_context.py",
+      "source_sha256": "3cff2d528a1cff1ac65ed89513e1c7b1a4372b29e6db9df95dc542481ba31488",
+      "migrated_sha256": "3cff2d528a1cff1ac65ed89513e1c7b1a4372b29e6db9df95dc542481ba31488"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_download_progress.py",
+      "destination": "app/tests/test_download_progress.py",
+      "source_sha256": "8aadab73a9607d9a021bc9e265e21d6eb2502faaab3d340c9ab15dc89ab8bbe1",
+      "migrated_sha256": "8aadab73a9607d9a021bc9e265e21d6eb2502faaab3d340c9ab15dc89ab8bbe1"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_install143.py",
+      "destination": "app/tests/test_install143.py",
+      "source_sha256": "623aa094a0e1423f7498e3e478ebae924bdf3bb134b1ce5463923179fe2e0ba3",
+      "migrated_sha256": "623aa094a0e1423f7498e3e478ebae924bdf3bb134b1ce5463923179fe2e0ba3"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_job_fixture.py",
+      "destination": "app/tests/test_job_fixture.py",
+      "source_sha256": "afe23a516e6362954452e54e789aaba4f982a1f6b275d46d4b7412ae074dfcc7",
+      "migrated_sha256": "9d03e0a342f8dd630837a1753eb263d624d3ea3af202e27e6a751039f1b94abb"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_llama141_integration.py",
+      "destination": "app/tests/test_llama141_integration.py",
+      "source_sha256": "f1d46133347c0b78101254f5903a425da1d29d6df7ac71acc2c5ebc0f739c851",
+      "migrated_sha256": "f1d46133347c0b78101254f5903a425da1d29d6df7ac71acc2c5ebc0f739c851"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_llama_template.py",
+      "destination": "app/tests/test_llama_template.py",
+      "source_sha256": "45ab5eab24e36320d584541695bb62ea7bd93b865dbaf7d2963e98b3465c0671",
+      "migrated_sha256": "45ab5eab24e36320d584541695bb62ea7bd93b865dbaf7d2963e98b3465c0671"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_load_hotfix.py",
+      "destination": "app/tests/test_load_hotfix.py",
+      "source_sha256": "ed68a4b5a1faaf89b24b7d0d0fab31daa99b8abe10e7e61b7eceb2f7bff6b9e8",
+      "migrated_sha256": "ed68a4b5a1faaf89b24b7d0d0fab31daa99b8abe10e7e61b7eceb2f7bff6b9e8"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_memory_accounting.py",
+      "destination": "app/tests/test_memory_accounting.py",
+      "source_sha256": "3fa5f5c8599c107f3995a65d176ac13121dad9718f23743c9883112d4e2a061f",
+      "migrated_sha256": "3fa5f5c8599c107f3995a65d176ac13121dad9718f23743c9883112d4e2a061f"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_model_mapping.py",
+      "destination": "app/tests/test_model_mapping.py",
+      "source_sha256": "8fded129b497df7c8c051619fa37754bb41598f1e01e9e889fcb1630fc1bfd5b",
+      "migrated_sha256": "8fded129b497df7c8c051619fa37754bb41598f1e01e9e889fcb1630fc1bfd5b"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_modern_catalog.py",
+      "destination": "app/tests/test_modern_catalog.py",
+      "source_sha256": "c9a59230a8a3a70c1197c00a372fb7128ec8b1426216a844b9f42e8f298ccda1",
+      "migrated_sha256": "c9a59230a8a3a70c1197c00a372fb7128ec8b1426216a844b9f42e8f298ccda1"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_native_gate.py",
+      "destination": "app/tests/test_native_gate.py",
+      "source_sha256": "059371db37fd8de26ffe36a3d6c79f762e0bdfc2943960adfd324355aea3a812",
+      "migrated_sha256": "059371db37fd8de26ffe36a3d6c79f762e0bdfc2943960adfd324355aea3a812"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_preparation.py",
+      "destination": "app/tests/test_preparation.py",
+      "source_sha256": "59854860196332da9303a21a2589aada11f37132f8d080d266e4a107551cb2c8",
+      "migrated_sha256": "59854860196332da9303a21a2589aada11f37132f8d080d266e4a107551cb2c8"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/test_worker_fixture.py",
+      "destination": "app/tests/test_worker_fixture.py",
+      "source_sha256": "890fa4f1b5bdfe7f4c1be00cbb51a10577da25d05c0d21d7247a15e756e03eec",
+      "migrated_sha256": "890fa4f1b5bdfe7f4c1be00cbb51a10577da25d05c0d21d7247a15e756e03eec"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/fixtures/llama-checkpoint-template.jinja",
+      "destination": "app/tests/fixtures/llama-checkpoint-template.jinja",
+      "source_sha256": "240ea9241e181a219c466bd28d978fe8e88c1ec5466eea116bb309cd64e9b716",
+      "migrated_sha256": "240ea9241e181a219c466bd28d978fe8e88c1ec5466eea116bb309cd64e9b716"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/tests/fixtures/micinfo-windows-3120a.txt",
+      "destination": "app/tests/fixtures/micinfo-windows-3120a.txt",
+      "source_sha256": "063a46e4f1b2f72070853925c774b34520367a67d25fbfd5242761c3617abbe6",
+      "migrated_sha256": "063a46e4f1b2f72070853925c774b34520367a67d25fbfd5242761c3617abbe6"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/Start-PhiChat.ps1",
+      "destination": "app/Start-PhiChat.ps1",
+      "source_sha256": "fc970bfd93a38090ed553137c8bb415ae530b75d1d176e2e6b882db9f959891f",
+      "migrated_sha256": "fc970bfd93a38090ed553137c8bb415ae530b75d1d176e2e6b882db9f959891f"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/Invoke-PhiJob.ps1",
+      "destination": "app/Invoke-PhiJob.ps1",
+      "source_sha256": "76ba46e5024327eaaf7b52dfd8a8c157b2492d30b13a36a2b6cde73b9b676f28",
+      "migrated_sha256": "403d055f5f1460b071ce5fdc2f0752daf4cc8fc48512bf53d18a6cd2986cda58"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/Install-ModernRuntime.ps1",
+      "destination": "app/Install-ModernRuntime.ps1",
+      "source_sha256": "9a3be0e3cdf7879ce38b5cefc1df4106ce2060ade0639517e60246ebf30ac963",
+      "migrated_sha256": "9a3be0e3cdf7879ce38b5cefc1df4106ce2060ade0639517e60246ebf30ac963"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/Test-ModernRuntime.ps1",
+      "destination": "app/Test-ModernRuntime.ps1",
+      "source_sha256": "746031ea6b362e2021bd647ba79e38bf6889353fd711c6f051da9ecb3ee634ff",
+      "migrated_sha256": "746031ea6b362e2021bd647ba79e38bf6889353fd711c6f051da9ecb3ee634ff"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/Install-GccRuntime.ps1",
+      "destination": "app/Install-GccRuntime.ps1",
+      "source_sha256": "3d1bd5b74b7aa38e97eac4bb9af9f03485d07e42847e8584c5e4c489ab31ffb7",
+      "migrated_sha256": "3d1bd5b74b7aa38e97eac4bb9af9f03485d07e42847e8584c5e4c489ab31ffb7"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/ChatWindow.xaml",
+      "destination": "app/ChatWindow.xaml",
+      "source_sha256": "32e700878c31079a860be70017de5a109a0f8af282c20cee63a0d4dec131aef0",
+      "migrated_sha256": "32e700878c31079a860be70017de5a109a0f8af282c20cee63a0d4dec131aef0"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/VERSION",
+      "destination": "app/VERSION",
+      "source_sha256": "acb57a7135b2d7d6e665f67f056e21353023b93835f54def1ae523bf76f1bfb3",
+      "migrated_sha256": "d6824fbd00945968edd9858fee5cde245c17693c1be7a27d24d335bf4eb2946c"
+    },
+    {
+      "source": "host/recovery/lib/SshPersistence.ps1",
+      "destination": "setup/recovery/SshPersistence.ps1",
+      "source_sha256": "1f73c6be5a0cf73208847f4ee6fdd3b25901d1a43505332c199d09909c23a5e2",
+      "migrated_sha256": "543bbaf3686c21f9acec7a0eca021aab96ca7dcbed0467b3cb51cc5c0d306438"
+    },
+    {
+      "source": "host/recovery/lib/CapturedProcess.ps1",
+      "destination": "setup/recovery/CapturedProcess.ps1",
+      "source_sha256": "c259ffaa2236c78a4ccde8954cd2c56f5bed12dc722d16f5e47f01054aa7a2aa",
+      "migrated_sha256": "d8d66ad492d8c50232b74529ec9dbfb9d434eb1f5e0d1da2113bd5897aef6b21"
+    },
+    {
+      "source": "host/recovery/lib/Files.cs",
+      "destination": "setup/recovery/Files.cs",
+      "source_sha256": "6ca5fdb8af204e07c38af9c5e62b5ffd3d315b971363c1fd8cca3c237d2bdad6",
+      "migrated_sha256": "6ca5fdb8af204e07c38af9c5e62b5ffd3d315b971363c1fd8cca3c237d2bdad6"
+    },
+    {
+      "source": "host/recovery/tests/Test-SshPersistence.ps1",
+      "destination": "setup/tests/Test-SshPersistence.ps1",
+      "source_sha256": "09ff03cadd2a1131ee7251a06056a99614fb2e55e90fdc14ee36dd883f1cbb66",
+      "migrated_sha256": "fa5d3a8f1a5d5287edd92122d7c1a4aa0152b74624a33a286ce2d9be2462a5dd"
+    },
+    {
+      "source": "tests/Test-ChatControls.ps1",
+      "destination": "tests/Test-ChatControls.ps1",
+      "source_sha256": "dc1b671a7490d7127efce7137e735decaf1a34f1cda833347bc6e9e84793a76f",
+      "migrated_sha256": "dc1b671a7490d7127efce7137e735decaf1a34f1cda833347bc6e9e84793a76f"
+    },
+    {
+      "source": "tests/Test-ChatExperience.ps1",
+      "destination": "tests/Test-ChatExperience.ps1",
+      "source_sha256": "dbafee5134ca44f7634d88252323825ebe5fe0ce8a4fb23237e535828c21390e",
+      "migrated_sha256": "dbafee5134ca44f7634d88252323825ebe5fe0ce8a4fb23237e535828c21390e"
+    },
+    {
+      "source": "tests/Test-ModelRuntimePairing.ps1",
+      "destination": "tests/Test-ModelRuntimePairing.ps1",
+      "source_sha256": "21499ee39e8d4a9f1c17d64939ab5094d88b14417c9b81b044beeaddb26195b8",
+      "migrated_sha256": "21499ee39e8d4a9f1c17d64939ab5094d88b14417c9b81b044beeaddb26195b8"
+    },
+    {
+      "source": "tests/Test-AutoResources.ps1",
+      "destination": "tests/Test-AutoResources.ps1",
+      "source_sha256": "5a362710f255a469d68e0b29326b1c41f31968d5d700ec4564094d3a989966df",
+      "migrated_sha256": "5a362710f255a469d68e0b29326b1c41f31968d5d700ec4564094d3a989966df"
+    },
+    {
+      "source": "tests/Test-StandaloneRuntimePins.ps1",
+      "destination": "tests/Test-StandaloneRuntimePins.ps1",
+      "source_sha256": "fdba3929fc873ed07618b85cb12bfce267d81b455b31148126f706a9af8d87bd",
+      "migrated_sha256": "fdba3929fc873ed07618b85cb12bfce267d81b455b31148126f706a9af8d87bd"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/licenses/knc-kernels/LICENSE",
+      "destination": "licenses/native/LICENSE",
+      "source_sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+      "migrated_sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/licenses/knc-kernels/THIRD-PARTY-NOTICES.txt",
+      "destination": "licenses/native/THIRD-PARTY-NOTICES.txt",
+      "source_sha256": "847e0aba947263ab9a84ce6d8109d1def5511abe2d326bb6295a4a4f65efcaee",
+      "migrated_sha256": "847e0aba947263ab9a84ce6d8109d1def5511abe2d326bb6295a4a4f65efcaee"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/licenses/knc-kernels/third_party/gcc-libgomp/COPYING.RUNTIME",
+      "destination": "licenses/native/third_party/gcc-libgomp/COPYING.RUNTIME",
+      "source_sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+      "migrated_sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+    },
+    {
+      "source": "releases/Phi-Chat-1.5.0/licenses/knc-kernels/third_party/gcc-libgomp/COPYING3",
+      "destination": "licenses/native/third_party/gcc-libgomp/COPYING3",
+      "source_sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "migrated_sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    }
+  ],
+  "destination_version": "1.5.1",
+  "note": "Original source hashes verified after migration. Edited copies retain their original import hashes separately. Newly authored setup/docs/build files are versioned by Git."
+}

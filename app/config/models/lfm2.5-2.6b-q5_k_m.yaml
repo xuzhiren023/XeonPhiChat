@@ -1,0 +1,32 @@
+{
+  "id": "lfm2.5-2.6b-q5_k_m",
+  "label": "LFM2.5-2.6B Q5_K_M (KNC experimental)",
+  "architecture": "lfm2",
+  "repository": "LiquidAI/LFM2.5-2.6B-GGUF",
+  "revision": "e7caca5d835a3901a8e0d63e94009429bafafdfc",
+  "filename": "LFM2.5-2.6B-Q5_K_M.gguf",
+  "file_size_bytes": 1939744768,
+  "sha256": "17ce54cc676e15e572adebfeeed8da6abd12b0f68d595be19b59e662476c21b3",
+  "estimated_peak_runtime_mib": 1536,
+  "minimum_memory_mib": 3584,
+  "target_profiles": [
+    "xeon-phi-3120a",
+    "xeon-phi-7120p"
+  ],
+  "upstream_repository": "LiquidAI/LFM2.5-2.6B",
+  "description": "3120A Q5_K_M target. Q5 and Q6 weight dots use IMCI in runtime 1.4.2. 2K context; native validation and speed measurements pending.",
+  "schema_version": 3,
+  "quantization": "Q5_K_M",
+  "context_tokens": 2048,
+  "chat_template": "gguf_metadata",
+  "memory_mode": "shared_mmap",
+  "runtime_family": "modern-knc",
+  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "availability": "experimental_native",
+  "native_acceptance": false,
+  "hash_provenance": "Downloaded complete GGUF; SHA-256 verified locally",
+  "memory_budget_note": "2K context; 32-token microbatch. Estimated 1536 MiB additional runtime plus weights counted once. Native peak validation pending.",
+  "inference_command": "llama/phi-modern",
+  "model_path": "models/LFM2.5-2.6B-Q5_K_M.gguf",
+  "recommended_profile": "xeon-phi-3120a"
+}

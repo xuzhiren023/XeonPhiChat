@@ -1,0 +1,30 @@
+# Generated installation state and private credentials
+installation.json
+data/
+private/
+app/config/connection.yaml
+app/dependencies/
+app/models/
+*.part
+*.new
+*.log
+*.pem
+*.key
+id_ed25519*
+ssh_host_*_key*
+known_hosts*
+# Release binaries are assets, never source commits
+assets/payloads/
+dist/
+*.gguf
+*.tar
+*.zip
+*.exe
+*.dll
+*.pdb
+# Developer caches
+__pycache__/
+.pytest_cache/
+.venv/
+.vs/
+

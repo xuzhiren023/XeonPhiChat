@@ -1,0 +1,16 @@
+The kernel package and its pinned GGML reference retain the MIT license in
+LICENSE and the original source notices.
+
+The bundled GNU OpenMP runtime, native/lib/libgomp.so.1, is a separate GCC
+component. It is licensed under GPL version 3 with the GCC Runtime Library
+Exception, version 3.1. The applicable license texts, original source notices,
+source snapshot, build provenance, and build records are in
+third_party/gcc-libgomp/.
+
+GCC source repository:
+https://github.com/apc-llc/gcc-5.1.1-knc
+Source commit: af7cc04cef723da3166f0d6f1539f02525fe5a93
+
+No Intel compiler, MPSS driver, firmware, glibc distribution, or complete GCC
+toolchain is distributed in this package. The build SDK provenance is recorded
+in evidence/v0.2.0/toolchain/.

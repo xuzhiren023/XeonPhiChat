@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "context_tokens": 0,
+  "batch_tokens": 0,
+  "max_output_tokens": 0,
+  "seed": 1234,
+  "poll_seconds": 5,
+  "heartbeat_timeout_seconds": 35,
+  "generation_timeout_seconds": 1800,
+  "system_prompt": "You are a helpful assistant. Answer clearly and concisely.",
+  "default_model": "lfm2.5-2.6b-q5_k_m",
+  "resource_policy": "automatic"
+}

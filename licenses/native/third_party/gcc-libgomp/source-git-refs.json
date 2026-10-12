@@ -1,0 +1,5 @@
+{
+  "gcc-5.1.1-knc/.git/HEAD": "ref: refs/heads/master\n",
+  "gcc-5.1.1-knc/.git/packed-refs": "# pack-refs with: peeled fully-peeled \ne7f4a37fefbd91d9174fc53f94383098e3c59606 refs/remotes/origin/k1om\naf7cc04cef723da3166f0d6f1539f02525fe5a93 refs/remotes/origin/master\n",
+  "gcc-5.1.1-knc/.git/refs/heads/master": "af7cc04cef723da3166f0d6f1539f02525fe5a93\n"
+}

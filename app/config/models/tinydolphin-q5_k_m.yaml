@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "id": "tinydolphin-2.8-1.1b-q5_k_m",
+  "label": "TinyDolphin 1.1B Q5_K_M",
+  "architecture": "llama",
+  "quantization": "Q5_K_M",
+  "repository": "Isonium/TinyDolphin-2.8-1.1b-GGUF",
+  "revision": "d550cc9743d04a64f38f8ea01cbb8290e50b3c6c",
+  "filename": "tiny-dolphin-2.8-1b-Q5_K_M.gguf",
+  "file_size_bytes": 782049888,
+  "sha256": "4e78568709140dd931ba1a5c68477e4bdf49001569943b07b1bd95fe779448dc",
+  "estimated_peak_runtime_mib": 1024,
+  "minimum_memory_mib": 1792,
+  "context_tokens": 2048,
+  "chat_template": "chatml",
+  "memory_budget_note": "Admission estimate: one RAM-backed GGUF file plus additional runtime (KV cache, compute and metadata). Shared mmap required; not a measured peak.",
+  "memory_mode": "shared_mmap",
+  "license_note": "Apache-2.0 on the author and quantizer model cards.",
+  "description": "Small Dolphin-family option for responsiveness; Q5_K uses the historical KNC dot kernel. Assess quality during chat; not yet tested on your card.",
+  "experimental_context_tokens": 4096,
+  "context_4k_extra_runtime_mib": 256
+}

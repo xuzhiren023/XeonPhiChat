@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "version": "1.5.1",
+  "models": [
+    {
+      "id": "lfm2.5-2.6b-matrices-q5_k",
+      "path": "models/uniform-q5-k/LFM2.5-2.6B-MATRICES-Q5_K.gguf",
+      "bytes": 1863428096,
+      "sha256": "f709163f35e4335331f0cb27a3498541dc3879ed18bab398e8b6093887b04f57"
+    },
+    {
+      "id": "llama-3.3-8b-abliterated-matrices-q5_k",
+      "path": "models/uniform-q5-k/Llama-3.3-8B-Instruct-128K_Abliterated-MATRICES-Q5_K.gguf",
+      "bytes": 5529527392,
+      "sha256": "80406046114a144d712c5455d803f88679920aec6d738eb656e9fbe87a14928a"
+    }
+  ]
+}

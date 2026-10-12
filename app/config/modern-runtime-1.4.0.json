@@ -1,0 +1,22 @@
+{
+  "version": "1.4.0",
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "kernel_version": "0.2.1",
+  "payloads": [
+    {
+      "profile": "xeon-phi-3120a",
+      "file": "runtime-3120A.tar",
+      "sha256": "8f399c1474eb6bcf318de13cb4ed6a5df329d429819c504cf0b3df6ee96349c7",
+      "bytes": 14039040,
+      "runtime_id": "phichat140-modern-016e8696f3667152"
+    },
+    {
+      "profile": "xeon-phi-7120p",
+      "file": "runtime-7120P.tar",
+      "sha256": "01d167b40c244a8e14eb3d3e4dd14acb24ce2cfb65923f47f8f8f7b7b6b6a956",
+      "bytes": 14039040,
+      "runtime_id": "phichat140-modern-f2a3bc114c6ebac7"
+    }
+  ]
+}

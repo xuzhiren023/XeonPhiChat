@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "version": "1.5.1",
+  "native_payloads_unchanged_from": "1.5.0-preview.4",
+  "assets": [
+    {
+      "file": "runtime-3120A.tar",
+      "bytes": 42383360,
+      "sha256": "91959fa4f510028b05cf9c7a16926e0598e6e27d09832c18095be83b6624bb6e",
+      "profile": "xeon-phi-3120a",
+      "runtime_id": "phichat142-modern-346789f47a328478",
+      "kind": "modern"
+    },
+    {
+      "file": "runtime-7120P.tar",
+      "bytes": 69826560,
+      "sha256": "0ab988a1f5c65beb01284f281726cb3f2e0cc9678cbbd33dd1382622bca700df",
+      "profile": "xeon-phi-7120p",
+      "runtime_id": "phichat142-modern-9610d4c7df2513c6",
+      "kind": "modern"
+    },
+    {
+      "file": "baseline-runtime.tar",
+      "bytes": 4554240,
+      "sha256": "e344c67c4a255e87d20bbfa7fce870fe20216956087a2f59663faa51404f9264",
+      "kind": "guard-backup"
+    }
+  ]
+}

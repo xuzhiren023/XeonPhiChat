@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "profile_id": "xeon-phi-7120p",
+  "card_model": "Intel Xeon Phi 7120P class",
+  "expected_cores": 61,
+  "gddr_capacity_mib": 16384,
+  "gddr_min_mib": 14500,
+  "gddr_max_mib": 16384,
+  "safe_memory_budget_mib": 12288,
+  "os_reserve_mib": 2048,
+  "available_reserve_mib": 256,
+  "thread_candidates": [
+    60,
+    120,
+    180,
+    240
+  ],
+  "cooling_type": "forced-air",
+  "thermal_warn_c": 75,
+  "thermal_stop_c": 85,
+  "sku_pattern": "7120",
+  "phase3_threads": 60,
+  "build_jobs_default": 8,
+  "build_jobs_max": 8
+}
