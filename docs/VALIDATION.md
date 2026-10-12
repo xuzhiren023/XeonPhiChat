@@ -1,5 +1,15 @@
 # Validation
 
+## 1.5.3: Windows installer launch repair
+
+The reported 1.5.2 failure immediately after accepting UAC was reproduced with the installer entry point. An array expression joined a parameter name and value into one argument (`-Model lfm2.5-2.6b-q5_k_m`), causing the elevated PowerShell process to reject its arguments before setup or error logging began. The corrected expression passes two separate arguments, including for paths containing spaces.
+
+A separate read-only preflight found that the adapter expression matched `MIC` inside `Microsoft`. Hidden Wi-Fi Direct and kernel debugging adapters then caused a false ambiguous-device failure. Matching now requires a separate MIC word or a Xeon Phi driver name. Regression cases cover the observed Intel driver name, Microsoft virtual adapters, legacy MIC names and explicitly selected non-Phi interfaces.
+
+Windows PowerShell 5.1 host validation passed on October 12, 2026: 59 scripts parsed, 42 setup checks, 15 installer entry checks, and all prior first-run, identity, chat, model and runtime tests. The entry tests run the real parent/child scripts from a directory containing spaces, simulate elevation, preserve the underlying preflight error in both console and saved diagnostics, and prove logging does not create a conflicting installation destination. Plan remains read-only.
+
+The corrected read-only preflight on the reported PC selected the single Phi adapter and retained its existing host/card addresses, without planning an address or XML change. This is not a complete hardware installation test. No network, MPSS, SSH identity, runtime or card state was changed. Native archives and model packs are unchanged; 1.5.3 replaces the application/source downloads only.
+
 ## 1.5.2: pinned Gaston import and MoE gating
 
 The Windows PowerShell 5.1 host suite passed on October 12, 2026. It includes 84 provenance checks, 38 standalone setup checks, 53 SSH persistence checks, 9 first-run fixtures, and 22 MoE compatibility checks alongside the existing chat, Stop, memory and runtime-pairing regressions. The Bash process harness remains skipped on Windows.

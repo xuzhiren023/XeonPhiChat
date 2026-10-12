@@ -15,6 +15,15 @@ try {
     $phi=[pscustomobject]@{ifIndex=7;InterfaceDescription='Intel Xeon Phi Virtual Ethernet'}
     $lan=[pscustomobject]@{ifIndex=1;InterfaceDescription='Intel Ethernet LAN'}
     Check ((Select-PhiAdapter @($phi,$lan)).ifIndex -eq 7) 'only Phi adapter chosen'
+    $wifi=[pscustomobject]@{ifIndex=9;InterfaceDescription='Microsoft Wi-Fi Direct Virtual Adapter'}
+    $wifi3=[pscustomobject]@{ifIndex=8;InterfaceDescription='Microsoft Wi-Fi Direct Virtual Adapter #3'}
+    $debug=[pscustomobject]@{ifIndex=3;InterfaceDescription='Microsoft Kernel Debug Network Adapter'}
+    $realPhi=[pscustomobject]@{ifIndex=10;InterfaceDescription='Intel(R) Xeon Phi(TM) coprocessor Virtual Ethernet Adapter (x64)'}
+    Check ((Select-PhiAdapter @($realPhi,$wifi,$wifi3,$debug,$lan)).ifIndex -eq 10) 'real driver name wins over Microsoft hidden virtual adapters'
+    Reject { Select-PhiAdapter @($wifi,$wifi3,$debug) } 'Microsoft devices alone never count as MIC adapters'
+    Reject { Select-PhiAdapter @($realPhi,$wifi) 9 } 'explicit Microsoft virtual interface rejected'
+    $mic=[pscustomobject]@{ifIndex=11;InterfaceDescription='Intel MIC Virtual Ethernet Adapter'}
+    Check ((Select-PhiAdapter @($mic,$wifi)).ifIndex -eq 11) 'standalone MIC driver-name token is supported'
     Reject { Select-PhiAdapter @($phi,$lan) 1 } 'explicit physical LAN index rejected'
     Reject { Select-PhiAdapter @($phi,$phi) } 'ambiguous Phi adapter rejected'
     $plan=New-PhiNetworkPlan $mpss $phi @() @()

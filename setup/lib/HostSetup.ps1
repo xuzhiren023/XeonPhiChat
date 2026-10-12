@@ -16,7 +16,9 @@ function Find-PhiMpss([string]$Hint='') {
     return $path
 }
 function Select-PhiAdapter($Adapters,[int]$InterfaceIndex=0) {
-    $candidates=@($Adapters | Where-Object { $_.InterfaceDescription -match '(?i)Xeon.*Phi|MIC.*(Network|Virtual|Ethernet)' })
+    # MIC is a driver-name token, not the prefix of "Microsoft". Hidden
+    # Microsoft virtual adapters must never be treated as Phi candidates.
+    $candidates=@($Adapters | Where-Object { $_.InterfaceDescription -match '(?i)\bXeon\b.*\bPhi\b|\bMIC\b.*\b(Network|Virtual|Ethernet)\b' })
     if ($InterfaceIndex) { $candidates=@($candidates | Where-Object ifIndex -EQ $InterfaceIndex) }
     if ($candidates.Count -ne 1) { throw 'Expected one Xeon Phi virtual network adapter. Install its MPSS driver; for multiple adapters specify -InterfaceIndex. Physical LAN adapters are never selected.' }
     return $candidates[0]

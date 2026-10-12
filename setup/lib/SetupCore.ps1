@@ -3,6 +3,29 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '../recovery/SshPersistence.ps1')
 
 function Get-PhiVersion([string]$Root) { return [IO.File]::ReadAllText((Join-Path $Root 'VERSION')).Trim() }
+function New-PhiSetupDiagnostics([string]$Id='') {
+    if (!$Id) { $Id=[Guid]::NewGuid().ToString('N') }
+    if ($Id -cnotmatch '^[a-f0-9]{32}$') { throw 'Invalid setup diagnostic ID.' }
+    # Preflight can fail before an installation exists. Keep its diagnostics
+    # outside Destination so logging cannot turn an empty install into a conflict.
+    $path=Join-Path $env:LOCALAPPDATA ('PhiChat/SetupLogs/'+$Id)
+    Assert-RegularPath $path
+    New-Directory $path
+    return $path
+}
+function Write-PhiSetupFailure([string]$Directory,[Management.Automation.ErrorRecord]$Failure) {
+    Save-Json (Join-Path $Directory ('error-'+$PID+'.json')) ([pscustomobject]@{
+        message=$Failure.Exception.Message;exception_type=$Failure.Exception.GetType().FullName;
+        position=$Failure.InvocationInfo.PositionMessage;script_stack=$Failure.ScriptStackTrace;
+        process_id=$PID;created_utc=[DateTime]::UtcNow.ToString('o')})
+}
+function Get-PhiElevatedFailure([string]$Directory,[int]$ProcessId) {
+    $path=Join-Path $Directory ('error-'+$ProcessId+'.json')
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        try { return [string](Read-Json $path).message } catch {}
+    }
+    return 'The elevated process did not report a result. Review its console; use the same Windows account when accepting UAC.'
+}
 function Get-PhiSetupRun([string]$Destination) {
     $path=Join-Path $Destination ('data/setup/run-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
     New-Directory $path

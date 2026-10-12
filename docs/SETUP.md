@@ -11,9 +11,9 @@ The console explains and requests permission for the initial card restart, which
 ## Custom folders
 
 ```powershell
-.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.2' -MpssDirectory 'C:\Program Files\Intel\MPSS'
+.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.3' -MpssDirectory 'C:\Program Files\Intel\MPSS'
 .\Setup.ps1 -Mode Plan -MpssDirectory 'C:\Program Files\Intel\MPSS'
-.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.2' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
+.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.3' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
 ```
 
 `Plan` reads hardware/network configuration without writing settings or creating credentials. Depending on local Windows permissions it may need an administrator console. Use `-InterfaceIndex` only to disambiguate Phi virtual adapters; a physical LAN interface is rejected. Automatic installation supports one card (mic0).
@@ -22,7 +22,11 @@ The console explains and requests permission for the initial card restart, which
 
 Rerun **the original extracted installer** with the same destination. Saved identities are reused, never silently rotated. Modified application files and unrelated destination folders are preserved with an actionable error. If boot files were generated but verification failed, the next run reuses the recorded transaction. Once host verification succeeds, later retries do not initialize the host again. Runtime selection is accepted only after native validation; model downloads use hash verification and atomic completion.
 
+Early setup errors are saved under `%LOCALAPPDATA%\PhiChat\SetupLogs\<run-id>`, even before an installation exists. The original and elevated windows share that run ID; the original window displays the elevated process's error. The console shows the exact diagnostic folder. `Plan` remains read-only and does not create logs.
+
 Installation evidence is in `data/setup`; protected boot plans/backups are in `data/host`. Runtime jobs and native validation evidence are in `app/data/jobs`. These folders may contain private material and are not source/release inputs.
+
+Version 1.5.3 corrects the 1.5.2 UAC argument handoff and excludes Microsoft virtual adapters from MIC device matching. If 1.5.2 stopped immediately after UAC, extract the 1.5.3 Windows ZIP into a new folder and run its `Setup.cmd`. You do not need to delete an earlier download or installation.
 
 To restore the previous MPSS boot files and adapter configuration:
 

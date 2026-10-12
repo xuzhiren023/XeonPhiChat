@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": "1.5.2",
+  "version": "1.5.3",
   "models": [
     {
       "id": "lfm2.5-2.6b-matrices-q5_k",

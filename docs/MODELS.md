@@ -20,11 +20,11 @@ These are generated quantizations, not upstream Hugging Face filenames. They are
 
 Model licenses belong to their upstream authors; app/kernel code licenses do not grant rights to model weights. The complete model profiles include `repository`, `revision` and `upstream_repository` provenance. Review the license/model card at the pinned repository before redistributing weights. The local pack is assembled from the existing approved local models; no public upload occurs during packaging.
 
-The first two models remain available in `PhiChat-1.5.1-OptimizedModels.zip`, compatible with 1.5.2. Gaston is a separate `PhiChat-1.5.2-LFM2.5-8B-A1B-Gaston-Q5_K.zip` so existing models need not be downloaded again. Its Q5_K weights were requantized from the pinned Q8_0 source, without a new imatrix. It uses `lfm2moe`, which is blocked by the current native runner. Import stores the exact audited file; it does not enable chat or confer the green performance check. See [integration status and required validation](LFM2-MOE.md).
+The first two models remain available in `PhiChat-1.5.1-OptimizedModels.zip`, compatible with 1.5.3. Gaston is a separate `PhiChat-1.5.2-LFM2.5-8B-A1B-Gaston-Q5_K.zip` so existing models need not be downloaded again. Its Q5_K weights were requantized from the pinned Q8_0 source, without a new imatrix. It uses `lfm2moe`, which is blocked by the current native runner. Import stores the exact audited file; it does not enable chat or confer the green performance check. See [integration status and required validation](LFM2-MOE.md).
 
 To import just Gaston after extracting its ZIP:
 
 ```powershell
-.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.2' -ModelPackDirectory 'D:\Downloads\Gaston' -ModelIds lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k
+.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.3' -ModelPackDirectory 'D:\Downloads\Gaston' -ModelIds lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k
 ```
 

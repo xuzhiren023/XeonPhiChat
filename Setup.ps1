@@ -5,11 +5,12 @@ param(
     [string]$Destination='', [string]$MpssDirectory='', [int]$InterfaceIndex=0,
     [string]$AssetsDirectory='', [string]$ModelPackDirectory='',
     [string[]]$ModelIds=@(),
-    [string]$Model='lfm2.5-2.6b-q5_k_m', [string]$OriginalUserSid='', [switch]$NoLaunch
+    [string]$Model='lfm2.5-2.6b-q5_k_m', [string]$OriginalUserSid='', [switch]$NoLaunch,
+    [ValidatePattern('^$|^[a-f0-9]{32}$')][string]$DiagnosticId=''
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-. (Join-Path $PSScriptRoot 'setup/lib/HostSetup.ps1')
+$diagnostics=''
 
 function Confirm-PhiAction([string]$Message) {
     Write-Host $Message
@@ -17,18 +18,23 @@ function Confirm-PhiAction([string]$Message) {
 }
 function Invoke-PhiElevation {
     $arguments=@('-NoProfile','-ExecutionPolicy','Bypass','-File',$PSCommandPath,'-Mode',$Mode,
-        '-Destination',$Destination,'-OriginalUserSid',[Security.Principal.WindowsIdentity]::GetCurrent().User.Value)
+        '-Destination',$Destination,'-OriginalUserSid',[Security.Principal.WindowsIdentity]::GetCurrent().User.Value,
+        '-DiagnosticId',(Split-Path $diagnostics -Leaf))
     foreach ($entry in @(@('MpssDirectory',$MpssDirectory),@('AssetsDirectory',$AssetsDirectory),@('ModelPackDirectory',$ModelPackDirectory),@('Model',$Model))) {
-        if ($entry[1]) { $arguments+=@('-'+$entry[0],$entry[1]) }
+        if ($entry[1]) { $arguments+=@(('-'+$entry[0]),$entry[1]) }
     }
     if ($InterfaceIndex) { $arguments+=@('-InterfaceIndex',[string]$InterfaceIndex) }
     if ($NoLaunch) { $arguments+='-NoLaunch' }
     # Interactive installer: the user needs to review the elevated console.
     $p=Start-Process -FilePath (Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe') -ArgumentList (Join-NativeArguments $arguments) -Verb RunAs -Wait -PassThru
-    if ($p.ExitCode -ne 0) { throw 'Setup did not complete. Review the installer console and saved setup evidence.' }
+    try {
+        if ($p.ExitCode -ne 0) { throw ('Elevated setup stopped: '+(Get-PhiElevatedFailure $diagnostics $p.Id)) }
+    } finally { $p.Dispose() }
 }
 try {
+    . (Join-Path $PSScriptRoot 'setup/lib/HostSetup.ps1')
     Assert-Windows
+    if ($Mode -cne 'Plan') { $diagnostics=New-PhiSetupDiagnostics $DiagnosticId }
     if ($ModelIds.Count -and $Mode -cne 'AddModels') { throw '-ModelIds is supported only with -Mode AddModels.' }
     if (!$Destination) {
         $Destination=if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'installation.json')) { $PSScriptRoot } else { Join-Path $env:LOCALAPPDATA ('Programs/PhiChat/'+(Get-PhiVersion $PSScriptRoot)) }
@@ -112,7 +118,12 @@ try {
     exit 0
 } catch {
     Write-Host ('SETUP STOPPED: '+$_.Exception.Message) -ForegroundColor Red
-    Write-Host ('Existing app copies are preserved. Setup evidence: '+(Join-Path $Destination 'data/setup'))
+    if ($diagnostics) {
+        try { Write-PhiSetupFailure $diagnostics $_; Write-Host ('Setup diagnostics: '+$diagnostics) }
+        catch { Write-Host ('Could not save setup diagnostics: '+$_.Exception.Message) }
+    }
+    if ($Destination -and (Test-Path -LiteralPath (Join-Path $Destination 'data/setup'))) { Write-Host ('Installation evidence: '+(Join-Path $Destination 'data/setup')) }
+    Write-Host 'Existing app copies are preserved.'
     if ($Mode -cne 'Plan' -and [Environment]::UserInteractive -and ![Console]::IsInputRedirected) { $null=Read-Host 'Press Enter to close' }
     exit 1
 }

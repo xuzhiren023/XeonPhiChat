@@ -20,6 +20,7 @@ try {
     Run-Test (Join-Path $root 'tests/Test-ModelManifest.ps1')
     Run-Test (Join-Path $root 'setup/tests/Test-SshPersistence.ps1')
     Run-Test (Join-Path $root 'setup/tests/Test-Setup.ps1')
+    Run-Test (Join-Path $root 'setup/tests/Test-SetupEntry.ps1')
     Run-Test (Join-Path $root 'setup/tests/Test-FirstRun.ps1')
     Run-Test (Join-Path $root 'app/tests/Run-Tests.ps1')
     foreach ($name in @('Test-RuntimeGuard','Test-ModernTransaction','Test-GccRuntime')) {
