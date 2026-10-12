@@ -11,9 +11,9 @@ The console explains and requests permission for the initial card restart, which
 ## Custom folders
 
 ```powershell
-.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.1' -MpssDirectory 'C:\Program Files\Intel\MPSS'
+.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.2' -MpssDirectory 'C:\Program Files\Intel\MPSS'
 .\Setup.ps1 -Mode Plan -MpssDirectory 'C:\Program Files\Intel\MPSS'
-.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.1' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
+.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.2' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
 ```
 
 `Plan` reads hardware/network configuration without writing settings or creating credentials. Depending on local Windows permissions it may need an administrator console. Use `-InterfaceIndex` only to disambiguate Phi virtual adapters; a physical LAN interface is rejected. Automatic installation supports one card (mic0).

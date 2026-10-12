@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k",
+  "file": "LFM2.5-8B-A1B-Uncensored-Gaston-MATRICES-Q5_K.gguf",
+  "bytes": 5830593408,
+  "sha256": "852cd73ed6ba7d8fcd6ebeae577a75fa7de5f3239c9fe0dce7bf8cc077e20ec3",
+  "architecture": "lfm2moe",
+  "source": {
+    "repo": "gaston-parravicini/LFM2.5-8B-A1B-Uncensored-Gaston-GGUF",
+    "revision": "c4e8cb570263f2d6f79911f3ecf3538d143d682f",
+    "files": [
+      {
+        "file": "LFM2.5-8B-A1B-Uncensored-Gaston-Q8_0.gguf",
+        "bytes": 9010195616,
+        "sha256": "a3bd5a242606e7a3af2950a2377e2411dadf4afa9883199a948cb8c834af38f9"
+      }
+    ]
+  },
+  "source_quantization": "Q8_0",
+  "requantization": true,
+  "requantization_explicitly_approved": true,
+  "imatrix_used_for_this_conversion": false,
+  "quantizer": {
+    "release": "b11552",
+    "commit": "23b0202a189c44a54625aadcb37a946dd1d6278d",
+    "executable": "llama-quantize.exe",
+    "sha256": "28f7c258c6491b84bdc9c5ced700c36667e1cedad18d3697bff5e157445f7146",
+    "ggml_base_sha256": "243baf8750a26053d63c1a0e5538729c7fd75e8bd639ccb80439c597d2c53964",
+    "arguments": [
+      "--allow-requantize",
+      "--pure",
+      "--output-tensor-type",
+      "q5_k",
+      "--token-embedding-type",
+      "q5_k",
+      "--tensor-type-file",
+      "tensor-types.txt",
+      "--max-buffer-size",
+      "512",
+      "LFM2.5-8B-A1B-Uncensored-Gaston-Q8_0.gguf",
+      "stock-q5.gguf",
+      "Q5_K_S",
+      "6"
+    ],
+    "router_conversion": "ggml_quantize_chunk(Q5_K), pinned ggml-base.dll"
+  },
+  "tensor_counts": {
+    "Q5_K": 155,
+    "F32": 101
+  },
+  "matrix_categories": {
+    "ordinary": 67,
+    "packed_expert": 66,
+    "router": 22
+  },
+  "f32_exceptions": {
+    "normalization": 61,
+    "short_convolution": 18,
+    "routing_bias": 22
+  },
+  "all_matrix_weights_q5_k": true,
+  "f32_exceptions_byte_identical": true,
+  "all_q5_block_scales_finite": true,
+  "expert_slices_numerically_sampled": 2112,
+  "sampled_rows_per_expert_slice": 3,
+  "sampled_relative_rmse_max": 0.054645718361003216,
+  "audit": {
+    "file": "assets/model-provenance/lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k.audit.json",
+    "bytes": 110086,
+    "sha256": "0bdd3dae4be8886e8975c63c485a8142091f89f2036f8cd2888b113a10cece8a"
+  },
+  "producer_receipt_sha256": "215d8cdd95575cd23fafe6d9c9014a5542bc009758d22c55feba01e496f411d2",
+  "knc_execution_validated": false,
+  "runtime_status": "blocked_lfm2moe",
+  "notes": "Q8_0 requantization, not F16 conversion. Tensor audit does not establish native execution or model quality. Personal absolute paths removed from this distribution receipt."
+}

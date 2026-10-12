@@ -69,4 +69,4 @@ $script:operatorCancelled=$false; $script:cardLockOwned=$false; $script:cleanupC
 Check ($null -eq (Get-ChatCancellationStatus)) 'a native or thermal failure is never labelled user cancellation'
 
 $choices=@(Get-ModelChoices $AppRoot $large)
-Check ($choices.Count -eq 7 -and @($choices | Where-Object name -Match '^(tinyllama|dolphin-phi2)').Count -eq 0) 'retired models are absent from the application catalog'
+Check ($choices.Count -eq 8 -and @($choices | Where-Object name -Match '^(tinyllama|dolphin-phi2)').Count -eq 0) 'retired models are absent from the application catalog'

@@ -61,7 +61,7 @@ function Copy-PhiApplication([string]$Root,[string]$Destination) {
     $roots=@('app','setup','docs','licenses')
     $sources=@(foreach ($name in $roots) { Get-TreeFiles (Join-Path $Root $name) @('tests/*','__pycache__/*') })
     $sources+=@(Get-Item -LiteralPath (Join-Path $Root 'VERSION'),(Join-Path $Root 'Start.cmd'),(Join-Path $Root 'Start.ps1'),(Join-Path $Root 'Setup.cmd'),(Join-Path $Root 'Setup.ps1'),(Join-Path $Root 'Add-Models.cmd'),(Join-Path $Root 'README.md'),(Join-Path $Root 'LICENSES.md'))
-    $sources+=@(Get-ChildItem -LiteralPath (Join-Path $Root 'assets') -Filter '*.json' -File)
+    $sources+=@(Get-TreeFiles (Join-Path $Root 'assets') @('payloads') | Where-Object Extension -CEQ '.json')
     foreach ($source in $sources) {
         $relative=Get-Relative $source.FullName $Root
         if ($relative -match '/(data|private|jobs)/|/config/connection.yaml$') { throw 'Machine state must not appear in app source.' }
@@ -136,15 +136,43 @@ function Invoke-PhiSetupJob([string]$Destination,[string]$Action,[string]$Model=
         return $status
     } finally { $job.process.Dispose() }
 }
-function Import-PhiOptimizedModels([string]$Root,[string]$Destination,[string]$Pack) {
-    # Folder import avoids extracting arbitrary archives into the installation.
+function Get-PhiModelPackSelection([string]$Root,[string]$Pack,[string[]]$ModelIds=@()) {
     $manifest=Read-Json (Join-Path $Root 'assets/optimized-models.json')
-    if ($manifest.schema_version -ne 1 -or $manifest.models.Count -ne 2) { throw 'Invalid optimized model manifest.' }
-    foreach ($model in $manifest.models) {
+    if ($manifest.schema_version -ne 1 -or @($manifest.models).Count -lt 1) { throw 'Invalid local model manifest.' }
+    $ids=@{}; $paths=@{}
+    foreach ($model in @($manifest.models)) {
+        if ($model.id -notmatch '^[a-z0-9][a-z0-9_.-]+$' -or
+            $model.path -notmatch '^models/uniform-q5-k/[A-Za-z0-9_.-]+\.gguf$' -or
+            $model.sha256 -notmatch '^[a-f0-9]{64}$' -or $model.bytes -lt 1 -or
+            $ids.ContainsKey($model.id) -or $paths.ContainsKey($model.path)) { throw 'Invalid or duplicate pinned model identity.' }
+        $ids[$model.id]=$true; $paths[$model.path]=$true
+    }
+    if ($ModelIds.Count) {
+        foreach ($id in $ModelIds) { if (!$ids.ContainsKey($id)) { throw ('Unknown pinned model ID: '+$id) } }
+        $selected=@($manifest.models | Where-Object { $_.id -cin $ModelIds })
+    } else {
+        # A new single-model pack need not include earlier multi-gigabyte models.
+        # Only identities pinned by this app are eligible; pack-supplied metadata
+        # never authorizes a new hash or a new runtime.
+        $selected=@($manifest.models | Where-Object { Test-Path -LiteralPath (Join-Safe $Pack $_.path) -PathType Leaf })
+    }
+    if (!$selected.Count) { throw 'No recognized model files found. Select the extracted folder containing models/uniform-q5-k.' }
+    foreach ($model in $selected) {
         $source=Join-Safe $Pack $model.path
         Assert-PhiAsset $source ([pscustomobject]@{file=$model.path;bytes=$model.bytes;sha256=$model.sha256})
     }
-    foreach ($model in $manifest.models) {
+    return $selected
+}
+function Import-PhiOptimizedModels([string]$Root,[string]$Destination,[string]$Pack,[string[]]$ModelIds=@()) {
+    # Folder import avoids extracting arbitrary archives into the installation.
+    $selected=@(Get-PhiModelPackSelection $Root $Pack $ModelIds)
+    # Check all existing destinations before writing any model from the pack.
+    foreach ($model in $selected) {
+        $target=Join-Safe (Join-Path $Destination 'app') $model.path
+        Assert-RegularPath $target
+        if (Test-Path -LiteralPath $target) { Assert-PhiAsset $target ([pscustomobject]@{file=$model.path;bytes=$model.bytes;sha256=$model.sha256}) }
+    }
+    foreach ($model in $selected) {
         $source=Join-Safe $Pack $model.path; $target=Join-Safe (Join-Path $Destination 'app') $model.path
         New-Directory (Split-Path $target -Parent)
         if (Test-Path -LiteralPath $target) {
@@ -158,6 +186,8 @@ function Import-PhiOptimizedModels([string]$Root,[string]$Destination,[string]$P
             [IO.File]::Move($part,$target)
         } finally { if (Test-Path -LiteralPath $part) { Remove-Item -LiteralPath $part } }
     }
+    return [pscustomobject]@{count=$selected.Count;model_ids=@($selected | ForEach-Object id);runtime_acceptance_changed=$false;
+        blocked_model_ids=@($selected | Where-Object { $_.PSObject.Properties['runtime_status'] -and $_.runtime_status -ceq 'blocked_lfm2moe' } | ForEach-Object id)}
 }
 function New-PhiShortcut([string]$Destination) {
     $path=Join-Path ([Environment]::GetFolderPath('Desktop')) ('Phi Chat '+(Get-PhiVersion $Destination)+'.lnk')

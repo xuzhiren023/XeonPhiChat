@@ -25,6 +25,12 @@ namespace PhiChat {
                     if(depth>2)throw new InvalidDataException("Nested GGUF arrays.");
                     uint t=r.ReadUInt32();ulong n=r.ReadUInt64();int[] sizes={1,1,2,2,4,4,4,1,0,0,8,8,8};
                     if(t>=sizes.Length)throw new InvalidDataException("Invalid GGUF array type.");
+                    if(keep){
+                        if(sizes[t]==0||n>4096)throw new InvalidDataException("Invalid numeric model metadata array.");
+                        var values=new object[(int)n];
+                        for(int i=0;i<values.Length;i++)values[i]=Value(r,t,true,depth+1);
+                        return values;
+                    }
                     if(sizes[t]>0)Skip(r,checked(n*(ulong)sizes[t]));
                     else {if(n>(ulong)(r.BaseStream.Length-r.BaseStream.Position)/8)throw new InvalidDataException("Invalid GGUF array length.");for(ulong i=0;i<n;i++)Value(r,t,false,depth+1);}
                     return null;
@@ -38,7 +44,7 @@ namespace PhiChat {
                 uint v=r.ReadUInt32();if(v!=2&&v!=3)throw new InvalidDataException("Unsupported GGUF version.");
                 r.ReadUInt64();ulong n=r.ReadUInt64();if(n>(ulong)r.BaseStream.Length/12)throw new InvalidDataException("Invalid metadata count.");
                 for(ulong i=0;i<n;i++){
-                    string k=Text(r,true);bool keep=k=="general.architecture"||k.EndsWith(".context_length")||k.EndsWith(".block_count")||k.EndsWith(".embedding_length")||k.EndsWith(".attention.head_count")||k.EndsWith(".attention.head_count_kv")||k.EndsWith(".attention.key_length")||k.EndsWith(".attention.value_length");
+                    string k=Text(r,true);bool keep=k=="general.architecture"||k.EndsWith(".context_length")||k.EndsWith(".block_count")||k.EndsWith(".embedding_length")||k.EndsWith(".attention.head_count")||k.EndsWith(".attention.head_count_kv")||k.EndsWith(".attention.key_length")||k.EndsWith(".attention.value_length")||k.EndsWith(".expert_count")||k.EndsWith(".expert_used_count")||k.EndsWith(".expert_feed_forward_length")||k.EndsWith(".leading_dense_block_count")||k.EndsWith(".shortconv.l_cache");
                     object value=Value(r,r.ReadUInt32(),keep,0);if(keep&&value!=null)result.Add(k,value);
                 }
             }return result;

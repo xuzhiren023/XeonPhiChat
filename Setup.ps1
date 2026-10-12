@@ -4,6 +4,7 @@ param(
     [ValidateSet('Install','Plan','AddModels','RollbackHost','Boot')][string]$Mode='Install',
     [string]$Destination='', [string]$MpssDirectory='', [int]$InterfaceIndex=0,
     [string]$AssetsDirectory='', [string]$ModelPackDirectory='',
+    [string[]]$ModelIds=@(),
     [string]$Model='lfm2.5-2.6b-q5_k_m', [string]$OriginalUserSid='', [switch]$NoLaunch
 )
 Set-StrictMode -Version Latest
@@ -28,6 +29,7 @@ function Invoke-PhiElevation {
 }
 try {
     Assert-Windows
+    if ($ModelIds.Count -and $Mode -cne 'AddModels') { throw '-ModelIds is supported only with -Mode AddModels.' }
     if (!$Destination) {
         $Destination=if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'installation.json')) { $PSScriptRoot } else { Join-Path $env:LOCALAPPDATA ('Programs/PhiChat/'+(Get-PhiVersion $PSScriptRoot)) }
     }
@@ -35,8 +37,10 @@ try {
     if ($Mode -ceq 'AddModels') {
         if (!(Test-Path -LiteralPath (Join-Path $Destination 'installation.json'))) { throw 'Run Setup.cmd to install Phi Chat first.' }
         if (!$ModelPackDirectory) { $ModelPackDirectory=(Read-Host 'Folder containing the extracted optimized models pack').Trim('"') }
-        Import-PhiOptimizedModels $PSScriptRoot $Destination $ModelPackDirectory
-        Write-Host 'Both optimized Q5_K models are installed and verified.'; exit 0
+        $import=Import-PhiOptimizedModels $PSScriptRoot $Destination $ModelPackDirectory $ModelIds
+        Write-Host ($import.count.ToString()+' pinned model(s) imported and verified. Runtime compatibility is checked separately by the app.')
+        if ($import.blocked_model_ids.Count) { Write-Host ('Stored for later use; a validated KNC MoE runtime is still required: '+($import.blocked_model_ids -join ', ')) }
+        exit 0
     }
     if ($Mode -ceq 'Plan') { Get-PhiHostPlan $MpssDirectory $InterfaceIndex | ConvertTo-Json -Depth 8; exit 0 }
     if (!(Test-PhiAdministrator)) {
@@ -93,7 +97,7 @@ try {
         $saved=Read-Json $verified; $plan=Read-SshPersistencePlan $saved.plan_directory
         $null=Test-PhiBootIdentity $Destination $plan $run
     }
-    if ($ModelPackDirectory) { Import-PhiOptimizedModels $PSScriptRoot $Destination $ModelPackDirectory }
+    if ($ModelPackDirectory) { $null=Import-PhiOptimizedModels $PSScriptRoot $Destination $ModelPackDirectory }
     $probe=Invoke-PhiSetupJob $Destination 'Probe'
     $selection=Join-Path $Destination ('app/data/modern-runtime/active-'+$probe.result.serial+'.json')
     if (!(Test-Path -LiteralPath $selection)) { $null=Invoke-PhiSetupJob $Destination 'InstallModern' }

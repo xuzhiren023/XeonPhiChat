@@ -17,7 +17,8 @@ function Test-ModernTextModel($Model) {
     return ($Model.architecture -ceq 'lfm2' -or ($Model.PSObject.Properties['runtime_family'] -and $Model.runtime_family -ceq 'modern-knc' -and $Model.architecture -ceq 'llama'))
 }
 function Test-Q5OptimizedModel($Model) {
-    return ($Model.id -cin @('lfm2.5-2.6b-matrices-q5_k','llama-3.3-8b-abliterated-matrices-q5_k') -and
+    return ((($Model.id -ceq 'lfm2.5-2.6b-matrices-q5_k' -and $Model.architecture -ceq 'lfm2') -or
+             ($Model.id -ceq 'llama-3.3-8b-abliterated-matrices-q5_k' -and $Model.architecture -ceq 'llama')) -and
         $Model.PSObject.Properties['required_runtime_feature'] -and $Model.required_runtime_feature -ceq 'q5-balanced-pf64-v1')
 }
 function Get-ModelEngineVariant($Model) {
@@ -33,9 +34,9 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
         $m.filename -notmatch '^[A-Za-z0-9_.-]+\.gguf$' -or $m.id -notmatch '^[a-z0-9][a-z0-9_.-]+$' -or
         $m.repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' -or
         $m.chat_template -notin @('zephyr','chatml','gguf_metadata') -or
-        $m.architecture -notin @('llama','lfm2','qwen3') -or
+        $m.architecture -notin @('llama','lfm2','lfm2moe','qwen3') -or
         $m.memory_mode -cne 'shared_mmap') { throw 'Invalid pinned model profile or unsupported memory mode.' }
-    $modern=($m.architecture -in @('lfm2','qwen3') -or (Test-ModernTextModel $m))
+    $modern=($m.architecture -in @('lfm2','lfm2moe','qwen3') -or (Test-ModernTextModel $m))
     if ($modern) {
         if (!$m.PSObject.Properties['runtime_family'] -or $m.runtime_family -cne 'modern-knc' -or
             $m.chat_template -cne 'gguf_metadata' -or $m.schema_version -ne 3 -or
@@ -44,6 +45,9 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
     return $m
 }
 function Assert-ModelRuntime($Model) {
+    if ($Model.architecture -ceq 'lfm2moe') {
+        throw 'LFM2-MoE needs a validated KNC MoE runtime. This build cannot run it; importing Q5_K weights does not enable execution.'
+    }
     if ((($Model.id -in @('lfm2.5-2.6b-q5_k_m','lfm2.5-2.6b-matrices-q5_k') -and $Model.architecture -ceq 'lfm2') -or
         ($Model.id -in @('llama-3.3-8b-abliterated-q2_k','llama-3.3-8b-abliterated-q5_k_m','llama-3.3-8b-abliterated-matrices-q5_k') -and $Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model))) -and
         $Model.required_source_commit -ceq '6783b11fb0889d68d0046176b4cc92ceee1961b0' -and

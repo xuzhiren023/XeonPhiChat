@@ -91,9 +91,31 @@ try {
         $model.bytes=(Get-Item -LiteralPath $file).Length; $model.sha256=(Get-FileHash -LiteralPath $file).Hash.ToLowerInvariant()
     }
     Save-Json (Join-Path $fixture 'assets/optimized-models.json') $models
-    Import-PhiOptimizedModels $fixture $install $pack
-    Import-PhiOptimizedModels $fixture $install $pack
-    Check (@(Get-ChildItem -LiteralPath (Join-Path $install 'app/models/uniform-q5-k')).Count -eq 2) 'optimized models import and retry verified'
+    $null=Import-PhiOptimizedModels $fixture $install $pack
+    $null=Import-PhiOptimizedModels $fixture $install $pack
+    Check (@(Get-ChildItem -LiteralPath (Join-Path $install 'app/models/uniform-q5-k')).Count -eq $models.models.Count) 'all pinned models import and retry verified'
+    $blocked=@($models.models | Where-Object { $_.PSObject.Properties['runtime_status'] -and $_.runtime_status -ceq 'blocked_lfm2moe' })
+    Check ($blocked.Count -eq 1) 'one pinned Gaston model remains blocked for native execution'
+    $gaston=Import-PhiOptimizedModels $fixture $install $pack @($blocked[0].id)
+    Check ($gaston.count -eq 1 -and $gaston.blocked_model_ids[0] -ceq $blocked[0].id -and !$gaston.runtime_acceptance_changed) 'Gaston import reports blocked runtime without creating acceptance'
+    $one=Join-Path $scratch 'single model pack'; New-Directory (Join-Path $one 'models/uniform-q5-k')
+    Copy-Item -LiteralPath (Join-Safe $pack $models.models[0].path) -Destination (Join-Safe $one $models.models[0].path)
+    $single=Import-PhiOptimizedModels $fixture $install $one
+    Check ($single.count -eq 1 -and !$single.runtime_acceptance_changed) 'single-model pack imports without granting runtime acceptance'
+    Reject { Import-PhiOptimizedModels $fixture $install $one @($models.models[1].id) } 'explicitly requested missing model fails'
+    Reject { Import-PhiOptimizedModels $fixture $install $one @('untrusted-model') } 'unknown model ID cannot be imported'
+    $duplicate=$models | ConvertTo-Json -Depth 12 | ConvertFrom-Json; $duplicate.models[1].id=$duplicate.models[0].id
+    Save-Json (Join-Path $fixture 'assets/optimized-models.json') $duplicate
+    Reject { Import-PhiOptimizedModels $fixture $install $one } 'duplicate manifest identities rejected'
+    $duplicate.models[1].id='escape-model'; $duplicate.models[1].path='../outside.gguf'
+    Save-Json (Join-Path $fixture 'assets/optimized-models.json') $duplicate
+    Reject { Import-PhiOptimizedModels $fixture $install $one } 'manifest path traversal rejected before writes'
+    Save-Json (Join-Path $fixture 'assets/optimized-models.json') $models
+    $conflict=Join-Path $scratch 'conflicting installed models'
+    $badTarget=Join-Safe (Join-Path $conflict 'app') $models.models[1].path
+    New-Directory (Split-Path $badTarget -Parent); Write-Utf8 $badTarget 'unrelated existing weights'
+    Reject { Import-PhiOptimizedModels $fixture $conflict $pack } 'existing model conflicts are checked before any copy'
+    Check (!(Test-Path -LiteralPath (Join-Safe (Join-Path $conflict 'app') $models.models[0].path))) 'later model conflict cannot leave earlier model newly installed'
     Add-Content -LiteralPath (Join-Safe $pack $models.models[1].path) 'bad'
     Reject { Import-PhiOptimizedModels $fixture $install $pack } 'tampered model pack rejected'
     Write-Output ('PASS: '+$checks+' standalone setup checks; all host network operations mocked, only disposable keys/files created.')

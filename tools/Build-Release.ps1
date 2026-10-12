@@ -1,6 +1,8 @@
 #Requires -Version 5.1
 [CmdletBinding()]
-param([string]$AssetsDirectory='', [string]$ModelDirectory='', [switch]$SourceOnly)
+param([string]$AssetsDirectory='', [string]$ModelDirectory='', [string[]]$ModelIds=@(),
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$')][string]$ModelPackName='LocalModels',
+    [switch]$SourceOnly, [switch]$ModelsOnly)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
@@ -8,6 +10,8 @@ $root=Split-Path $PSScriptRoot -Parent
 Add-Type -AssemblyName System.IO.Compression,System.IO.Compression.FileSystem
 $version=Get-PhiVersion $root
 $dist=Join-Path $root 'dist'; New-Directory $dist
+if ($SourceOnly -and $ModelsOnly) { throw 'Choose source-only or models-only packaging, not both.' }
+if ($ModelsOnly -and !$ModelDirectory) { throw '-ModelsOnly requires -ModelDirectory.' }
 
 function New-PhiZip([string]$Name,$Entries) {
     $target=Join-Path $dist $Name
@@ -60,20 +64,36 @@ foreach ($name in @('VERSION','README.md','AGENTS.md','LICENSES.md','MIGRATION.j
     if (!(Test-Path -LiteralPath $path)) { throw ('Required source file missing: '+$name) }
     $sources+=@([pscustomobject]@{path=$path;name=('PhiChat-'+$version+'/'+$name)})
 }
+foreach ($file in @(Get-TreeFiles (Join-Path $root 'assets/model-provenance'))) {
+    if ($file.Extension -cne '.json') { throw 'Only JSON provenance is allowed in the model-provenance directory.' }
+    $sources+=@([pscustomobject]@{path=$file.FullName;name=('PhiChat-'+$version+'/'+(Get-Relative $file.FullName $root))})
+}
 if ($SourceOnly) { New-PhiZip ('PhiChat-'+$version+'-Source.zip') $sources; exit }
+if (!$ModelsOnly) {
 if (!$AssetsDirectory) { $AssetsDirectory=Join-Path $root 'assets/payloads' }
 $manifest=Get-PhiAssets $root $AssetsDirectory
 $entries=$sources
 foreach ($asset in $manifest.assets) { $entries+=@([pscustomobject]@{path=(Join-Safe $AssetsDirectory $asset.file);name=('PhiChat-'+$version+'/assets/payloads/'+$asset.file)}) }
 New-PhiZip ('PhiChat-'+$version+'-Windows.zip') $entries
+}
 if ($ModelDirectory) {
-    $models=Read-Json (Join-Path $root 'assets/optimized-models.json')
-    $entries=@([pscustomobject]@{path=(Join-Path $root 'assets/optimized-models.json');name='optimized-models.json'},[pscustomobject]@{path=(Join-Path $root 'docs/MODELS.md');name='README.md'})
-    foreach ($model in $models.models) {
+    $models=@(Get-PhiModelPackSelection $root $ModelDirectory $ModelIds)
+    $entries=@([pscustomobject]@{path=(Join-Path $root 'assets/optimized-models.json');name='optimized-models.json'},
+        [pscustomobject]@{path=(Join-Path $root 'docs/MODEL-PACK.md');name='README.md'},
+        [pscustomobject]@{path=(Join-Path $root 'docs/MODELS.md');name='docs/MODELS.md'},
+        [pscustomobject]@{path=(Join-Path $root 'docs/LFM2-MOE.md');name='docs/LFM2-MOE.md'})
+    foreach ($model in $models) {
         $path=Join-Safe $ModelDirectory $model.path
         Assert-PhiAsset $path ([pscustomobject]@{file=$model.path;bytes=$model.bytes;sha256=$model.sha256})
         $entries+=@([pscustomobject]@{path=$path;name=$model.path})
+        foreach ($field in @('provenance_file','audit_file')) {
+            if ($model.PSObject.Properties[$field]) {
+                $relative=[string]$model.$field
+                if ($relative -notmatch '^assets/model-provenance/[a-z0-9_.-]+\.json$') { throw 'Invalid model evidence path.' }
+                $entries+=@([pscustomobject]@{path=(Join-Safe $root $relative);name=$relative})
+            }
+        }
     }
-    New-PhiZip ('PhiChat-'+$version+'-OptimizedModels.zip') $entries
+    New-PhiZip ('PhiChat-'+$version+'-'+$ModelPackName+'.zip') $entries
 }
 
