@@ -11,7 +11,7 @@ function Read-CardCacheInventory([string]$Tool) {
 function Get-CacheModel($Entry,[object[]]$Models,$State) {
     $matches=@($Models | Where-Object { $Entry.path.EndsWith('/models/'+$_.id+'.gguf') -or $Entry.path.EndsWith('/models/'+$_.id+'.gguf.part') })
     if (!$matches.Count -and $Entry.path.EndsWith('/model.gguf')) {
-        if ($Entry.path -ceq ($State.remote_base+'/model.gguf')) {
+        if ($Entry.path -ceq ($State.remote_base+'/model.gguf') -and $State.PSObject.Properties['model_sha256']) {
             $matches=@($Models | Where-Object { $_.sha256 -ceq $State.model_sha256 -and $_.file_size_bytes -eq $Entry.bytes })
         } elseif ($Entry.identity -ne '-') {
             $matches=@($Models | Where-Object { $_.sha256 -ceq $Entry.identity -and $_.file_size_bytes -eq $Entry.bytes })
@@ -70,7 +70,8 @@ function Remove-OtherCardModels($Selected,$State) {
         foreach ($entry in $inventory) {
             if ($entry.path -ceq ($State.remote_base+'/models/'+$Selected.id+'.gguf') -and $entry.identity -ceq $Selected.sha256 -and $entry.bytes -eq $Selected.file_size_bytes) { $keep=$entry.path }
         }
-        if (!$keep -and $Selected.sha256 -ceq $State.model_sha256) {
+        # Standalone bootstrap receipts contain no bundled model identity.
+        if (!$keep -and $State.PSObject.Properties['model_sha256'] -and $Selected.sha256 -ceq $State.model_sha256) {
             $candidate=@($inventory | Where-Object { $_.path -ceq ($State.remote_base+'/model.gguf') -and $_.bytes -eq $Selected.file_size_bytes })
             if ($candidate.Count -eq 1) { $keep=$candidate[0].path }
         }
@@ -85,7 +86,7 @@ function Remove-OtherCardModels($Selected,$State) {
             }
             # An old generic model.gguf without an identity receipt is hashed
             # on Windows once; filename/size alone never authorizes its removal.
-            $verify=($entry.path.EndsWith('/model.gguf') -and $entry.path -cne ($State.remote_base+'/model.gguf') -and $entry.identity -ceq '-')
+            $verify=($entry.path.EndsWith('/model.gguf') -and ($entry.path -cne ($State.remote_base+'/model.gguf') -or !$State.PSObject.Properties['model_sha256']) -and $entry.identity -ceq '-')
             if ($entry.identity -ne '-' -and $entry.identity -cne $model.sha256) {
                 if ($entry.path -ceq ($State.remote_base+'/models/'+$Selected.id+'.gguf')) { throw 'Selected cache path has a different model identity. File preserved; inspect model-cache-before.json.' }
                 $events.Add([pscustomobject]@{action='retained';card_path=$entry.path;bytes=$entry.bytes;reason='Identity differs from pinned model; preserved.'})

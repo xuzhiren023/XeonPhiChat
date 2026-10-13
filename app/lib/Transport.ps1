@@ -322,7 +322,7 @@ function Get-CardModel($Model,$State,[string]$LocalPath) {
     if (!$script:cardLockOwned) { throw 'Card staging requires the workload lock.' }
     $base=$State.remote_base
     Remove-OtherCardModels $Model $State
-    if ($State.model_sha256 -ceq $Model.sha256) {
+    if ($State.PSObject.Properties['model_sha256'] -and $State.model_sha256 -ceq $Model.sha256) {
         $size=(Invoke-Card "if test -f '$base/model.gguf'; then LC_ALL=C ls -ln '$base/model.gguf' | awk '{print `$5}'; else echo 0; fi").Trim()
         if ($size -ceq [string]$Model.file_size_bytes) { return "$base/model.gguf" }
     }

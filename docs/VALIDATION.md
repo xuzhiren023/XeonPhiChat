@@ -1,5 +1,11 @@
 # Validation
 
+## 1.5.6: loading models after standalone setup
+
+Standalone bootstrap receipts describe a runtime without a bundled model. Cache cleanup, model transfer and chat readiness now treat the legacy `model_sha256` field as optional. A legacy generic model file without a pinned identity must still be verified before removal. The installed/downloaded model and shared native runtime are reusable after this correction.
+
+The existing standalone host checks include a focused model load/cache/readiness regression using the actual bootstrap receipt shape, without a model hash. Network and transfer calls in that check are fixtures; native validation is recorded separately. App and installer version markers are both 1.5.6. Native binaries and model files are unchanged.
+
 ## 1.5.5: simpler Windows permissions and installer contents
 
 The original 1.5.4 error was a noncanonical inherited ACL. Its rollback then replayed an old security descriptor including SYSTEM ownership and failed because Windows did not allow assigning that owner. Private-file permissions now use a fresh restricted DACL; directory permissions and backup/restore leave existing owners unchanged. Old journals remain readable, but only their access rules are restored. A partially completed rollback skips copying files whose bytes already match their backups.

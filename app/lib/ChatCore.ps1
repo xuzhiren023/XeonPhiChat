@@ -176,7 +176,7 @@ function Assert-ModelReady($Ready,$Model,$State,$Health) {
         $Ready.remote_base -cne $State.remote_base) { throw 'Model or card changed. Click Load model again.' }
     $normal="$($State.remote_base)/models/$($Model.id).gguf"
     $baseline="$($State.remote_base)/model.gguf"
-    if ($Ready.remote_model -cne $normal -and !($Ready.remote_model -ceq $baseline -and $State.model_sha256 -ceq $Model.sha256)) {
+    if ($Ready.remote_model -cne $normal -and !($Ready.remote_model -ceq $baseline -and $State.PSObject.Properties['model_sha256'] -and $State.model_sha256 -ceq $Model.sha256)) {
         throw 'Prepared model path does not match the selected model. Click Load model again.'
     }
 }
