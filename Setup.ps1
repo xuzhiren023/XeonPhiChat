@@ -83,6 +83,7 @@ try {
     if (!(Test-Path -LiteralPath $verified)) {
         Confirm-PhiAction 'Setup will install the Windows SSH client if needed, set a static address on the Phi adapter, create SSH keys, back up and rebuild the MPSS boot image, then restart mic0. Restarting discards work stored only in card RAM. The card receives a new SSH host identity; other tools with saved trust pins may need their pins updated. Close other Phi applications and save card work first. Setup then validates the native runtime and downloads the first model (about 2 GB by default).'
     } else { Confirm-PhiAction 'Resume this installation using its saved identity and card configuration, validate/restore its runtime, and prepare the selected model?' }
+    Repair-PhiInterruptedPermissions $Destination $hostPlan.mpss
     $receipt=Copy-PhiApplication $PSScriptRoot $Destination
     Install-PhiAssets $PSScriptRoot $AssetsDirectory $Destination
     $run=Get-PhiSetupRun $Destination

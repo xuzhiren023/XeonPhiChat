@@ -10,7 +10,7 @@ New-Directory $scratch
 $script:checks=0
 function Check([bool]$Value,[string]$Message) { $script:checks++; if (!$Value) { throw ('FAIL: '+$Message) } }
 try {
-    $mpss=Join-Path $scratch 'MPSS'; $install=Join-Path $scratch 'fresh user/PhiChat'
+    $mpss=Join-Path $scratch 'MPSS'; $install=Join-Path $scratch 'fresh user/1.5.4'
     foreach ($name in @('bin','filesystem/mic0','filesystem/common')) { New-Directory (Join-Path $mpss $name) }
     foreach ($name in @('bin/micctrl.exe','bin/MicInfo.exe')) { Write-Utf8 (Join-Path $mpss $name) 'fixture marker, never executed' }
     Write-Utf8 (Join-Path $mpss 'global.xml') '<global />'
@@ -70,6 +70,19 @@ try {
     $journal=Read-Json (Join-Path $pending.plan_directory 'journal.json')
     Check ($journal.state -ceq 'image-generated' -and (Test-Path -LiteralPath (Join-Path $pending.plan_directory 'before'))) 'boot transaction and original image backup are retained'
     Check ((Read-SmallText (Join-Path $mpss 'filesystem/mic0.filelist')).Contains('file /etc/hostname etc/hostname 644 0 0')) 'unrelated MPSS configuration survives first run'
+    # Reuse this fixture for the reported partial rollback: bytes restored,
+    # journal still failed, and old descriptors include an unassignable owner.
+    Restore-IdentityTargets $journal $pending.plan_directory
+    $journal.state='rollback-failed'
+    foreach($entry in $journal.entries){if($entry.exists){$entry.acl='O:SYG:SY'+$entry.acl}}
+    Save-Json (Join-Path $pending.plan_directory 'journal.json') $journal
+    $next=Join-Path $scratch 'fresh user/1.5.5'
+    Repair-PhiInterruptedPermissions $next $mpss
+    Check ((Read-Json (Join-Path $pending.plan_directory 'journal.json')).state -ceq 'rolled-back' -and $script:boots -eq 1 -and $script:resets -eq 0) 'next setup completes old permission rollback without restarting the card'
+    $journal.state='rollback-failed'; Save-Json (Join-Path $pending.plan_directory 'journal.json') $journal
+    Write-Utf8 (Join-Path $mpss 'filesystem/mic0.filelist') '# later operator edit'
+    $blocked=$false; try{Repair-PhiInterruptedPermissions $next $mpss}catch{$blocked=$true}
+    Check ($blocked -and (Read-SmallText (Join-Path $mpss 'filesystem/mic0.filelist')) -ceq '# later operator edit') 'automatic permission recovery preserves later operator edits'
     Write-Output ('PASS: '+$script:checks+' complete first-run fixture checks; no real MPSS, network or card commands executed.')
 } finally {
     $resolved=[IO.Path]::GetFullPath($scratch)

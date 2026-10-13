@@ -11,14 +11,16 @@ The console explains and requests permission for the initial card restart, which
 ## Custom folders
 
 ```powershell
-.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.4' -MpssDirectory 'C:\Program Files\Intel\MPSS'
+.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.5' -MpssDirectory 'C:\Program Files\Intel\MPSS'
 .\Setup.ps1 -Mode Plan -MpssDirectory 'C:\Program Files\Intel\MPSS'
-.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.4' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
+.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.5' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
 ```
 
 `Plan` reads hardware/network configuration without writing settings or creating credentials. Depending on local Windows permissions it may need an administrator console. Use `-InterfaceIndex` only to disambiguate Phi virtual adapters; a physical LAN interface is rejected. Automatic installation supports one card (mic0).
 
 ## Interrupted setup
+
+Version 1.5.5 replaces problematic inherited Windows permission lists with a fresh private-file DACL. It leaves file ownership alone, including during rollback of older setup journals. This fixes the 1.5.4 failure involving a noncanonical ACL followed by a rejected SYSTEM-owner restore. After you approve setup, it finishes a previous sibling Phi Chat installation's failed permission rollback if all boot-file bytes already match their saved originals. Later operator changes are preserved for explicit recovery. Normal setup no longer runs throughput benchmarks; compatibility checks and boot-file backups remain.
 
 Rerun **the original extracted installer** with the same destination. Saved identities are reused, never silently rotated. Modified application files and unrelated destination folders are preserved with an actionable error. If boot files were generated but verification failed, the next run reuses the recorded transaction. Once host verification succeeds, later retries do not initialize the host again. Runtime selection is accepted only after native validation; model downloads use hash verification and atomic completion.
 

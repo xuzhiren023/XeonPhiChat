@@ -72,7 +72,8 @@ if ($SourceOnly) { New-PhiZip ('PhiChat-'+$version+'-Source.zip') $sources; exit
 if (!$ModelsOnly) {
 if (!$AssetsDirectory) { $AssetsDirectory=Join-Path $root 'assets/payloads' }
 $manifest=Get-PhiAssets $root $AssetsDirectory
-$entries=$sources
+# Developer suites/build helpers belong in the source ZIP, not the installer.
+$entries=@($sources | Where-Object { $_.name -notmatch '/(?:tests|tools|\.github)/|/app/Test-[^/]+\.ps1$|/(?:AGENTS\.md|MIGRATION\.json|\.gitignore|\.gitattributes)$' })
 foreach ($asset in $manifest.assets) { $entries+=@([pscustomobject]@{path=(Join-Safe $AssetsDirectory $asset.file);name=('PhiChat-'+$version+'/assets/payloads/'+$asset.file)}) }
 New-PhiZip ('PhiChat-'+$version+'-Windows.zip') $entries
 }

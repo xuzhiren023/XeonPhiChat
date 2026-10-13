@@ -9,19 +9,20 @@ function Protect-IdentityDirectory([string]$Path) {
     $allow=[Security.AccessControl.AccessControlType]::Allow
     $prop=[Security.AccessControl.PropagationFlags]::None
     $owner=[Security.Principal.WindowsIdentity]::GetCurrent().User
-    $acl.SetOwner($owner)
+    # Set only permissions; keep the existing Windows owner.
     foreach ($sid in @($owner,(New-Object Security.Principal.SecurityIdentifier('S-1-5-18')),(New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))) {
         $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid,[Security.AccessControl.FileSystemRights]::FullControl,$inherit,$prop,$allow)))
     }
     [IO.Directory]::SetAccessControl($Path,$acl)
 }
 function Protect-IdentityFile([string]$Path) {
-    $acl=[IO.File]::GetAccessControl($Path,[Security.AccessControl.AccessControlSections]::Access)
+    # Replace the DACL instead of editing an MPSS-inherited ACL. Some Intel
+    # files have noncanonical ACE ordering that Windows refuses to edit.
+    $acl=New-Object Security.AccessControl.FileSecurity
     $acl.SetAccessRuleProtection($true,$false)
     # ssh-keygen creates the file for this user. Change its DACL only; asking
     # Windows to rewrite its owner also requires privileges a normal user lacks.
     $owner=[Security.Principal.WindowsIdentity]::GetCurrent().User
-    foreach ($rule in @($acl.Access)) { $null=$acl.RemoveAccessRuleSpecific($rule) }
     foreach ($sid in @($owner,(New-Object Security.Principal.SecurityIdentifier('S-1-5-18')),(New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))) {
         $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid,[Security.AccessControl.FileSystemRights]::FullControl,[Security.AccessControl.AccessControlType]::Allow)))
     }
@@ -274,10 +275,16 @@ function Read-SshPersistencePlan([string]$PlanDir) {
     foreach ($inputFile in $plan.payload_inputs) { if (!(Test-Within $inputFile.path (Join-Path $PlanDir 'payload'))) { throw 'Payload outside the plan.' } }
     return $plan
 }
-function Get-RepairAcl([string]$Path) { return (Get-Acl -LiteralPath $Path).Sddl }
+function Get-RepairAcl([string]$Path) {
+    $access=[Security.AccessControl.AccessControlSections]::Access
+    return [IO.File]::GetAccessControl($Path,$access).GetSecurityDescriptorSddlForm($access)
+}
 function Set-RepairAcl([string]$Path,[string]$Sddl) {
     $acl=New-Object Security.AccessControl.FileSecurity
-    $acl.SetSecurityDescriptorSddlForm($Sddl)
+    # Old journals include owner/group fields. Ignore those too: setup changes
+    # permissions, not ownership, and restoring SYSTEM ownership needs privileges
+    # that ordinary UAC elevation does not grant.
+    $acl.SetSecurityDescriptorSddlForm($Sddl,[Security.AccessControl.AccessControlSections]::Access)
     [IO.File]::SetAccessControl($Path,$acl)
 }
 function Backup-IdentityTargets($Plan,[string]$PlanDir) {
@@ -312,7 +319,11 @@ function Restore-IdentityTargets($Journal,[string]$PlanDir) {
     }
     foreach ($entry in $Journal.entries) {
         if ($entry.exists) {
-            Copy-Item -LiteralPath (Join-Safe $PlanDir $entry.backup) -Destination $entry.path -Force
+            # A previous rollback may already have restored the bytes before
+            # stopping on permissions. Avoid rewriting an unchanged boot image.
+            if (!(Test-Path -LiteralPath $entry.path -PathType Leaf) -or (Get-FileHash -LiteralPath $entry.path).Hash -ine $entry.sha256) {
+                Copy-Item -LiteralPath (Join-Safe $PlanDir $entry.backup) -Destination $entry.path -Force
+            }
             Set-RepairAcl $entry.path $entry.acl
         } elseif (Test-Path -LiteralPath $entry.path -PathType Leaf) { Remove-Item -LiteralPath $entry.path }
     }

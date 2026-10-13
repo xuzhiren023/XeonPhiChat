@@ -21,8 +21,6 @@ on_error() {
     local rc=$? line=$1
     trap - ERR
     set +e
-    if [[ $stage == integration-benchmark ]]; then cat "$runtime/integrated-kernel-benchmark.txt" >&2; fi
-    if [[ $stage == vendor-benchmark ]]; then cat "$runtime/unchanged-kernel-benchmark.txt" >&2; fi
     printf 'FAIL: stage=%s exit=%s line=%s\n' "$stage" "$rc" "$line" >&2
     exit "$rc"
 }
@@ -110,15 +108,7 @@ step legacy-cli-startup
 unset PHI_KNC_Q5_MODE PHI_KNC_F32_MODE PHI_KNC_EXTENDED PHI_KNC_TRACE
 step modern-operators
 "$modern_test"
-workers=168
-[[ $archive == runtime-7120P.tar ]] && workers=180
-# Five samples per invocation, matching the supplied baseline dimensions.
-step vendor-benchmark
-LD_LIBRARY_PATH="$runtime/lib" "$runtime/tests/test-knc" --bench 4096 256 20 "$workers" > "$runtime/unchanged-kernel-benchmark.txt"
-cat "$runtime/unchanged-kernel-benchmark.txt"
-step integration-benchmark
-"$modern_test" --bench "$workers" > "$runtime/integrated-kernel-benchmark.txt"
-cat "$runtime/integrated-kernel-benchmark.txt"
+# Throughput benchmarking belongs in developer qualification, not installation.
 step modern-cli-startup
 "$modern_engine" --describe > "$runtime/modern-identity.json"
 "$modern_engine" --help > "$runtime/modern-help.txt"

@@ -1,5 +1,13 @@
 # Validation
 
+## 1.5.5: simpler Windows permissions and installer contents
+
+The original 1.5.4 error was a noncanonical inherited ACL. Its rollback then replayed an old security descriptor including SYSTEM ownership and failed because Windows did not allow assigning that owner. Private-file permissions now use a fresh restricted DACL; directory permissions and backup/restore leave existing owners unchanged. Old journals remain readable, but only their access rules are restored. A partially completed rollback skips copying files whose bytes already match their backups.
+
+Four focused cases were added to the existing SSH setup suite using actual Windows permissions on disposable files: a noncanonical ACL, replacement with a restricted canonical DACL, ignoring a saved SYSTEM owner, and preserving directory ownership. The existing host suite remains the development check. These tests do not configure hardware.
+
+The Windows installer excludes developer test suites, build tools, CI and repository metadata; those stay in the source ZIP. Normal runtime setup no longer measures vendor/integration throughput. Native compatibility checks, file hashes, backups and hardware temperature/memory monitoring remain. Native binaries/model files are unchanged from 1.5.4.
+
 ## 1.5.4: optional MPSS stack service and shared inference engine
 
 The reported full MPSS installation has a stopped `micRAS` telemetry service and no service named `mpss`. Setup had treated that optional name as mandatory and stopped before changing the adapter, SSH identity or boot image. Startup now permits an absent stack service, waits for required telemetry, handles pending starts, and reports missing/failed telemetry. Only exact service names are queried; Windows Firewall is never selected.

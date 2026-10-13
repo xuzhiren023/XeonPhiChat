@@ -5,6 +5,32 @@ function Test-PhiAdministrator {
     $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
+function Repair-PhiInterruptedPermissions([string]$Destination,[string]$Mpss) {
+    # 1.5.4 could restore the boot bytes and then fail replaying a SYSTEM owner.
+    # Finish that permission-only rollback during the next approved setup.
+    $parent=Split-Path $Destination -Parent
+    if (!(Test-Path -LiteralPath $parent)) { return }
+    foreach ($install in @(Get-ChildItem -LiteralPath $parent -Directory | Where-Object Name -Match '^\d+\.\d+\.\d+(?:[-.][A-Za-z0-9.-]+)?$')) {
+        $receipt=Join-Path $install.FullName 'installation.json'
+        if (!(Test-Path -LiteralPath $receipt) -or (Read-Json $receipt).product -cne 'PhiChat') { continue }
+        $state=Join-Path $install.FullName 'data/host'
+        $repairs=Join-Path $state 'data/ssh-repair'
+        if (!(Test-Path -LiteralPath $repairs)) { continue }
+        foreach ($directory in @(Get-ChildItem -LiteralPath $repairs -Directory)) {
+            $path=Join-Path $directory.FullName 'journal.json'
+            if (!(Test-Path -LiteralPath $path)) { continue }
+            $journal=Read-Json $path
+            if ($journal.state -cne 'rollback-failed') { continue }
+            $plan=Read-SshPersistencePlan $directory.FullName
+            if ($plan.mpss -cne $Mpss -or (Resolve-Absolute $plan.recovery) -cne (Resolve-Absolute $state)) { continue }
+            # Only resume when bytes are already back to their originals. Do
+            # not overwrite card work or later operator edits automatically.
+            Assert-IdentityInputs $journal.entries
+            Restore-IdentityTargets $journal $directory.FullName
+            Write-Host ('Recovered interrupted setup permissions from Phi Chat '+$install.Name+'.')
+        }
+    }
+}
 function Find-PhiMpss([string]$Hint='') {
     $path=if ($Hint) { Resolve-Absolute $Hint } else { Join-Path $env:ProgramFiles 'Intel/MPSS' }
     Assert-RegularPath $path

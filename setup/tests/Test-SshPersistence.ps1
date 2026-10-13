@@ -9,7 +9,25 @@ function Reject([scriptblock]$Action,[string]$Message) { $caught=$false; try { &
 $tmp=Join-Path ([IO.Path]::GetTempPath()) ('phi-ssh-test-'+[Guid]::NewGuid().ToString('N'))
 New-Directory $tmp
 try {
-    # OpenSSH key operations are real. Only Windows ACL APIs are replaced.
+    # Reproduce the reported Windows ACL failure on one disposable file.
+    if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+        $aclFile=Join-Path $tmp 'permissions-fixture'; Write-Utf8 $aclFile 'fixture'
+        $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+        $ownerBefore=(Get-Acl -LiteralPath $aclFile).Owner
+        $acl=New-Object Security.AccessControl.FileSecurity
+        $acl.SetSecurityDescriptorSddlForm(('D:P(A;;FA;;;'+$sid+')(D;;WD;;;BG)'),[Security.AccessControl.AccessControlSections]::Access)
+        [IO.File]::SetAccessControl($aclFile,$acl)
+        Check (!(Get-Acl -LiteralPath $aclFile).AreAccessRulesCanonical) 'fixture reproduces noncanonical MPSS file permissions'
+        Protect-IdentityFile $aclFile
+        Check ((Get-Acl -LiteralPath $aclFile).AreAccessRulesCanonical -and (Get-Acl -LiteralPath $aclFile).AreAccessRulesProtected) 'private file receives a clean restricted DACL'
+        $access=Get-RepairAcl $aclFile
+        Set-RepairAcl $aclFile ('O:SYG:SY'+$access)
+        Check ((Get-Acl -LiteralPath $aclFile).Owner -ceq $ownerBefore) 'old journal owner fields are ignored during restore'
+        $ownerBefore=(Get-Acl -LiteralPath $tmp).Owner
+        Protect-IdentityDirectory $tmp
+        Check ((Get-Acl -LiteralPath $tmp).Owner -ceq $ownerBefore) 'private directory permissions leave its owner unchanged'
+    }
+    # Transaction fixtures below replace ACL APIs; OpenSSH operations are real.
     function Protect-IdentityDirectory([string]$Path) { }
     function Protect-IdentityFile([string]$Path) { }
     function Get-RepairAcl([string]$Path) { 'fixture-acl' }
