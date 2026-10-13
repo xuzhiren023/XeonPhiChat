@@ -15,5 +15,5 @@
     "knc.cpp": "30c55d1bcb8182cc45eb55ddada844133de260191a34bff94c1384b60806f787",
     "metadata-fix.patch": "49b6dda4135d501dddae6a24ca5afba729eec4fd6fc9dc985be2376ec42645d1"
   },
-  "inherited_native_scope": "7120P: synthetic four-architecture/image fixtures and TinyDolphin trained logits; full Step3/Gaston acceptance is separate."
+  "inherited_native_scope": "7120P: synthetic four-architecture/image fixtures and TinyDolphin trained logits; full trained-model acceptance is separate."
 }

@@ -21,11 +21,11 @@ function Install-RuntimeGuard($Baseline,[string]$Remote) {
         if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -lt 20 -or $item.Length -gt 2MB) { throw 'Invalid accepted watchdog file.' }
         $bytes=[IO.File]::ReadAllBytes($guard)
         if ($bytes[0] -ne 127 -or $bytes[1] -ne 69 -or $bytes[2] -ne 76 -or $bytes[3] -ne 70 -or $bytes[4] -ne 2 -or $bytes[5] -ne 1 -or $bytes[18] -ne 181 -or $bytes[19] -ne 0) { throw 'Accepted watchdog is not ELF64 K1OM.' }
-        $sha=(Get-FileHash -LiteralPath $guard -Algorithm SHA256).Hash
+        $sha=(Get-PhiFileHash -LiteralPath $guard -Algorithm SHA256).Hash
         Send-CardFiles @($guard) ($Remote+'/')
         $returned=Join-Path $script:job 'staged-guard'
         $null=Invoke-JobProcess $script:scp ($script:scpMode+$script:sshOptions+@(($script:target+':'+$Remote+'/guard'),$returned)) 60
-        if ((Get-FileHash -LiteralPath $returned -Algorithm SHA256).Hash -cne $sha) { throw 'Watchdog transfer hash mismatch.' }
+        if ((Get-PhiFileHash -LiteralPath $returned -Algorithm SHA256).Hash -cne $sha) { throw 'Watchdog transfer hash mismatch.' }
         Write-JsonFile (Join-Path $script:job 'watchdog.json') ([pscustomobject]@{source_archive=$Baseline.runtime_archive;sha256=$sha;restored=$true})
     }
     # This is a guard-source receipt, deliberately not a native build/acceptance receipt.

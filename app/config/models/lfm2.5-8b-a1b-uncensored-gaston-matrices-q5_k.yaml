@@ -1,6 +1,6 @@
 {
   "id": "lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k",
-  "label": "LFM2.5 8B A1B Gaston Q5_K",
+  "label": "LFM2.5 8B A1B Gaston Q5_K - Text only",
   "architecture": "lfm2moe",
   "repository": "gaston-parravicini/LFM2.5-8B-A1B-Uncensored-Gaston-GGUF",
   "revision": "c4e8cb570263f2d6f79911f3ecf3538d143d682f",
@@ -23,7 +23,7 @@
     "xeon-phi-7120p"
   ],
   "candidate_profile": "xeon-phi-7120p",
-  "description": "Mixture of experts; all expert weights remain resident. Uses the multimodal runtime on 7120P.",
+  "description": "Text only. This checkpoint has no trained vision component. Choose LFM2.5-VL or Step3-VL to attach pictures.",
   "hash_provenance": "Complete generated GGUF SHA-256 independently verified; exhaustive producer tensor audit retained with the app.",
   "memory_budget_note": "Routing, selected-expert scratch, recurrent state and full resident weights are included; live memory guard applies.",
   "inference_command": "phi-modern shared",

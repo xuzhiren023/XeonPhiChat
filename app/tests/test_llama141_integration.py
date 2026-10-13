@@ -16,7 +16,7 @@ def test_modern_llama_load_chat_repeat_without_hash(tmp_path,sku,model,threads):
  ssh.write_text(s)
  load_model(f,'load',model)
  # Make any attempted SHA during Chat fatal: these are actual child job runs.
- core=f['app']/'lib/ChatCore.ps1';core.write_text(core.read_text()+"\nfunction Get-FileHash { throw 'Repeated SHA during Send is forbidden by test' }\n")
+ core=f['app']/'lib/ChatCore.ps1';core.write_text(core.read_text()+"\nfunction Get-PhiFileHash { throw 'Repeated SHA during Send is forbidden by test' }\n")
  for n in range(2):
   result,status,job=run_job(f,'chat'+str(n),model)
   assert_chat_ok(result,status,job,f,threads)

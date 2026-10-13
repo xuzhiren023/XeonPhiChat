@@ -47,7 +47,7 @@ function Test-ModernModelSource($Model,$State) {
 }
 function Assert-ModernPayload([string]$Path,$Payload) {
     if (!(Test-Path -LiteralPath $Path -PathType Leaf) -or (Get-Item -LiteralPath $Path).Length -ne $Payload.bytes -or
-        (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Payload.sha256) { throw "Modern runtime cache is missing or changed: $Path. Restore this exact archive from its matching package. Run Setup.cmd from the matching installer ZIP to repair its runtime cache." }
+        (Get-PhiFileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Payload.sha256) { throw "Modern runtime cache is missing or changed: $Path. Restore this exact archive from its matching package. Run Setup.cmd from the matching installer ZIP to repair its runtime cache." }
 }
 function Install-ModernCardRuntime($Baseline,[string]$PackageDir='',[string]$Version='1.4.2',[string]$RuntimeId='') {
     $payload=Get-ModernPayload $script:health $Version $RuntimeId

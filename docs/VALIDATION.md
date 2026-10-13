@@ -1,5 +1,17 @@
 # Validation
 
+## 1.6.1: model loading repair and LFM2.5-VL
+
+Model admission no longer depends on the PowerShell `Get-FileHash` command. The app uses the .NET SHA-256 implementation, including model, runtime and image verification. The receipt regression deliberately makes `Get-FileHash` unavailable and covers initial hashing, reuse, changed files and invalid hashes. The full Windows PowerShell 5.1 host suite passed, including WPF image controls, context/Stop behavior, setup fixtures and all nine model choices. Shared-runtime integration passed 63 source/protocol checks; the native payloads are unchanged from 1.6.0.
+
+Gaston remains available and is explicitly labeled **Text only**. LFM2.5-VL-3B is a separate image model, pinned to the official Q5_K_M decoder and matching F16 projector at revision `6f730e9a2c454e8af9adc29db58e638e01e5957f`. Both files were downloaded and fully SHA-256 verified. Loading, image attachment and Send were exercised through the actual WPF handlers against the 7120P, using automatic resources: 32,768 context, batch 128 and 180 workers. No physical OS drag gesture was automated.
+
+Two independent native image conversations returned **Blue** and **Red** for contrasting 120-by-80 images. They used the unchanged `61e9799` engine and its pinned metadata fix. Generation was 2.641 and 2.654 tokens/s, with first stream bytes at approximately 61.6 seconds after generation launch. Preparation added 24.1 and 23.7 seconds. Peak temperature was 65 C, and additional process RSS was about 1,457 MiB. The short color checks establish working image input for this pair of weights, not general photograph/OCR quality or full-context accuracy.
+
+Stop during LFM2.5-VL image encoding returned `preserve_ready=true`, removed transient inputs and released the card lease. A subsequent text request on the same loaded readiness returned **12** for 7 plus 5 without Load. That run used the same automatic context/batch, generated at 2.601 tokens/s and peaked at 60 C. Its preparation took 19.7 seconds, followed by 7.5 seconds of native initialization and prompt processing before the first output at 19.7 seconds after generation launch. No card reset, driver/service or network reconfiguration was used.
+
+The preparation investigation confirmed that automatic requests start a full native count/allocation process and then a second generation process. A proposed resident-worker design is recorded in [Architecture](ARCHITECTURE.md#preparation-latency-proposed-resident-worker). It is not implemented in 1.6.1; these results do not claim a few-second Send-to-prefill time. Gaston's prior text checks and Step3's prior image checks remain inherited evidence below, separate from this release's LFM2.5-VL checks.
+
 ## 1.6.0: images and the shared multimodal runtime
 
 The 7120P payload uses source `61e97998bf49c2d425563920b7e83e52b5ae57a6` plus the retained GCC metadata fix, executable SHA-256 `e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54`. All eight catalog models resolve to this exact shared engine on 7120P. The 3120A retains its previous pinned text engine. The producer's numerical replay and small vision fixtures are inherited evidence, separate from the trained-model checks below.

@@ -23,7 +23,9 @@ try {
     [IO.File]::WriteAllBytes($file,[Text.Encoding]::ASCII.GetBytes('GGUFfixture141'))
     $m=[pscustomobject]@{file_size_bytes=(Get-Item $file).Length;sha256=(Microsoft.PowerShell.Utility\Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()}
     $script:hashCalls=0
-    function Get-FileHash { param($LiteralPath,$Algorithm);$script:hashCalls++;Microsoft.PowerShell.Utility\Get-FileHash -LiteralPath $LiteralPath -Algorithm $Algorithm }
+    $script:realHash=(Get-Command Get-PhiFileHash).ScriptBlock
+    function Get-FileHash { throw 'Get-FileHash is unavailable in this worker environment.' }
+    function Get-PhiFileHash { param($LiteralPath,$Algorithm);$script:hashCalls++; & $script:realHash -LiteralPath $LiteralPath -Algorithm $Algorithm }
     Assert-ModelFile $file $m $receipt
     1..5 | ForEach-Object { Assert-ModelFile $file $m $receipt }
     Check ($script:hashCalls -eq 1) 'first admission hashes once; repeated preparation reuses receipt'

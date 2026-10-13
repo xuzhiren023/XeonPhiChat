@@ -16,7 +16,7 @@ foreach ($model in @($td,$lfm,$q2)) { Assert-ModelBudget $model $a }
 Reject { Assert-ModelBudget $q5 $a } '3120A rejects oversized weights'
 Assert-ModelBudget $q5 $p
 Check (@(Get-ModelChoices $root $a | Where-Object enabled).Count -eq 3) '3120A has three supported model choices'
-Check (@(Get-ModelChoices $root $p | Where-Object enabled).Count -eq 8) '7120P also admits the MoE and Step3 profiles'
+Check (@(Get-ModelChoices $root $p | Where-Object enabled).Count -eq 9) '7120P admits text, MoE, Step3 and LFM2-VL profiles'
 $copy=$td.PSObject.Copy(); $copy.memory_mode='copy'
 Reject { Assert-ModelBudget $copy $a } 'copy-mode accounting is rejected'
 $prompt=New-ChatPrompt $td @([pscustomobject]@{role='user';content='Hello'}) 'Be helpful' 1024

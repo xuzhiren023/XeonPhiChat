@@ -1,4 +1,14 @@
 # Helpers use Windows PowerShell 5.1-compatible APIs.
+function Get-PhiFileHash([string]$LiteralPath,[string]$Algorithm='SHA256') {
+    if ($Algorithm -cne 'SHA256') { throw 'Only SHA256 is supported for application assets.' }
+    $hash=[Security.Cryptography.SHA256]::Create()
+    $stream=$null
+    try {
+        $stream=[IO.File]::OpenRead($LiteralPath)
+        return [pscustomobject]@{Hash=[BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-','');Algorithm='SHA256';Path=$LiteralPath}
+    } finally { if ($stream) { $stream.Dispose() }; $hash.Dispose() }
+}
+
 function Get-BuildPolicy {
     param([int]$RequestedJobs, $Config, $Profile)
     if ($RequestedJobs -lt 0 -or $RequestedJobs -gt 8 -or
@@ -92,7 +102,7 @@ function Assert-ModelFile([string]$Path, $Model, [string]$ReceiptPath) {
         if ($stream.Read($magic, 0, 4) -ne 4 -or [Text.Encoding]::ASCII.GetString($magic) -cne 'GGUF') { throw 'Model is not a GGUF file.' }
     } finally { $stream.Dispose() }
     Write-Host 'Verifying model SHA-256 before chat; unchanged files reuse this result.'
-    $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $digest = (Get-PhiFileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($digest -cne $Model.sha256) { throw 'Model does not match the pinned SHA-256.' }
     $after=Get-Item -LiteralPath $file.FullName
     if ($after.Length -ne $file.Length -or $after.LastWriteTimeUtc.Ticks -ne $file.LastWriteTimeUtc.Ticks) { throw 'Model changed during verification; retry Load model.' }

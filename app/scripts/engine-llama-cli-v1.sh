@@ -60,7 +60,11 @@ phi_build_engine_args() {
     fi
     if [[ ${IMAGE_COUNT:-0} != 0 ]]; then
         [[ ${IMAGE_COUNT:-} =~ ^[1-4]$ && ${MODERN_SOURCE_COMMIT:-} == 61e97998bf49c2d425563920b7e83e52b5ae57a6 ]] || fail 'Invalid image runtime/count'
-        [[ $PROJECTOR_PATH == "$runtime/models/step3-vl-10b-q5_k_m-projector.gguf" && $PROJECTOR_SHA256 =~ ^[a-f0-9]{64}$ && $PROJECTOR_BYTES =~ ^[0-9]+$ ]] || fail 'Invalid projector pairing'
+        case "$MODEL_PATH" in
+            "$runtime/models/step3-vl-10b-q5_k_m.gguf"|"$runtime/models/lfm2.5-vl-3b-q5_k_m.gguf") ;;
+            *) fail 'Decoder does not support images';;
+        esac
+        [[ $PROJECTOR_PATH == "${MODEL_PATH%.gguf}-projector.gguf" && $PROJECTOR_SHA256 =~ ^[a-f0-9]{64}$ && $PROJECTOR_BYTES =~ ^[0-9]+$ ]] || fail 'Invalid projector pairing'
         [[ -f $PROJECTOR_PATH && $(cat "$PROJECTOR_PATH.identity") == "$PROJECTOR_SHA256" && $(LC_ALL=C ls -ln "$PROJECTOR_PATH" | awk '{print $5}') == "$PROJECTOR_BYTES" ]] || fail 'Projector absent or changed'
         args+=(--mmproj "$PROJECTOR_PATH")
         for ((i=0;i<IMAGE_COUNT;i++)); do

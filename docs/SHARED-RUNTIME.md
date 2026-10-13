@@ -1,12 +1,12 @@
-# Shared runtime in 1.6.0
+# Shared runtime in 1.6.1
 
-The 7120P default is now the fixed `61e9799` multimodal runtime. All eight catalog models use it; Step3-VL gains image input and Gaston gains MoE execution. The 3120A retains its `d57e0e6` text build. See [image/runtime contract](IMAGES.md), [exact new build provenance](../assets/multimodal-runtime-build.json), and [hardware validation](VALIDATION.md).
+The 7120P default is now the fixed `61e9799` multimodal runtime. All nine catalog models use it; Step3-VL and LFM2.5-VL support image input. Gaston is labeled text only. The 3120A retains its `d57e0e6` text build. See [image/runtime contract](IMAGES.md), [exact new build provenance](../assets/multimodal-runtime-build.json), and [hardware validation](VALIDATION.md).
 
 The following records the retained 1.5.7 build and its previous validation. It is not new multimodal acceptance.
 
 # Shared runtime in 1.5.7
 
-All six enabled dense models route to `shared/bin/phi-modern`, built against optimized llama.cpp commit `d57e0e6e4882445bc625aaee47f91db469f9fc22`. Its upstream base is `4413a192410fad1f054e9216114087a3e01527a0`. Mixed Q5_K_M, Q2_K and uniform Q5_K remain supported by the catalog; this update does not enable Gaston MoE, Step3-VL or a new card profile.
+All six enabled dense models route to `shared/bin/phi-modern`, built against optimized llama.cpp commit `d57e0e6e4882445bc625aaee47f91db469f9fc22`. Its upstream base is `4413a192410fad1f054e9216114087a3e01527a0`. Mixed Q5_K_M, Q2_K and uniform Q5_K remain supported by the catalog; that earlier update did not enable vision or a new card profile.
 
 Both 3120A and 7120P use exact cross-built MPSS GCC 5.1.1 binaries. ELF, ISA, ABI and host-reference checks passed. Native validation on 13 October 2026 covered a 7120P with LFM2.5 2.6B and Llama 3.3 8B Q5_K_M; the tested generation speeds were effectively unchanged from 1.5.6. Other models, full-length context quality and 3120A hardware remain unqualified. See [validation scope](VALIDATION.md). The UI displays the revision without inheriting the old TinyDolphin speed badge. Defaults are row tile 4, with 168 workers on 3120A and 180 on 7120P. Runtime placement reserves CPU 0's whole core using actual sibling topology. Context, batch and response allocation remain dynamic.
 

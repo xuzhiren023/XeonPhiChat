@@ -385,7 +385,7 @@ function Get-CheckedChatPrompt($Model,$State,[string]$RemoteModel,$Threads,[obje
         if ($fits) {
             if ($automatic) { $Tokens=[int]$Model.context_tokens-[int]$count-64; $script:request.output_tokens=$Tokens }
             if ($Model.context_tokens -ne $baseModel.context_tokens -and $null -ne $count) { Save-AllocationReceipt $allocationKey $check }
-            Write-JsonFile (Join-Path $script:job 'prompt-budget.json') ([pscustomobject]@{context_tokens=$Model.context_tokens;reserved_reply_tokens=$Tokens;margin_tokens=64;prompt_budget=$budget;prompt_tokens=$count;utf8_upper_bound=$prompt.utf8_upper_bound;omitted_pairs=$prompt.omitted_pairs;native_counted=($null -ne $count);image_count=$script:promptImages.Count;prompt_positions=$count;position_contract='Step3 normal positions equal expanded tokens'})
+            Write-JsonFile (Join-Path $script:job 'prompt-budget.json') ([pscustomobject]@{context_tokens=$Model.context_tokens;reserved_reply_tokens=$Tokens;margin_tokens=64;prompt_budget=$budget;prompt_tokens=$count;utf8_upper_bound=$prompt.utf8_upper_bound;omitted_pairs=$prompt.omitted_pairs;native_counted=($null -ne $count);image_count=$script:promptImages.Count;prompt_positions=$count;position_contract='Pinned Step3/LFM2-VL normal positions equal expanded tokens'})
             return $prompt
         }
         if ($prompt.omitted_pairs -eq 0 -and $Messages.Count -gt 1) {

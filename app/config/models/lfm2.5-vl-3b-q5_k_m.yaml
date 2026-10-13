@@ -1,0 +1,43 @@
+{
+  "schema_version": 3,
+  "id": "lfm2.5-vl-3b-q5_k_m",
+  "label": "LFM2.5-VL 3B Q5_K_M",
+  "architecture": "lfm2",
+  "repository": "LiquidAI/LFM2.5-VL-3B-GGUF",
+  "revision": "6f730e9a2c454e8af9adc29db58e638e01e5957f",
+  "filename": "LFM2.5-VL-3B-Q5_K_M.gguf",
+  "file_size_bytes": 1939744800,
+  "sha256": "5f20c13b2da2bde85362ca76b816572bd400598da528b5a2da8d7d4eda3bea3f",
+  "model_path": "models/LFM2.5-VL-3B-Q5_K_M.gguf",
+  "quantization": "Q5_K_M",
+  "context_tokens": 2048,
+  "native_context_tokens": 32768,
+  "chat_template": "gguf_metadata",
+  "thinking_prefix": false,
+  "memory_mode": "shared_mmap",
+  "runtime_family": "modern-knc",
+  "required_source_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
+  "required_runtime_feature": "knc-text-image-r1",
+  "required_runtime_version": "1.4.2",
+  "inference_command": "phi-modern shared",
+  "availability": "experimental_native",
+  "native_acceptance": false,
+  "target_profiles": [
+    "xeon-phi-7120p"
+  ],
+  "estimated_peak_runtime_mib": 1024,
+  "minimum_memory_mib": 4096,
+  "description": "Text and pictures. The matching vision component downloads automatically.",
+  "model_family": "lfm2vl",
+  "vision_adapter": "lfm2vl-v1",
+  "memory_budget_note": "Decoder, projector file, projector tensor allocation, vision scratch and decoded inputs are charged separately.",
+  "projector": {
+    "filename": "mmproj-LFM2.5-VL-3B-F16.gguf",
+    "file_size_bytes": 853993952,
+    "sha256": "74c4b2c095913be3cccce10aefe3b5d6f73aa7b4a15d49a8b68d97c229f8b922",
+    "quantization": "F16",
+    "local_only": false,
+    "required_for_vision": true,
+    "native_acceptance": false
+  }
+}

@@ -14,7 +14,7 @@ function Get-GccPayload($Health) {
 }
 function Assert-GccPayload([string]$Path,$Payload) {
     if (!(Test-Path -LiteralPath $Path -PathType Leaf) -or (Get-Item -LiteralPath $Path).Length -ne $Payload.bytes -or
-        (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Payload.sha256) { throw "GCC runtime archive is missing or changed: $Path" }
+        (Get-PhiFileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Payload.sha256) { throw "GCC runtime archive is missing or changed: $Path" }
 }
 function Install-GccCardRuntime($Baseline,[string]$PackageDir='') {
     $payload=Get-GccPayload $script:health

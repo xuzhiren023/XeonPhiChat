@@ -46,6 +46,7 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
 }
 function Assert-ModelRuntime($Model) {
     if ((($Model.id -ceq 'lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k' -and $Model.architecture -ceq 'lfm2moe') -or
+         ($Model.id -ceq 'lfm2.5-vl-3b-q5_k_m' -and $Model.architecture -ceq 'lfm2' -and (Test-ImageModel $Model)) -or
          ($Model.id -ceq 'step3-vl-10b-q5_k_m' -and $Model.architecture -ceq 'qwen3')) -and
         $Model.required_source_commit -ceq '61e97998bf49c2d425563920b7e83e52b5ae57a6' -and
         $Model.required_runtime_feature -ceq 'knc-text-image-r1' -and $Model.availability -ceq 'experimental_native') { return }
@@ -104,7 +105,7 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     while ($start -lt $Messages.Count-1 -and @($Messages[$start..($Messages.Count-1)] | ForEach-Object { Get-MessageImages $_ }).Count -gt 4) { $start+=2 }
     $images=@($Messages[$start..($Messages.Count-1)] | ForEach-Object { Get-MessageImages $_ })
     if ($images.Count -gt 4) { Stop-ChatInput 'This runtime accepts up to four images per prompt.' }
-    if ($images.Count -and !(Test-ImageModel $Model)) { Stop-ChatInput 'This model accepts text only. Use Step3-VL for images.' }
+    if ($images.Count -and !(Test-ImageModel $Model)) { Stop-ChatInput 'This model accepts text only. Choose LFM2.5-VL or Step3-VL for images.' }
     $sb = New-Object Text.StringBuilder
     $entries = @([pscustomobject]@{role='system';content=$System}) + @($Messages[$start..($Messages.Count-1)])
     if ($Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model) -and $Model.chat_template -ceq 'gguf_metadata') {
@@ -128,7 +129,7 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     }
     if ($Model.chat_template -eq 'zephyr') { $null=$sb.Append("<|assistant|>`n") }
     else { $null=$sb.Append("<|im_start|>assistant`n") }
-    if ($Model.architecture -ceq 'lfm2') { $null=$sb.Append('<think>') }
+    if ($Model.architecture -ceq 'lfm2' -and (!$Model.PSObject.Properties['thinking_prefix'] -or $Model.thinking_prefix)) { $null=$sb.Append('<think>') }
     if ($Model.architecture -ceq 'qwen3') { $null=$sb.Append("<think>`n") }
     }
     $text = $sb.ToString()

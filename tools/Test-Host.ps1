@@ -29,7 +29,7 @@ try {
     }
     $app=Join-Path $scratch 'app with spaces'
     Copy-Item -LiteralPath (Join-Path $root 'app') -Destination $app -Recurse
-    foreach ($name in @('Test-ChatControls','Test-ChatExperience','Test-ModelRuntimePairing','Test-AutoResources','Test-MoeCompatibility','Test-Images')) {
+    foreach ($name in @('Test-ChatControls','Test-ChatExperience','Test-ModelRuntimePairing','Test-AutoResources','Test-MoeCompatibility','Test-VisionModels','Test-Images')) {
         Run-Test (Join-Path $root ('tests/'+$name+'.ps1')) @('-AppRoot',$app,'-Scratch',(Join-Path $scratch $name))
     }
     Run-Test (Join-Path $root 'tests/Test-StandaloneRuntimePins.ps1') @('-AppRoot',$app)

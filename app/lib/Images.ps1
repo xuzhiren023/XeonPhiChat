@@ -1,6 +1,6 @@
 # Session-owned images. Requests carry opaque IDs, never arbitrary filesystem paths.
 function Test-ImageModel($Model) {
-    return ($Model.PSObject.Properties['vision_adapter'] -and $Model.vision_adapter -ceq 'step3vl-v1')
+    return ($Model.PSObject.Properties['vision_adapter'] -and $Model.vision_adapter -cin @('step3vl-v1','lfm2vl-v1'))
 }
 function Get-MessageImages($Message) {
     if ($Message.PSObject.Properties['images']) { foreach ($image in @($Message.images)) { $image } }
@@ -51,7 +51,7 @@ function Import-ChatImage([string]$Data,[string]$Path) {
         $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
         $output=[IO.File]::Open($target,[IO.FileMode]::CreateNew)
         try { $encoder.Save($output) } finally { $output.Dispose() }
-        $result=[pscustomobject]@{id=$id;name=$file.Name;bytes=(Get-Item -LiteralPath $target).Length;sha256=(Get-FileHash -LiteralPath $target).Hash.ToLowerInvariant();width=$bitmap.PixelWidth;height=$bitmap.PixelHeight}
+        $result=[pscustomobject]@{id=$id;name=$file.Name;bytes=(Get-Item -LiteralPath $target).Length;sha256=(Get-PhiFileHash -LiteralPath $target).Hash.ToLowerInvariant();width=$bitmap.PixelWidth;height=$bitmap.PixelHeight}
         Assert-ImageReference $result
         return $result
     } catch { Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue; throw }
@@ -60,7 +60,7 @@ function Assert-StoredImage([string]$Data,$Image) {
     $path=Get-ImagePath $Data $Image
     $file=Get-Item -LiteralPath $path -ErrorAction Stop
     if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -ne $Image.bytes -or
-        (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -cne $Image.sha256) { Stop-ChatInput 'An attached image is missing or changed. Remove it and attach it again.' }
+        (Get-PhiFileHash -LiteralPath $path).Hash.ToLowerInvariant() -cne $Image.sha256) { Stop-ChatInput 'An attached image is missing or changed. Remove it and attach it again.' }
     return $path
 }
 function Remove-UnreferencedImages([string]$Data,[object[]]$Sessions) {

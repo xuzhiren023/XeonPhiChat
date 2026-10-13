@@ -1,6 +1,8 @@
-# LFM2.5-8B-A1B Gaston integration status
+# LFM2.5-8B-A1B Gaston: text only
 
-**Phi Chat 1.6.0 enables this model on 7120P with the pinned `61e9799` multimodal runtime.** Earlier app versions deliberately blocked it. Existing Gaston Q5_K packs remain compatible. The selector does not claim a speed advantage or inherit the dense models' numerical acceptance.
+This is a text model with no matching trained vision component. The selector labels it **Text only**. Choose the separate **LFM2.5-VL** model for pictures; a shared multimodal runtime does not turn text weights into a vision model.
+
+**Phi Chat 1.6.1 retains this model on 7120P with the pinned `61e9799` multimodal runtime.** Earlier app versions deliberately blocked it. Existing Gaston Q5_K packs remain compatible. The selector does not claim a speed advantage or inherit the dense models' numerical acceptance.
 
 The requested [Gaston checkpoint](https://huggingface.co/gaston-parravicini/LFM2.5-8B-A1B-Uncensored-Gaston-GGUF) is pinned to revision `c4e8cb570263f2d6f79911f3ecf3538d143d682f`. Its GGUF header reports `lfm2moe`, 24 blocks, embedding width 2048, 128,000-token training context, 32 experts with 4 selected per token, 2 leading dense blocks, 18 short convolutions and 6 attention blocks. The published Q8_0 source is 9,010,195,616 bytes with SHA-256 `a3bd5a242606e7a3af2950a2377e2411dadf4afa9883199a948cb8c834af38f9`.
 

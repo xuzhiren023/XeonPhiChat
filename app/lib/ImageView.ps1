@@ -37,7 +37,7 @@ function Show-Attachments {
 function Add-ImageFiles([string[]]$Paths) {
     try {
         $model=Get-ModelProfile $script:appRoot $script:selectedModel
-        if (!(Test-ImageModel $model)) { throw 'Choose Step3-VL in a new chat to attach images.' }
+        if (!(Test-ImageModel $model)) { throw 'Choose LFM2.5-VL or Step3-VL in a new chat to attach images.' }
         if ($script:active) { throw 'Wait for the response to finish before attaching an image.' }
         if ($script:conversation.images.Count+$Paths.Count -gt 4) { throw 'This runtime accepts up to four images in a prompt.' }
         foreach ($path in $Paths) { $script:conversation.images+=@(Import-ChatImage $connection.data_dir $path) }
