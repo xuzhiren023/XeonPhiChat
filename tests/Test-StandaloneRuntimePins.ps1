@@ -17,3 +17,10 @@ foreach ($payload in $pin.payloads) {
     if (!$failed) { throw 'Runtime from a different card profile was accepted.' }
     Write-Output ('PASS: exact runtime ID/SHA for '+$payload.profile+'; wrong-profile runtime rejected.')
 }
+$previous=Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime-1.5.3-paired.json')
+foreach ($payload in $previous.payloads) {
+    $health=[pscustomobject]@{profile=[pscustomobject]@{profile_id=$payload.profile}}
+    $found=Get-ModernPayload $health '1.4.2' $payload.runtime_id
+    if ($found.sha256 -cne $payload.sha256) { throw 'Previous paired runtime pin was lost.' }
+    Write-Output ('PASS: original 1.5.3 runtime still resolves by exact ID for '+$payload.profile)
+}

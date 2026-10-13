@@ -13,6 +13,10 @@ phi_select_engine() {
             engine="$runtime/llama/phi-modern"
             case ${MODERN_ENGINE_VARIANT:-standard} in
             standard) ;;
+            shared)
+                [[ -f $runtime/shared-runtime-id.txt && $(cat "$runtime/shared-runtime-id.txt") == "$MODERN_RUNTIME_ID" ]] || fail 'Shared runtime identity'
+                engine="$runtime/shared/bin/phi-modern"
+                ;;
             optimized)
                 [[ -f $runtime/optimized-runtime-id.txt ]] || fail 'Optimized model runtime is not installed'
                 [[ $(cat "$runtime/optimized-runtime-id.txt") == "$MODERN_RUNTIME_ID" ]] || fail 'optimized runtime identity'
@@ -25,8 +29,10 @@ phi_select_engine() {
     esac
 }
 phi_configure_engine() {
-    unset BP_KNC_CPUS BP_Q5_SPECIALIZE
-    if [[ $engine == "$runtime/optimized/bin/phi-modern" ]]; then
+    unset BP_KNC_CPUS BP_Q5_SPECIALIZE GGML_KNC_MQ GGML_KNC_MQ_ROWS
+    if [[ $engine == "$runtime/shared/bin/phi-modern" ]]; then
+        source "$runtime/shared/configure.sh"
+    elif [[ $engine == "$runtime/optimized/bin/phi-modern" ]]; then
         source "$runtime/optimized/configure.sh"
     fi
 }

@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "id": "tinydolphin-2.8-1.1b-q5_k_m",
   "label": "TinyDolphin 1.1B Q5_K_M",
   "architecture": "llama",
@@ -16,7 +16,13 @@
   "memory_budget_note": "Admission estimate: one RAM-backed GGUF file plus additional runtime (KV cache, compute and metadata). Shared mmap required; not a measured peak.",
   "memory_mode": "shared_mmap",
   "license_note": "Apache-2.0 on the author and quantizer model cards.",
-  "description": "Small Dolphin-family option for responsiveness; Q5_K uses the historical KNC dot kernel. Assess quality during chat; not yet tested on your card.",
+  "description": "Small Dolphin-family model using the shared multi-quant runtime and its original ChatML prompt.",
   "experimental_context_tokens": 4096,
-  "context_4k_extra_runtime_mib": 256
+  "context_4k_extra_runtime_mib": 256,
+  "runtime_family": "modern-knc",
+  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "availability": "experimental_native",
+  "native_acceptance": false,
+  "required_runtime_feature": "shared-multi-quant-v1",
+  "inference_command": "shared/bin/phi-modern"
 }

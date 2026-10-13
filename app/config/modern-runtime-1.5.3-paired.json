@@ -1,0 +1,29 @@
+{
+  "version": "1.4.2",
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "kernel_version": "0.2.1",
+  "payloads": [
+    {
+      "profile": "xeon-phi-3120a",
+      "file": "runtime-3120A.tar",
+      "sha256": "91959fa4f510028b05cf9c7a16926e0598e6e27d09832c18095be83b6624bb6e",
+      "bytes": 42383360,
+      "runtime_id": "phichat142-modern-346789f47a328478",
+      "main_sha256": "17ded4495f77e5150ba55965a7b74f80a170f41abf8ebba3ac28f281cd9aff80"
+    },
+    {
+      "profile": "xeon-phi-7120p",
+      "file": "runtime-7120P.tar",
+      "sha256": "0ab988a1f5c65beb01284f281726cb3f2e0cc9678cbbd33dd1382622bca700df",
+      "bytes": 69826560,
+      "runtime_id": "phichat142-modern-9610d4c7df2513c6",
+      "main_sha256": "e2c23c41dcd8af2bb5d03b934f8f4778facb8de606413a6d259916a755b45750",
+      "features": [
+        "auto-resources-v1",
+        "q5-balanced-pf64-v1"
+      ]
+    }
+  ],
+  "repair_version": "q5-balanced-pf64-v1"
+}

@@ -26,7 +26,7 @@
   "native_acceptance": false,
   "hash_provenance": "Complete GGUF downloaded and SHA-256 verified locally; PhiChat verifies new/changed local files before chat.",
   "memory_budget_note": "2K context, batch 32, F16 KV 256 MiB; additional runtime budget 1024 MiB; native peak pending.",
-  "inference_command": "llama/phi-modern",
+  "inference_command": "shared/bin/phi-modern",
   "model_path": "models/SicariusSicariiStuff_Llama-3.3-8B-Instruct-128K_Abliterated-Q2_K.gguf",
   "upstream_revision": "52830094ce6105e675e4b61ebe3d1d9847bb76cd",
   "stop_token_ids": [
@@ -34,5 +34,6 @@
     128008,
     128009
   ],
-  "required_runtime_version": "1.4.1"
+  "required_runtime_version": "1.4.1",
+  "required_runtime_feature": "shared-multi-quant-v1"
 }

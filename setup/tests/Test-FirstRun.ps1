@@ -26,7 +26,16 @@ try {
     $script:fakeState='ready'; $script:generated=0; $script:boots=0; $script:resets=0; $script:sshCalls=0
     $script:realProcess=(Get-Item Function:Invoke-SetupProcess).ScriptBlock
     function Enable-PhiTools { param($Plan) }
-    function Start-PhiServices { param($Mpss,$Run) }
+    $script:rasFixture=[pscustomobject]@{Name='micRAS';Status='Stopped'}
+    $script:rasFixture | Add-Member ScriptMethod WaitForStatus { param($Wanted,$Timeout); $this.Status='Running' }
+    $script:rasFixture | Add-Member ScriptMethod Refresh { }
+    function Get-Service {
+        param($Name,$ErrorAction)
+        if ($Name -ceq 'micras') { return $script:rasFixture }
+        if ($Name -cne 'mpss') { throw 'Unexpected fixture service lookup.' }
+        return $null
+    }
+    function Start-Service { param($Name,$ErrorAction); Check ($Name -ceq 'micras') 'first-run starts only required micRAS when no mpss service exists' }
     function Get-PhiHostPlan { param($MpssDirectory,$InterfaceIndex); return $plan }
     function Get-NetIPInterface { param($InterfaceIndex,$AddressFamily); [pscustomobject]@{Dhcp='Disabled'} }
     function New-NetIPAddress { param($InterfaceIndex,$IPAddress,$PrefixLength,$ErrorAction); Check ($InterfaceIndex -eq 7 -and $IPAddress -ceq '192.168.66.1') 'provisions the planned Phi address' }
@@ -51,6 +60,7 @@ try {
         return (& $script:realProcess $Exe $Arguments $Run $Timeout)
     }
     $result=Initialize-PhiHost $install $plan $run
+    Check ($script:rasFixture.Status -ceq 'Running') 'full first-run passed actual service startup function with the reported MPSS layout'
     Check ($script:generated -eq 2 -and $script:boots -eq 1 -and $script:resets -eq 0) 'fresh MPSS image generated, then provisioned and booted once'
     Check ($script:sshCalls -eq 1 -and $result.boot_id -ceq '00000000-0000-0000-0000-000000000001') 'host receipt follows verified boot identity'
     Check (Test-Path -LiteralPath (Join-Path $install 'app/private/id_ed25519')) 'new user receives a login identity'

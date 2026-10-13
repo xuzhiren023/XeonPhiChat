@@ -90,7 +90,7 @@ function Update-ModelRuntimeStatus {
         return
     }
     $controls.RuntimeStatus.Visibility='Visible'
-    $label=switch ($choice.engine_variant) {'optimized' {'Optimized Q5_K runtime'} 'standard' {'Standard runtime'} default {'Classic runtime'}}
+    $label=switch ($choice.engine_variant) {'shared' {'Shared optimized runtime'} 'optimized' {'Optimized Q5_K runtime'} 'standard' {'Standard runtime'} default {'Classic runtime'}}
     $using=((Test-SelectedReady) -and $script:loadedModel.PSObject.Properties['engine_variant'] -and $script:loadedModel.engine_variant -ceq $choice.engine_variant)
     $controls.RuntimeStatus.Text=if ($choice.optimized) {'Optimized for fast chat'} else {$label}
     $controls.RuntimeStatus.Foreground=if ($choice.optimized) {'#6DDC9F'} else {'#999999'}

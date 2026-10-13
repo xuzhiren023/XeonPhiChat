@@ -9,7 +9,7 @@ function Get-ModernSelectionPath([string]$Data,$Health) {
 function Get-ModernPayload($Health,[string]$Version='1.4.2',[string]$RuntimeId='') {
     if ($Version -notin @('1.4.0','1.4.1','1.4.2')) { throw 'Unsupported modern runtime version.' }
     $files=if ($Version -cne '1.4.2') { @('config/modern-runtime-'+$Version+'.json') }
-           elseif ($RuntimeId) { @('config/modern-runtime.json','config/modern-runtime-1.4.2-original.json','config/modern-runtime-q5-repair-r1.json','config/modern-runtime-preview-standard.json') }
+           elseif ($RuntimeId) { @('config/modern-runtime.json','config/modern-runtime-1.5.3-paired.json','config/modern-runtime-1.4.2-original.json','config/modern-runtime-q5-repair-r1.json','config/modern-runtime-preview-standard.json') }
            else { @('config/modern-runtime.json') }
     $matches=@(foreach ($file in $files) {
         $pin=Read-JsonFile (Join-Path $script:root $file)
@@ -97,7 +97,8 @@ function Resolve-ModernRuntime($Baseline,[switch]$RestoreMissing) {
     Assert-ModernSelection $s $payload
     if ($s.source_commit -cne $Baseline.source_commit) { throw 'Baseline source differs from modern runtime.' }
     if ($RestoreMissing) {
-        $present=(Invoke-Card "if test -x '$($s.remote_base)/llama/main' && test -f '$($s.remote_base)/modern-runtime-passed.txt'; then cat '$($s.remote_base)/modern-runtime-passed.txt'; fi").Trim()
+        $engine=if ($payload.PSObject.Properties['features'] -and 'shared-multi-quant-v1' -cin $payload.features) { 'shared/bin/phi-modern' } else { 'llama/main' }
+        $present=(Invoke-Card "if test -x '$($s.remote_base)/$engine' && test -f '$($s.remote_base)/modern-runtime-passed.txt'; then cat '$($s.remote_base)/modern-runtime-passed.txt'; fi").Trim()
         if ($present -cne $payload.runtime_id) { $s=Install-ModernCardRuntime $Baseline -Version ([string]$s.version) -RuntimeId ([string]$s.runtime_id) }
     }
     $result=$Baseline | ConvertTo-Json -Depth 12 | ConvertFrom-Json

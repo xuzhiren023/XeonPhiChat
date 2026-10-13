@@ -7,19 +7,28 @@ $null=New-Item -ItemType Directory $Scratch -Force
 . (Join-Path $AppRoot 'lib/ChatCore.ps1')
 $p=Read-JsonFile (Join-Path $AppRoot 'config/hardware/xeon-phi-7120p.yaml')
 $small=Read-JsonFile (Join-Path $AppRoot 'config/hardware/xeon-phi-3120a.yaml')
-$runtime=[pscustomobject]@{modern_features=@('auto-resources-v1','q5-balanced-pf64-v1')}
-$expected=@{'lfm2.5-2.6b-matrices-q5_k'=@('optimized',120);'llama-3.3-8b-abliterated-matrices-q5_k'=@('optimized',240);
-    'lfm2.5-2.6b-q5_k_m'=@('standard',180);'llama-3.3-8b-abliterated-q5_k_m'=@('standard',180);
-    'llama-3.3-8b-abliterated-q2_k'=@('standard',180);'tinydolphin-q5_k_m'=@('historical',240)}
+$runtime=[pscustomobject]@{modern_features=@('auto-resources-v1','shared-multi-quant-v1')}
+$expected=@{'lfm2.5-2.6b-matrices-q5_k'=@('shared',180);'llama-3.3-8b-abliterated-matrices-q5_k'=@('shared',180);
+    'lfm2.5-2.6b-q5_k_m'=@('shared',180);'llama-3.3-8b-abliterated-q5_k_m'=@('shared',180);
+    'llama-3.3-8b-abliterated-q2_k'=@('shared',180);'tinydolphin-q5_k_m'=@('shared',180)}
 foreach($id in $expected.Keys) {
     $m=Get-ModelProfile $AppRoot $id
     Check ((Get-ModelEngineVariant $m) -ceq $expected[$id][0]) ($id+': explicit engine pairing')
     Check ((Get-ThreadChoice $p $m $runtime).generation -eq $expected[$id][1]) ($id+': paired worker policy')
+    Assert-ModelRuntimeFeatures $m $runtime
+    $reject=$false;try{Assert-ModelRuntimeFeatures $m ([pscustomobject]@{modern_features=@('q5-balanced-pf64-v1')})}catch{$reject=$true}
+    Check $reject ($id+': old Q5-only runtime cannot silently run this selection')
+    Check ((Get-ThreadChoice $small $m $runtime).generation -eq 168) ($id+': 3120A policy respects its cores')
 }
+$tiny=Get-ModelProfile $AppRoot 'tinydolphin-q5_k_m'
+$policy=Get-ThreadChoice $p $tiny $runtime
+Check ($policy.prompt -eq 120 -and $policy.mq_rows -eq 8) 'TinyDolphin uses the tested 7120P prompt/decode/row setting'
+$prompt=New-ChatPrompt $tiny @([pscustomobject]@{role='user';content='hello'}) 'system'
+Check ($prompt.text.StartsWith('<|im_start|>system') -and !$prompt.text.Contains('<|start_header_id|>')) 'TinyDolphin retains ChatML on the new engine'
 $reject=$false;try{Get-ModelEngineVariant (Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m')}catch{$reject=$true}
 Check $reject 'unsupported architecture cannot acquire an engine pairing'
 $choices=@(Get-ModelChoices $AppRoot $p)
-Check (@($choices|Where-Object optimized).Count -eq 2) 'only the two uniform Q5_K models earn the performance check'
+Check (@($choices|Where-Object optimized).Count -eq 1) 'performance check follows the new engine evidence, not old Q5-only qualification'
 Check (@(Get-ModelChoices $AppRoot $small|Where-Object optimized).Count -eq 0) 'unsupported card never shows the performance check'
 Check (@(Get-ModelChoices $AppRoot|Where-Object optimized).Count -eq 0) 'unknown hardware never shows the performance check'
 $reject=$false;try {Assert-ModelReady ([pscustomobject]@{engine_variant='standard'}) (Get-ModelProfile $AppRoot 'lfm2.5-2.6b-matrices-q5_k') $runtime $null} catch {$reject=$_.Exception.Message -like '*pairing changed*'}
@@ -29,19 +38,19 @@ $source=[IO.File]::ReadAllText((Join-Path $AppRoot 'Start-PhiChat.ps1'))
 $source=$source.Replace('$PSScriptRoot',"'$($AppRoot.Replace("'","''"))'").Replace('$timer.Start()','').Replace('[void]$window.ShowDialog()','')
 . ([scriptblock]::Create($source))
 Accept-CardSession ([pscustomobject]@{serial='TEST';boot_id='boot';profile=$p;temperature_c=42;memory=[pscustomobject]@{available_kib=12000000}})
-$fast=New-ChatSession 'lfm2.5-2.6b-matrices-q5_k'
+$fast=New-ChatSession 'tinydolphin-q5_k_m'
 $mixed=New-ChatSession 'lfm2.5-2.6b-q5_k_m'
 $script:sessions[$fast.id]=$fast;$script:sessions[$mixed.id]=$mixed
 Select-Conversation $fast
-Check ($controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Optimized for fast chat') 'Q5_K selection shows the green performance badge'
+Check ($controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Optimized for fast chat') 'tested TinyDolphin/7120P selection shows the green performance badge'
 Check ($controls.RuntimeStatus.ToolTip -like 'Selected:*') 'selection does not claim an unloaded engine is running'
-$script:loadedModel=[pscustomobject]@{serial='TEST';engine_variant='optimized'};$script:loadedSelection=$fast.model
+$script:loadedModel=[pscustomobject]@{serial='TEST';engine_variant='shared'};$script:loadedSelection=$fast.model
 Show-SelectedModelState
-Check ($controls.RuntimeStatus.ToolTip -ceq 'Using optimized q5_k runtime.') 'successful Load confirms the actual optimized engine'
+Check ($controls.RuntimeStatus.ToolTip -ceq 'Using shared optimized runtime.') 'successful Load confirms the shared engine'
 Select-Conversation $mixed
-Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Standard runtime') 'navigating to mixed weights restores the standard runtime label'
+Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Shared optimized runtime') 'mixed weights use the shared runtime without an inherited performance claim'
 Select-Conversation $fast
-Check ($controls.Model.SelectedItem.optimized) 'returning to Q5_K restores its check'
+Check ($controls.Model.SelectedItem.optimized) 'returning to the tested model restores its check'
 # Render the selected badge and the small-window layout without opening a window.
 foreach($size in @(@(1180,820),@(820,560))) {
     $window.Width=$size[0];$window.Height=$size[1]

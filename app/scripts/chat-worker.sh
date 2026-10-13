@@ -194,7 +194,7 @@ else
     ! grep -Eiq '(^|[^[:alpha:]])(nan|inf)([^[:alpha:]]|$)' "$job/report/timing.txt" || fail 'Non-finite runtime diagnostic'
 fi
 [[ -n $mapping_seen ]] || fail 'Shared model mapping not observed; no successful memory-mapped inference receipt'
-if [[ $RUN_MODE == generate && $engine == "$runtime/optimized/bin/phi-modern" ]]; then
+if [[ $RUN_MODE == generate && ( $engine == "$runtime/optimized/bin/phi-modern" || $engine == "$runtime/shared/bin/phi-modern" ) ]]; then
     [[ ${affinity_verified:-} == 1 ]] || fail 'Optimized worker affinity was not observed'
 fi
 cat /proc/meminfo > "$job/report/memory-after.txt"

@@ -1,29 +1,33 @@
 {
-  "version": "1.4.2",
-  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
-  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
   "kernel_version": "0.2.1",
+  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
   "payloads": [
     {
-      "profile": "xeon-phi-3120a",
-      "file": "runtime-3120A.tar",
-      "sha256": "91959fa4f510028b05cf9c7a16926e0598e6e27d09832c18095be83b6624bb6e",
-      "bytes": 42383360,
-      "runtime_id": "phichat142-modern-346789f47a328478",
-      "main_sha256": "17ded4495f77e5150ba55965a7b74f80a170f41abf8ebba3ac28f281cd9aff80"
-    },
-    {
-      "profile": "xeon-phi-7120p",
-      "file": "runtime-7120P.tar",
-      "sha256": "0ab988a1f5c65beb01284f281726cb3f2e0cc9678cbbd33dd1382622bca700df",
-      "bytes": 69826560,
-      "runtime_id": "phichat142-modern-9610d4c7df2513c6",
-      "main_sha256": "e2c23c41dcd8af2bb5d03b934f8f4778facb8de606413a6d259916a755b45750",
+      "bytes": 69376000,
       "features": [
         "auto-resources-v1",
-        "q5-balanced-pf64-v1"
-      ]
+        "shared-multi-quant-v1"
+      ],
+      "file": "runtime-3120A.tar",
+      "main_sha256": "a8ff7cda62fdb384ed02f1f36e7a96dd43df5209ca2992eef45dc088d9446883",
+      "profile": "xeon-phi-3120a",
+      "runtime_id": "phichat142-modern-0a9429d60cdf8c42",
+      "sha256": "9977342a2b17895ace8789e4d5e8eacf16e272fcf2c713d5a20c6e7418f4c485"
+    },
+    {
+      "bytes": 69386240,
+      "features": [
+        "auto-resources-v1",
+        "shared-multi-quant-v1"
+      ],
+      "file": "runtime-7120P.tar",
+      "main_sha256": "3bda6cddfe8c7cd976348bb244a42e3b0610894a63364366e5391eb300f87453",
+      "profile": "xeon-phi-7120p",
+      "runtime_id": "phichat142-modern-0410f93aaeede4e3",
+      "sha256": "f6dfd7402c04df45b8d7fef7f342644a2855b433b5ee7bd1c80245d56349fd6f"
     }
   ],
-  "repair_version": "q5-balanced-pf64-v1"
+  "repair_version": "shared-multi-quant-v1",
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "version": "1.4.2"
 }

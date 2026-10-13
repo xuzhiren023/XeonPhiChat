@@ -1,5 +1,13 @@
 # Validation
 
+## 1.5.4: optional MPSS stack service and shared inference engine
+
+The reported full MPSS installation has a stopped `micRAS` telemetry service and no service named `mpss`. Setup had treated that optional name as mandatory and stopped before changing the adapter, SSH identity or boot image. Startup now permits an absent stack service, waits for required telemetry, handles pending starts, and reports missing/failed telemetry. Only exact service names are queried; Windows Firewall is never selected.
+
+Windows PowerShell 5.1 host validation covers 12 service regression checks (absent/running/stopped/pending stack, missing telemetry, timeout and denied start), 11 first-run checks using the actual repaired service function against service/MPSS/network doubles, installer UAC handoff, setup transactions and the existing application regression suite. The shared runtime checks exercise both hardware topologies with contiguous/interleaved CPU numbering, all worker counts, invalid placement, exact engine routing, missing/wrong receipts, ELF and library identity, and full payload hashes. These are host tests, not hardware acceptance.
+
+All six supported chat models require `shared-multi-quant-v1`; old runtimes cannot silently satisfy that requirement. TinyDolphin retains ChatML, verified against its hash-pinned local GGUF (EOS 32000). The 7120P package uses the upstream r4 export; 3120A uses its latest r3 candidate. [Build evidence and remaining native qualification](SHARED-RUNTIME.md) are separate from app acceptance. Old installation directories and native release ZIPs remain preserved. No card reset, boot, service start or host configuration change was used to test this repair.
+
 ## 1.5.3: Windows installer launch repair
 
 The reported 1.5.2 failure immediately after accepting UAC was reproduced with the installer entry point. An array expression joined a parameter name and value into one argument (`-Model lfm2.5-2.6b-q5_k_m`), causing the elevated PowerShell process to reject its arguments before setup or error logging began. The corrected expression passes two separate arguments, including for paths containing spaces.

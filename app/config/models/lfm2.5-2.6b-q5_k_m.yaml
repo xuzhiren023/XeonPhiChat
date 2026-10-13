@@ -26,7 +26,8 @@
   "native_acceptance": false,
   "hash_provenance": "Downloaded complete GGUF; SHA-256 verified locally",
   "memory_budget_note": "2K context; 32-token microbatch. Estimated 1536 MiB additional runtime plus weights counted once. Native peak validation pending.",
-  "inference_command": "llama/phi-modern",
+  "inference_command": "shared/bin/phi-modern",
   "model_path": "models/LFM2.5-2.6B-Q5_K_M.gguf",
-  "recommended_profile": "xeon-phi-3120a"
+  "recommended_profile": "xeon-phi-3120a",
+  "required_runtime_feature": "shared-multi-quant-v1"
 }

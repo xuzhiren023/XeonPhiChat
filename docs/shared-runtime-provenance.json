@@ -1,0 +1,56 @@
+[
+  {
+    "binaries": {
+      "phi-modern": {
+        "bytes": 11188869,
+        "sha256": "a8ff7cda62fdb384ed02f1f36e7a96dd43df5209ca2992eef45dc088d9446883"
+      },
+      "test-knc-mq": {
+        "bytes": 7813038,
+        "sha256": "2b531fd85a504ad11efa28c5e1560fe14886252834105ce54cc67cdf39f24520"
+      },
+      "test-modern-ops": {
+        "bytes": 7822367,
+        "sha256": "d56ec5171b717849fe048309b2511d146c90aab8572230df0119c024a7c9b4f3"
+      }
+    },
+    "build_receipt_sha256": "16d4a03902e4dc40955b043c26a5a3ef865c120af0355ace07e2950702111b3a",
+    "candidate": "knc-mq-dc2cee6d8fb2420e1a06",
+    "libgomp_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+    "native_acceptance": false,
+    "native_evidence": "cross-build and ISA audit only; native validation pending",
+    "parent_runtime_id": "phichat142-modern-346789f47a328478",
+    "parent_sha256": "91959fa4f510028b05cf9c7a16926e0598e6e27d09832c18095be83b6624bb6e",
+    "profile": "xeon-phi-3120a",
+    "revision": "r3",
+    "runtime_id": "phichat142-modern-0a9429d60cdf8c42",
+    "source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0"
+  },
+  {
+    "binaries": {
+      "phi-modern": {
+        "bytes": 11188869,
+        "sha256": "3bda6cddfe8c7cd976348bb244a42e3b0610894a63364366e5391eb300f87453"
+      },
+      "test-knc-mq": {
+        "bytes": 7813038,
+        "sha256": "4c1eada449c8b307c4f6351d3f5a6341487d6309487135e508c2f651c0d0d95e"
+      },
+      "test-modern-ops": {
+        "bytes": 7822367,
+        "sha256": "ff018d83ed45c3c9705eed0a1dc9c049d68216d2b72d0bbe8013929ae8ea128f"
+      }
+    },
+    "build_receipt_sha256": "335c66bddf1f17539751d225ce0045abf0b6d462e1a6e551699e941de1364bf4",
+    "candidate": "knc-mq-a3ab0be8c35cb872acb6",
+    "libgomp_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+    "native_acceptance": false,
+    "native_evidence": "upstream export: operators/graphs passed; TinyDolphin Q5_K_M bitwise comparison with qualified r3 at rows8, prompt120/decode180; not app integration acceptance",
+    "parent_runtime_id": "phichat142-modern-9610d4c7df2513c6",
+    "parent_sha256": "0ab988a1f5c65beb01284f281726cb3f2e0cc9678cbbd33dd1382622bca700df",
+    "profile": "xeon-phi-7120p",
+    "revision": "standalone-export-r4",
+    "runtime_id": "phichat142-modern-0410f93aaeede4e3",
+    "source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0"
+  }
+]

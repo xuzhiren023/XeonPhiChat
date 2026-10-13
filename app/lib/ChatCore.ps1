@@ -16,14 +16,12 @@ function Write-JsonFile([string]$Path, $Value) {
 function Test-ModernTextModel($Model) {
     return ($Model.architecture -ceq 'lfm2' -or ($Model.PSObject.Properties['runtime_family'] -and $Model.runtime_family -ceq 'modern-knc' -and $Model.architecture -ceq 'llama'))
 }
-function Test-Q5OptimizedModel($Model) {
-    return ((($Model.id -ceq 'lfm2.5-2.6b-matrices-q5_k' -and $Model.architecture -ceq 'lfm2') -or
-             ($Model.id -ceq 'llama-3.3-8b-abliterated-matrices-q5_k' -and $Model.architecture -ceq 'llama')) -and
-        $Model.PSObject.Properties['required_runtime_feature'] -and $Model.required_runtime_feature -ceq 'q5-balanced-pf64-v1')
+function Test-SharedRuntimeModel($Model) {
+    return ((Test-ModernTextModel $Model) -and $Model.PSObject.Properties['required_runtime_feature'] -and $Model.required_runtime_feature -ceq 'shared-multi-quant-v1')
 }
 function Get-ModelEngineVariant($Model) {
     Assert-ModelRuntime $Model
-    if (Test-Q5OptimizedModel $Model) { return 'optimized' }
+    if (Test-SharedRuntimeModel $Model) { return 'shared' }
     if (Test-ModernTextModel $Model) { return 'standard' }
     return 'historical'
 }
@@ -39,7 +37,7 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
     $modern=($m.architecture -in @('lfm2','lfm2moe','qwen3') -or (Test-ModernTextModel $m))
     if ($modern) {
         if (!$m.PSObject.Properties['runtime_family'] -or $m.runtime_family -cne 'modern-knc' -or
-            $m.chat_template -cne 'gguf_metadata' -or $m.schema_version -ne 3 -or
+            ($m.chat_template -cne 'gguf_metadata' -and !($m.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m' -and $m.chat_template -ceq 'chatml')) -or $m.schema_version -ne 3 -or
             $m.required_source_commit -notin @('de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b','6783b11fb0889d68d0046176b4cc92ceee1961b0')) { throw 'Invalid modern KNC model profile.' }
     } elseif ($m.chat_template -ceq 'gguf_metadata') { throw 'Legacy model requires its validated chat template.' }
     return $m
@@ -49,7 +47,7 @@ function Assert-ModelRuntime($Model) {
         throw 'LFM2-MoE needs a validated KNC MoE runtime. This build cannot run it; importing Q5_K weights does not enable execution.'
     }
     if ((($Model.id -in @('lfm2.5-2.6b-q5_k_m','lfm2.5-2.6b-matrices-q5_k') -and $Model.architecture -ceq 'lfm2') -or
-        ($Model.id -in @('llama-3.3-8b-abliterated-q2_k','llama-3.3-8b-abliterated-q5_k_m','llama-3.3-8b-abliterated-matrices-q5_k') -and $Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model))) -and
+        ($Model.id -in @('tinydolphin-2.8-1.1b-q5_k_m','llama-3.3-8b-abliterated-q2_k','llama-3.3-8b-abliterated-q5_k_m','llama-3.3-8b-abliterated-matrices-q5_k') -and $Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model))) -and
         $Model.required_source_commit -ceq '6783b11fb0889d68d0046176b4cc92ceee1961b0' -and
         $Model.availability -ceq 'experimental_native') { return }
     # This release ships the accepted historical worker. Catalog metadata or a
@@ -80,7 +78,7 @@ function Get-ModelChoices([string]$Root,$Profile=$null) {
         try { $engine=Get-ModelEngineVariant $model }
         catch { $enabled=$false; $hint=$model.description+' '+$_.Exception.Message }
         [pscustomobject]@{name=$file.BaseName;label=([regex]::Replace($model.label,'\s*\([^)]*\)',''));enabled=$enabled;hint=$hint;
-            engine_variant=$engine;optimized=[bool]($enabled -and $null -ne $Profile -and $engine -ceq 'optimized')}
+            engine_variant=$engine;optimized=[bool]($enabled -and $null -ne $Profile -and $engine -ceq 'shared' -and $Profile.profile_id -ceq 'xeon-phi-7120p' -and $model.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m')}
     }
 }
 function New-ModelConversation {
@@ -101,7 +99,7 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     $start = if ($LatestOnly) { $Messages.Count-1 } else { 0 }
     $sb = New-Object Text.StringBuilder
     $entries = @([pscustomobject]@{role='system';content=$System}) + @($Messages[$start..($Messages.Count-1)])
-    if ($Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model)) {
+    if ($Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model) -and $Model.chat_template -ceq 'gguf_metadata') {
         # Pinned checkpoint text-only Jinja defaults: no tools and fixed date.
         $null=$sb.Append("<|begin_of_text|><|start_header_id|>system<|end_header_id|>`n`nCutting Knowledge Date: December 2023`nToday Date: 30 Dec 2025`n`n"+$System.Trim()+'<|eot_id|>')
         foreach ($e in @($Messages[$start..($Messages.Count-1)])) {
@@ -134,28 +132,28 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     # tokenizers. Long text is counted by the actual KNC tokenizer, not rejected.
     return [pscustomobject]@{text=$text;omitted_pairs=($start/2);utf8_upper_bound=($bytes+1)}
 }
-function Test-OptimizedRuntime($State) {
-    return ($null -ne $State -and $State.PSObject.Properties['modern_features'] -and 'q5-balanced-pf64-v1' -cin $State.modern_features)
-}
 function Assert-ModelRuntimeFeatures($Model,$State) {
     if ($Model.PSObject.Properties['required_runtime_feature'] -and
-        (!(Test-OptimizedRuntime $State) -or $Model.required_runtime_feature -cne 'q5-balanced-pf64-v1')) {
-        throw 'This model needs the supplied optimized runtime. Click Restore runtime, then Load model.'
+        (!$State -or !$State.PSObject.Properties['modern_features'] -or $Model.required_runtime_feature -cnotin $State.modern_features)) {
+        throw 'This model needs the supplied shared multi-quant runtime. Click Restore runtime, then Load model.'
     }
 }
 function Get-ThreadChoice($Profile,$Model=$null,$State=$null) {
     if ($Model -and (Test-ModernTextModel $Model)) {
         $t=if ($Profile.profile_id -ceq 'xeon-phi-3120a') { 168 } else { 180 }
-        if ($Profile.profile_id -ceq 'xeon-phi-7120p' -and (Test-Q5OptimizedModel $Model) -and (Test-OptimizedRuntime $State)) {
-            $t=if ($Model.architecture -ceq 'lfm2') {120} else {240}
+        $prompt=$t; $rows=4
+        # Export r4 was compared natively at this setting on TinyDolphin/7120P.
+        # Other models keep a conservative policy, not an inherited speed claim.
+        if ($Profile.profile_id -ceq 'xeon-phi-7120p' -and $Model.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m' -and (Test-SharedRuntimeModel $Model)) {
+            $prompt=120; $rows=8
         }
-        if ($t -notin $Profile.thread_candidates) { throw 'Modern runtime profile has no matching worker setting.' }
-        return [pscustomobject]@{generation=$t;prompt=$t;mode='Modern'}
+        if ($t -notin $Profile.thread_candidates -or $prompt -notin $Profile.thread_candidates) { throw 'Modern runtime profile has no matching worker setting.' }
+        return [pscustomobject]@{generation=$t;prompt=$prompt;mq_rows=$rows;mode='Modern'}
     }
     $values = @($Profile.thread_candidates | ForEach-Object { [int]$_ })
     $t=($values | Measure-Object -Maximum).Maximum
     if ($t -lt 1) { throw 'Hardware profile has no inference thread count.' }
-    return [pscustomobject]@{generation=[int]$t;prompt=[int]$t;mode='Full'}
+    return [pscustomobject]@{generation=[int]$t;prompt=[int]$t;mq_rows=4;mode='Full'}
 }
 function New-TransferProgress([string]$Stage,[long]$Completed,[long]$Total,[double]$ElapsedSeconds,[switch]$Complete) {
     if ($Total -le 0 -or $Completed -lt 0) { throw 'Invalid transfer byte counts.' }

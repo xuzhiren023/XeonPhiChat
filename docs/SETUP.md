@@ -11,9 +11,9 @@ The console explains and requests permission for the initial card restart, which
 ## Custom folders
 
 ```powershell
-.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.3' -MpssDirectory 'C:\Program Files\Intel\MPSS'
+.\Setup.ps1 -Destination 'D:\Apps\PhiChat\1.5.4' -MpssDirectory 'C:\Program Files\Intel\MPSS'
 .\Setup.ps1 -Mode Plan -MpssDirectory 'C:\Program Files\Intel\MPSS'
-.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.3' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
+.\Setup.ps1 -Mode AddModels -Destination 'D:\Apps\PhiChat\1.5.4' -ModelPackDirectory 'D:\Downloads\PhiChatModels'
 ```
 
 `Plan` reads hardware/network configuration without writing settings or creating credentials. Depending on local Windows permissions it may need an administrator console. Use `-InterfaceIndex` only to disambiguate Phi virtual adapters; a physical LAN interface is rejected. Automatic installation supports one card (mic0).
@@ -26,7 +26,9 @@ Early setup errors are saved under `%LOCALAPPDATA%\PhiChat\SetupLogs\<run-id>`, 
 
 Installation evidence is in `data/setup`; protected boot plans/backups are in `data/host`. Runtime jobs and native validation evidence are in `app/data/jobs`. These folders may contain private material and are not source/release inputs.
 
-Version 1.5.3 corrects the 1.5.2 UAC argument handoff and excludes Microsoft virtual adapters from MIC device matching. If 1.5.2 stopped immediately after UAC, extract the 1.5.3 Windows ZIP into a new folder and run its `Setup.cmd`. You do not need to delete an earlier download or installation.
+Version 1.5.4 fixes setup on full Windows MPSS installations that have `micRAS` but no service named `mpss`. The optional stack service is started only if registered; required telemetry is started and awaited. Exact service names are used, so Windows Firewall (`mpssvc`) is never selected. Missing telemetry or a failed service start still stops setup with a specific diagnostic.
+
+If 1.5.3 stopped with "Cannot find any service with service name 'mpss'", extract 1.5.4 into a new folder and run its `Setup.cmd`. That failure occurred before host identity, adapter and boot-image changes. Existing downloads/installations need not be deleted. The earlier UAC argument and Microsoft-adapter fixes remain included.
 
 To restore the previous MPSS boot files and adapter configuration:
 

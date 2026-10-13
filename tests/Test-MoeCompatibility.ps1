@@ -31,7 +31,7 @@ try {
     $catalog.availability='experimental_native'; $catalog.native_acceptance=$true
     Reject { Assert-ModelRuntime $catalog } 'profile metadata cannot fabricate MoE native support'
     $catalog.id='lfm2.5-2.6b-matrices-q5_k'
-    Check (!(Test-Q5OptimizedModel $catalog)) 'dense model ID cannot grant a MoE performance badge'
+    Check (!(Test-SharedRuntimeModel $catalog)) 'dense model ID cannot grant MoE shared runtime support'
 
     function Write-Metadata([string]$Path,[int]$KvCount=24,[int]$Used=4) {
         $writer=New-Object IO.BinaryWriter([IO.File]::Create($Path))

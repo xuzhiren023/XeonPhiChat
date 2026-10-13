@@ -109,11 +109,30 @@ function Enable-PhiTools($Plan) {
     if (Test-Path -LiteralPath $sshBin) { $env:PATH=$sshBin+';'+$env:PATH }
     foreach ($name in @('ssh.exe','scp.exe','ssh-keygen.exe')) { $null=Get-Command $name -ErrorAction Stop }
 }
+function Wait-PhiServiceRunning($Service) {
+    try {
+        $Service.WaitForStatus('Running',[TimeSpan]::FromSeconds(30))
+        $Service.Refresh()
+        if ($Service.Status -ne 'Running') { throw 'Service did not reach Running.' }
+    } catch { throw ('MPSS service '+$Service.Name+' did not start: '+$_.Exception.Message) }
+}
 function Start-PhiServices([string]$Mpss,[string]$Run) {
-    $mpssService=Get-Service mpss -ErrorAction Stop
-    if ($mpssService.Status -ne 'Running') { $null=Invoke-SetupProcess (Join-Path $Mpss 'bin/micctrl.exe') @('--start') $Run 60000 }
-    $ras=Get-Service micras -ErrorAction Stop
-    if ($ras.Status -ne 'Running') { Start-Service micras -ErrorAction Stop }
+    # Windows MPSS releases do not all register an mpss service. Query exact
+    # names only: mpssvc is Windows Firewall and must never be selected here.
+    $ras=Get-Service -Name micras -ErrorAction SilentlyContinue
+    if (!$ras) { throw 'The Intel MPSS micRAS telemetry service is missing. Repair the full Intel MPSS installation before running setup.' }
+    $mpssService=Get-Service -Name mpss -ErrorAction SilentlyContinue
+    foreach ($service in @($ras,$mpssService)) {
+        if ($service -and $service.Status -notin @('Running','Stopped','StartPending')) {
+            throw ('MPSS service '+$service.Name+' is '+$service.Status+'. Wait for MPSS to finish or repair its service, then retry setup.')
+        }
+    }
+    if ($mpssService) {
+        if ($mpssService.Status -eq 'Stopped') { $null=Invoke-SetupProcess (Join-Path $Mpss 'bin/micctrl.exe') @('--start') $Run 60000 }
+        Wait-PhiServiceRunning $mpssService
+    }
+    if ($ras.Status -eq 'Stopped') { Start-Service -Name micras -ErrorAction Stop }
+    Wait-PhiServiceRunning $ras
 }
 function Apply-PhiNetwork($Plan,[string]$Run) {
     # Revalidate the selected hardware and all routes immediately before changes.

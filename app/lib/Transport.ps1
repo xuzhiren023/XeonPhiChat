@@ -410,6 +410,7 @@ function Invoke-Generation($Model,$State,[string]$RemoteModel,[string]$Prompt,$T
         RUNTIME_FAMILY=$(if (Test-ModernTextModel $Model) { 'modern-knc' } else { 'historical-knc' }); MODERN_RUNTIME_ID=$(if ($State.PSObject.Properties['modern_runtime_id']) { $State.modern_runtime_id } else { 'none' })
         MODERN_TEST_MODE=$(if (!$CheckOnly -and (Test-ModernTextModel $Model) -and $script:request.PSObject.Properties['modern_test_mode']) { $script:request.modern_test_mode } else { 'none' })
         MODERN_ENGINE_VARIANT=(Get-ModelEngineVariant $Model)
+        MQ_ROWS=$(if ($Threads.PSObject.Properties['mq_rows']) { [int]$Threads.mq_rows } else { 4 })
         STOP_TOKEN_IDS=$(if ($Model.PSObject.Properties['stop_token_ids']) { $Model.stop_token_ids -join ',' } else { '' })
         LOCK_TOKEN=$script:cardLockToken; SOURCE_COMMIT=$script:cfg.source_commit; MODEL_PATH=$RemoteModel; MODEL_BYTES=[long]$Model.file_size_bytes
         THREADS=[int]$Threads.generation; PROMPT_THREADS=[int]$Threads.prompt; CORES=[int]$script:health.cores

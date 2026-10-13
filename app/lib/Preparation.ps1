@@ -31,7 +31,7 @@ function Prepare-ChatSession($Ready,$Model,$State) {
     $script:cardLockOwned=$true; $script:cleanupConfirmed=$false
     $script:preparedRemote='/root/knc-chat-'+[Guid]::NewGuid().ToString('N')
     $base=$State.remote_base; $remote=$Ready.remote_model
-    $exe=if (Test-ModernTextModel $Model) { 'phi-modern' } else { 'main' }
+    $exe=if (Test-SharedRuntimeModel $Model) { 'shared/bin/phi-modern' } elseif (Test-ModernTextModel $Model) { 'llama/phi-modern' } else { 'llama/main' }
     $identity="test `"`$(cat '$remote.identity' 2>/dev/null)`" = '$($Model.sha256)'"
     if ($remote -ceq "$base/model.gguf") { $identity='true' }
     # No prompt text appears in this command or its evidence. Architecture,
@@ -40,13 +40,13 @@ function Prepare-ChatSession($Ready,$Model,$State) {
 # PHICHAT_PREPARE_V1
 set -eu
 [ "`$(uname -m)" = k1om ] || { echo 'SSH target is not K1OM; inference stopped.' >&2; exit 1; }
-[ -x '$base/guard' ] && [ -x '$base/llama/$exe' ] && [ "`$(cat '$base/build-passed.txt' 2>/dev/null)" = '$($script:cfg.source_commit)' ] || { echo 'Accepted runtime is absent on the card. Click Restore runtime, then Connect again.' >&2; exit 1; }
+[ -x '$base/guard' ] && [ -x '$base/$exe' ] && [ "`$(cat '$base/build-passed.txt' 2>/dev/null)" = '$($script:cfg.source_commit)' ] || { echo 'Accepted runtime is absent on the card. Click Restore runtime, then Connect again.' >&2; exit 1; }
 if mkdir /tmp/knc-phase3-workload.lock 2>/dev/null; then printf '%s\n' '$($script:cardLockToken)' > /tmp/knc-phase3-workload.lock/phi-chat-owner; else echo 'Another workload or retained lock exists; stop that workload before switching models.' >&2; exit 1; fi
 [ -f '$remote' ] && [ "`$(LC_ALL=C ls -ln '$remote' | awk '{print `$5}')" = '$($Model.file_size_bytes)' ] && $identity || { echo 'The selected model is no longer ready on the Phi. Click Load model again.' >&2; exit 1; }
 mkdir '$($script:preparedRemote)'
 printf 'BOOT\t'; if [ -r /proc/sys/kernel/random/boot_id ]; then cat /proc/sys/kernel/random/boot_id; else printf '\n'; fi
 printf 'MODEL\t'; LC_ALL=C ls -ln '$remote'
-printf 'MAIN\t'; LC_ALL=C ls -ln '$base/llama/$exe'
+printf 'MAIN\t'; LC_ALL=C ls -ln '$base/$exe'
 printf 'MEMORY\n'; cat /proc/meminfo
 "@
     try {
