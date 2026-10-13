@@ -163,6 +163,9 @@ function Invoke-JobProcess([string]$Exe,[string[]]$Arguments,[int]$Seconds=120,[
     return $answer
 }
 function Invoke-Card([string]$Command) {
+    # PowerShell here-strings inherit CRLF from Windows source checkouts.
+    # The card's Linux shell requires LF, including for `set -eu` and heredocs.
+    $Command=$Command.Replace("`r`n","`n")
     return Invoke-JobProcess $script:ssh ($script:sshOptions+@('-T',$script:target,$Command))
 }
 function Send-CardFiles([string[]]$Local,[string]$Remote) {

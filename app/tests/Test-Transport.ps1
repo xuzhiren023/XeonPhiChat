@@ -4,6 +4,14 @@ $ErrorActionPreference='Stop'
 $script:root=Split-Path $PSScriptRoot -Parent
 . (Join-Path $script:root 'lib/ChatCore.ps1')
 . (Join-Path $script:root 'lib/Transport.ps1')
+& {
+    $script:ssh='fixture'; $script:sshOptions=@(); $script:target='fixture.invalid'
+    function Invoke-JobProcess($Exe,$Arguments) { return $Arguments[-1] }
+    $command="# fixture`r`nset -eu`r`nprintf '%s\\n' 'ready'"
+    $sent=Invoke-Card $command
+    if ($sent.Contains("`r") -or $sent -cne $command.Replace("`r`n","`n")) { throw 'SSH command line endings were not normalized for Linux.' }
+    Write-Output 'PASS: Windows multiline commands use Linux line endings at the SSH boundary'
+}
 if (!(Test-Path -LiteralPath '/bin/bash')) { Write-Output 'SKIP: process harness requires /bin/bash; core tests run on Windows.'; exit 0 }
 $script:job=Join-Path ([IO.Path]::GetTempPath()) ('phi-transport-'+[Guid]::NewGuid().ToString('N'))
 $null=New-Item -ItemType Directory -Path $script:job

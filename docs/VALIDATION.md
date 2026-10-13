@@ -6,6 +6,10 @@ Standalone bootstrap receipts describe a runtime without a bundled model. Cache 
 
 The existing standalone host checks include a focused model load/cache/readiness regression using the actual bootstrap receipt shape, without a model hash. Network and transfer calls in that check are fixtures; native validation is recorded separately. App and installer version markers are both 1.5.6. Native binaries and model files are unchanged.
 
+The subsequent native chat check exposed CRLF line endings from Windows PowerShell here-strings reaching the card's Linux shell. SSH commands now normalize CRLF to LF at the transport boundary; the existing transport suite checks this on Windows before its Linux-only process tests.
+
+The interrupted 1.5.5 installation was repaired in place and completed Probe, Health and Load using its existing identity, accepted shared runtime and downloaded LFM2.5 Q5_K_M model. A real response then completed on the 7120P with automatic allocation (131,072 context, batch 128, 180 workers): 39 generated tokens at 2.679 tokens/s, peak temperature 60 C. This is one model/chat smoke check, not a new full hardware acceptance or clean-PC installation run. No card reset, service or network reconfiguration was performed for this repair.
+
 ## 1.5.5: simpler Windows permissions and installer contents
 
 The original 1.5.4 error was a noncanonical inherited ACL. Its rollback then replayed an old security descriptor including SYSTEM ownership and failed because Windows did not allow assigning that owner. Private-file permissions now use a fresh restricted DACL; directory permissions and backup/restore leave existing owners unchanged. Old journals remain readable, but only their access rules are restored. A partially completed rollback skips copying files whose bytes already match their backups.
