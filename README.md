@@ -18,7 +18,7 @@ The installer does not ship another person's SSH keys, saved chats, host configu
 
 ## Optimized Q5_K models
 
-All six supported chat models now use the shared multi-quant runtime: TinyDolphin, mixed Q5_K_M, Q2_K, and both uniform Q5_K models. Setup selects the binary for the detected card. Both hardware packages use optimized llama.cpp commit `d57e0e6`, rebased onto `4413a192`. Host checks and cross-build audits passed; native correctness and speed on this revision remain pending. Setup runs its card checks before selecting the new runtime. Gaston MoE and Step3-VL remain unavailable. See [runtime builds and validation limits](docs/SHARED-RUNTIME.md).
+All six supported chat models now use the shared multi-quant runtime: TinyDolphin, mixed Q5_K_M, Q2_K, and both uniform Q5_K models. Setup selects the binary for the detected card. Both hardware packages use optimized llama.cpp commit `d57e0e6`, rebased onto `4413a192`. Host checks and cross-build audits passed. Native checks on a 7120P passed for LFM2.5 2.6B and Llama 3.3 8B Q5_K_M, including generation, numerical state/reset checks and automatic allocation. Their measured speed is effectively unchanged from 1.5.6; other models and the 3120A still need native validation. Setup runs its card checks before selecting the new runtime. Gaston MoE and Step3-VL remain unavailable. See [runtime builds and validation limits](docs/SHARED-RUNTIME.md).
 
 To add them, extract **`PhiChat-1.5.1-OptimizedModels.zip`** and run **`Add-Models.cmd`**. Enter the extracted folder containing `models`. Both models are hash-verified before import. The pack contains about 7.4 GB of weights; extraction and installation require additional space. [Model details and upstream licenses](docs/MODELS.md).
 
@@ -43,7 +43,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Release.ps1 -Ass
 
 The three payload filenames and exact SHA-256 values are in [runtime-manifest.json](assets/runtime-manifest.json). `-ModelDirectory` can add a separate local model pack from a folder containing the manifest's `models/...` paths. Use `-ModelsOnly` to package weights without rebuilding the Windows ZIP, `-ModelIds` to select an exact subset, and `-ModelPackName` to name the pack (default `LocalModels`). Every ZIP member is read back and hash-checked. The source-only checkout needs these native release assets before installation; it does not silently fetch an unpinned runtime.
 
-No public remote or release URL is configured by this migration. The generated ZIPs are ready for local distribution; public hosting is a separate step.
+The source repository is [xuzhiren023/XeonPhiChat](https://github.com/xuzhiren023/XeonPhiChat). Installer and model ZIPs are separate release assets; the GitHub source download does not include those payloads.
 
 See [setup and recovery](docs/SETUP.md), [architecture](docs/ARCHITECTURE.md), [validation](docs/VALIDATION.md), and [third-party licenses](LICENSES.md).
 
