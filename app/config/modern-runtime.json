@@ -1,33 +1,35 @@
 {
   "kernel_version": "0.2.1",
-  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "modern_source_commit": "d57e0e6e4882445bc625aaee47f91db469f9fc22",
   "payloads": [
     {
-      "bytes": 69376000,
+      "bytes": 102768640,
       "features": [
         "auto-resources-v1",
-        "shared-multi-quant-v1"
+        "shared-multi-quant-v1",
+        "upstream-d57e0e6-v1"
       ],
       "file": "runtime-3120A.tar",
-      "main_sha256": "a8ff7cda62fdb384ed02f1f36e7a96dd43df5209ca2992eef45dc088d9446883",
+      "main_sha256": "5e2d8a05689fcee319049e7a323a21f926ccbb71b65d69a7b115b5aa3939f963",
       "profile": "xeon-phi-3120a",
-      "runtime_id": "phichat142-modern-0a9429d60cdf8c42",
-      "sha256": "9977342a2b17895ace8789e4d5e8eacf16e272fcf2c713d5a20c6e7418f4c485"
+      "runtime_id": "phichat142-modern-a684780203d60696",
+      "sha256": "076f2e46d5f7174d20c9ad393a01db6a51c38695f03a6b1f83cd60f6289de941"
     },
     {
-      "bytes": 69386240,
+      "bytes": 102778880,
       "features": [
         "auto-resources-v1",
-        "shared-multi-quant-v1"
+        "shared-multi-quant-v1",
+        "upstream-d57e0e6-v1"
       ],
       "file": "runtime-7120P.tar",
-      "main_sha256": "3bda6cddfe8c7cd976348bb244a42e3b0610894a63364366e5391eb300f87453",
+      "main_sha256": "6fc212e005da83eaa5b3c476b1db8af43fc9ec019df166d39d65718990c0e7c3",
       "profile": "xeon-phi-7120p",
-      "runtime_id": "phichat142-modern-0410f93aaeede4e3",
-      "sha256": "f6dfd7402c04df45b8d7fef7f342644a2855b433b5ee7bd1c80245d56349fd6f"
+      "runtime_id": "phichat142-modern-3d25ba4134e4db3f",
+      "sha256": "69fdb3e5dea8d6b8f66125c481058180a434cee41e4081a69ffb7a20cb023ff4"
     }
   ],
-  "repair_version": "shared-multi-quant-v1",
+  "repair_version": "upstream-d57e0e6-v1",
   "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
   "version": "1.4.2"
 }

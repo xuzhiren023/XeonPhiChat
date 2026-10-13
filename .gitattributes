@@ -8,4 +8,5 @@
 *.yaml text eol=lf
 *.md text eol=lf
 *.xaml text eol=lf
+tools/native-runner/* text eol=lf
 

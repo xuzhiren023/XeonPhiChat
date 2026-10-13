@@ -38,7 +38,7 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
     if ($modern) {
         if (!$m.PSObject.Properties['runtime_family'] -or $m.runtime_family -cne 'modern-knc' -or
             ($m.chat_template -cne 'gguf_metadata' -and !($m.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m' -and $m.chat_template -ceq 'chatml')) -or $m.schema_version -ne 3 -or
-            $m.required_source_commit -notin @('de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b','6783b11fb0889d68d0046176b4cc92ceee1961b0')) { throw 'Invalid modern KNC model profile.' }
+            $m.required_source_commit -notin @('de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b','6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22')) { throw 'Invalid modern KNC model profile.' }
     } elseif ($m.chat_template -ceq 'gguf_metadata') { throw 'Legacy model requires its validated chat template.' }
     return $m
 }
@@ -48,7 +48,7 @@ function Assert-ModelRuntime($Model) {
     }
     if ((($Model.id -in @('lfm2.5-2.6b-q5_k_m','lfm2.5-2.6b-matrices-q5_k') -and $Model.architecture -ceq 'lfm2') -or
         ($Model.id -in @('tinydolphin-2.8-1.1b-q5_k_m','llama-3.3-8b-abliterated-q2_k','llama-3.3-8b-abliterated-q5_k_m','llama-3.3-8b-abliterated-matrices-q5_k') -and $Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model))) -and
-        $Model.required_source_commit -ceq '6783b11fb0889d68d0046176b4cc92ceee1961b0' -and
+        $Model.required_source_commit -cin @('6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22') -and
         $Model.availability -ceq 'experimental_native') { return }
     # This release ships the accepted historical worker. Catalog metadata or a
     # caller-supplied ready.json can never authorize a modern model on that worker.
@@ -78,7 +78,7 @@ function Get-ModelChoices([string]$Root,$Profile=$null) {
         try { $engine=Get-ModelEngineVariant $model }
         catch { $enabled=$false; $hint=$model.description+' '+$_.Exception.Message }
         [pscustomobject]@{name=$file.BaseName;label=([regex]::Replace($model.label,'\s*\([^)]*\)',''));enabled=$enabled;hint=$hint;
-            engine_variant=$engine;optimized=[bool]($enabled -and $null -ne $Profile -and $engine -ceq 'shared' -and $Profile.profile_id -ceq 'xeon-phi-7120p' -and $model.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m')}
+            engine_variant=$engine;optimized=[bool]($enabled -and $null -ne $Profile -and $engine -ceq 'shared' -and $model.required_source_commit -ceq '6783b11fb0889d68d0046176b4cc92ceee1961b0' -and $Profile.profile_id -ceq 'xeon-phi-7120p' -and $model.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m')}
     }
 }
 function New-ModelConversation {
@@ -144,7 +144,7 @@ function Get-ThreadChoice($Profile,$Model=$null,$State=$null) {
         $prompt=$t; $rows=4
         # Export r4 was compared natively at this setting on TinyDolphin/7120P.
         # Other models keep a conservative policy, not an inherited speed claim.
-        if ($Profile.profile_id -ceq 'xeon-phi-7120p' -and $Model.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m' -and (Test-SharedRuntimeModel $Model)) {
+        if ($Model.required_source_commit -ceq '6783b11fb0889d68d0046176b4cc92ceee1961b0' -and $Profile.profile_id -ceq 'xeon-phi-7120p' -and $Model.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m' -and (Test-SharedRuntimeModel $Model)) {
             $prompt=120; $rows=8
         }
         if ($t -notin $Profile.thread_candidates -or $prompt -notin $Profile.thread_candidates) { throw 'Modern runtime profile has no matching worker setting.' }

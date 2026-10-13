@@ -1,5 +1,13 @@
 # Validation
 
+## 1.5.7: optimized llama.cpp d57e0e6
+
+Both supported profiles package the exact MPSS GCC 5.1.1 cross-built `phi-modern` runner linked against `d57e0e6e4882445bc625aaee47f91db469f9fc22` (upstream base `4413a192410fad1f054e9216114087a3e01527a0`). The private CLI adapter retains the existing app protocol; its source and CMake recipe are included under `tools/native-runner`. Binary, library, driver-source and evidence-archive hashes are pinned in `assets/upstream-runtime-build.json`.
+
+Runtime/model source selection now propagates the resolved payload revision through allocation, Send, the shell adapter and metrics. Explicit 1.5.6 runtime identities remain resolvable for restoration and rollback. Six dense models use the new engine; the MoE and vision gates remain unchanged. The UI identifies d57e0e6 and carries no inherited fastest-performance badge. Conservative defaults are row tile 4 and 168 workers on 3120A / 180 on 7120P.
+
+Offline validation covers current/prior source identities, model pairing, shell routing, payload hashes/ELF/runpaths, archive members and the existing host suite. The upstream host reference passed 52 small backend cases, translated-assembly sanitizer tests and synthetic mixed-model state comparisons. These results are separate from native execution. The card was disconnected throughout this integration: no native model, Stop, thermal, affinity or throughput results are claimed for d57e0e6. Existing installations, identities, models and card configuration were preserved.
+
 ## 1.5.6: loading models after standalone setup
 
 Standalone bootstrap receipts describe a runtime without a bundled model. Cache cleanup, model transfer and chat readiness now treat the legacy `model_sha256` field as optional. A legacy generic model file without a pinned identity must still be verified before removal. The installed/downloaded model and shared native runtime are reusable after this correction.

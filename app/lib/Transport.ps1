@@ -411,6 +411,7 @@ function Invoke-Generation($Model,$State,[string]$RemoteModel,[string]$Prompt,$T
     $telemetryStart=$script:healthIndex
     $values=[ordered]@{
         RUNTIME_FAMILY=$(if (Test-ModernTextModel $Model) { 'modern-knc' } else { 'historical-knc' }); MODERN_RUNTIME_ID=$(if ($State.PSObject.Properties['modern_runtime_id']) { $State.modern_runtime_id } else { 'none' })
+        MODERN_SOURCE_COMMIT=$(if ($State.PSObject.Properties['modern_source_commit']) { $State.modern_source_commit } else { 'none' })
         MODERN_TEST_MODE=$(if (!$CheckOnly -and (Test-ModernTextModel $Model) -and $script:request.PSObject.Properties['modern_test_mode']) { $script:request.modern_test_mode } else { 'none' })
         MODERN_ENGINE_VARIANT=(Get-ModelEngineVariant $Model)
         MQ_ROWS=$(if ($Threads.PSObject.Properties['mq_rows']) { [int]$Threads.mq_rows } else { 4 })

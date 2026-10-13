@@ -1,0 +1,33 @@
+{
+  "kernel_version": "0.2.1",
+  "modern_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "payloads": [
+    {
+      "bytes": 69376000,
+      "features": [
+        "auto-resources-v1",
+        "shared-multi-quant-v1"
+      ],
+      "file": "runtime-3120A.tar",
+      "main_sha256": "a8ff7cda62fdb384ed02f1f36e7a96dd43df5209ca2992eef45dc088d9446883",
+      "profile": "xeon-phi-3120a",
+      "runtime_id": "phichat142-modern-0a9429d60cdf8c42",
+      "sha256": "9977342a2b17895ace8789e4d5e8eacf16e272fcf2c713d5a20c6e7418f4c485"
+    },
+    {
+      "bytes": 69386240,
+      "features": [
+        "auto-resources-v1",
+        "shared-multi-quant-v1"
+      ],
+      "file": "runtime-7120P.tar",
+      "main_sha256": "3bda6cddfe8c7cd976348bb244a42e3b0610894a63364366e5391eb300f87453",
+      "profile": "xeon-phi-7120p",
+      "runtime_id": "phichat142-modern-0410f93aaeede4e3",
+      "sha256": "f6dfd7402c04df45b8d7fef7f342644a2855b433b5ee7bd1c80245d56349fd6f"
+    }
+  ],
+  "repair_version": "shared-multi-quant-v1",
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "version": "1.4.2"
+}

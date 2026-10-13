@@ -70,13 +70,19 @@ phi_select_engine
 [[ $engine == "$runtime/shared/bin/phi-modern" ]]
 '''.replace('runtime=RUNTIME','runtime='+q(runtime)).replace('=IDENTITY','='+identity).replace('source ADAPTER','source '+q(ROOT/'app/scripts/engine-llama-cli-v1.sh'))
         check(bash(script).returncode==0, 'shared selection uses shared binary')
+        (runtime/'modern-source.txt').write_bytes(b'd57e0e6e4882445bc625aaee47f91db469f9fc22\n')
+        updated='export MODERN_SOURCE_COMMIT=d57e0e6e4882445bc625aaee47f91db469f9fc22\n'+script
+        check(bash(updated).returncode==0, 'rebased source pin routes to shared engine')
+        check(bash(script).returncode!=0, 'source mismatch is rejected')
+        (runtime/'modern-source.txt').write_bytes(b'6783b11fb0889d68d0046176b4cc92ceee1961b0\n')
         (runtime/'shared-runtime-id.txt').write_bytes(b'wrong\n')
         check(bash(script).returncode!=0, 'wrong shared receipt fails closed')
         (runtime/'shared-runtime-id.txt').unlink()
         check(bash(script).returncode!=0, 'missing shared engine never falls back to old binary')
     if args.payloads:
         manifest=json.loads((ROOT/'assets/runtime-manifest.json').read_text())
-        pins=json.loads((ROOT/'app/config/modern-runtime.json').read_text())['payloads']
+        config=json.loads((ROOT/'app/config/modern-runtime.json').read_text())
+        pins=config['payloads']
         for asset in manifest['assets']:
             path=ROOT/'assets/payloads'/asset['file']
             check(path.stat().st_size==asset['bytes'] and hashlib.sha256(path.read_bytes()).hexdigest()==asset['sha256'], 'release payload hash/size '+asset['file'])
@@ -88,6 +94,9 @@ phi_select_engine
                 check('modern-runtime-passed.txt' not in names and 'build-passed.txt' not in names, 'no inherited native acceptance')
                 check(not any(n.startswith('optimized/') for n in names), 'obsolete Q5-only engine not shipped')
                 evidence=json.load(tf.extractfile('shared/provenance.json'))
+                check(evidence['source_commit']==config['modern_source_commit']==tf.extractfile('modern-source.txt').read().decode().strip(), 'compiled candidate source pin is propagated')
+                check(evidence['native_acceptance'] is False, 'package carries no native acceptance claim')
+                check(set(evidence['binaries'])=={'phi-modern','test-knc-dot','test-knc-mq','test-backend-ops','test-quantize-fns','test-sampling'}, 'current runner and native tests are all present')
                 for name,item in evidence['binaries'].items():
                     data=tf.extractfile('shared/bin/'+name).read()
                     check(hashlib.sha256(data).hexdigest()==item['sha256'] and len(data)==item['bytes'], 'exact audited native binary')

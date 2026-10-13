@@ -53,7 +53,7 @@ engine="$runtime/llama/main"
 if [[ ${RUNTIME_FAMILY:-historical-knc} == modern-knc ]]; then
     [[ ${MODERN_RUNTIME_ID:-} =~ ^phichat14[012]-modern-[a-f0-9]{16}$ ]] || fail 'modern runtime identity'
     [[ $(cat "$runtime/modern-runtime-passed.txt") == "$MODERN_RUNTIME_ID" ]] || fail 'modern runtime startup receipt'
-    [[ $(cat "$runtime/modern-source.txt") == 6783b11fb0889d68d0046176b4cc92ceee1961b0 ]] || fail 'modern engine source'
+    [[ $(cat "$runtime/modern-source.txt") == "${MODERN_SOURCE_COMMIT:-6783b11fb0889d68d0046176b4cc92ceee1961b0}" ]] || fail 'modern engine source'
     engine="$runtime/llama/phi-modern"
 fi
 source "$job/engine-llama-cli-v1.sh"

@@ -1,56 +1,94 @@
 [
   {
+    "artifact_archive_sha256": "802eba9db5e48cc3cfcd6e1a45f9e16a4a4b441c7722b3d439f759285b41d128",
     "binaries": {
       "phi-modern": {
-        "bytes": 11188869,
-        "sha256": "a8ff7cda62fdb384ed02f1f36e7a96dd43df5209ca2992eef45dc088d9446883"
+        "bytes": 13065710,
+        "sha256": "5e2d8a05689fcee319049e7a323a21f926ccbb71b65d69a7b115b5aa3939f963"
+      },
+      "test-backend-ops": {
+        "bytes": 10466162,
+        "sha256": "f829588cc3e2d57e6e0512b16a15318bec59222a9a1e9aa700d6029a64d3f3cf"
+      },
+      "test-knc-dot": {
+        "bytes": 8023791,
+        "sha256": "efce753f74242fa9b70415513fe8aef29d6aece73a6c85cddc7ed60b53819d60"
       },
       "test-knc-mq": {
-        "bytes": 7813038,
-        "sha256": "2b531fd85a504ad11efa28c5e1560fe14886252834105ce54cc67cdf39f24520"
+        "bytes": 8024162,
+        "sha256": "748f290cbf18581559e1da6eca0f7364d1c4b320a6bab246239dc6b4ff8f77d4"
       },
-      "test-modern-ops": {
-        "bytes": 7822367,
-        "sha256": "d56ec5171b717849fe048309b2511d146c90aab8572230df0119c024a7c9b4f3"
+      "test-quantize-fns": {
+        "bytes": 8025462,
+        "sha256": "b1aa75a4e39092f6c5300a2ff8a4fb69697bada237ad9f9178a919c320209c5b"
+      },
+      "test-sampling": {
+        "bytes": 12607945,
+        "sha256": "6fe76d612ce1ad0c8748a525b79ae5ed8fbe6d7cfa7732a64afc0fe4c7d814da"
       }
     },
-    "build_receipt_sha256": "16d4a03902e4dc40955b043c26a5a3ef865c120af0355ace07e2950702111b3a",
-    "candidate": "knc-mq-dc2cee6d8fb2420e1a06",
+    "compiler": "MPSS 3.8.6 GNU GCC 5.1.1 (k1om-mpss-linux)",
+    "driver_files": {
+      "CMakeLists.txt": "cc69196965e6a0f1ebf5fd53ab96f96a63bf382535e57b7f90cd5a6bdf821440",
+      "main.cpp": "c4bf58e182fa5e343aa151e10854811f4750d6c0deda5c395e1d353f605ea470",
+      "package-knc-profiles.sh": "b51488dfd940873c37fdf77e6494b56ed1fd721e6fed3b137e74b3142f20f8bf"
+    },
     "libgomp_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
     "native_acceptance": false,
-    "native_evidence": "cross-build and ISA audit only; native validation pending",
+    "native_evidence": "Host checks and cross-build/ISA audit only; native validation and speed pending.",
     "parent_runtime_id": "phichat142-modern-346789f47a328478",
     "parent_sha256": "91959fa4f510028b05cf9c7a16926e0598e6e27d09832c18095be83b6624bb6e",
     "profile": "xeon-phi-3120a",
-    "revision": "r3",
-    "runtime_id": "phichat142-modern-0a9429d60cdf8c42",
-    "source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0"
+    "retained_legacy_source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+    "retained_standard_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+    "runtime_id": "phichat142-modern-a684780203d60696",
+    "source_commit": "d57e0e6e4882445bc625aaee47f91db469f9fc22",
+    "upstream_base": "4413a192410fad1f054e9216114087a3e01527a0"
   },
   {
+    "artifact_archive_sha256": "802eba9db5e48cc3cfcd6e1a45f9e16a4a4b441c7722b3d439f759285b41d128",
     "binaries": {
       "phi-modern": {
-        "bytes": 11188869,
-        "sha256": "3bda6cddfe8c7cd976348bb244a42e3b0610894a63364366e5391eb300f87453"
+        "bytes": 13065774,
+        "sha256": "6fc212e005da83eaa5b3c476b1db8af43fc9ec019df166d39d65718990c0e7c3"
+      },
+      "test-backend-ops": {
+        "bytes": 10466226,
+        "sha256": "279d2319acb151dda9edd56db8bab80d835347b36bd66f48e225e0c6802b12a9"
+      },
+      "test-knc-dot": {
+        "bytes": 8023791,
+        "sha256": "8274fb28d2e241914ea4247ce92ac98b0742ef5a28f544e1deb2bf334f3aeb51"
       },
       "test-knc-mq": {
-        "bytes": 7813038,
-        "sha256": "4c1eada449c8b307c4f6351d3f5a6341487d6309487135e508c2f651c0d0d95e"
+        "bytes": 8024226,
+        "sha256": "6a136434fb1e8e6fb7d7b0af002089ceff22e90e9a490ed6340f66b79fd557bd"
       },
-      "test-modern-ops": {
-        "bytes": 7822367,
-        "sha256": "ff018d83ed45c3c9705eed0a1dc9c049d68216d2b72d0bbe8013929ae8ea128f"
+      "test-quantize-fns": {
+        "bytes": 8025526,
+        "sha256": "c26d925b90b29d24305281726697d7001083873f06840209ba8d077ed9c7cf3f"
+      },
+      "test-sampling": {
+        "bytes": 12608009,
+        "sha256": "e16c42c827ec0f35bb4c9f9d13ce6f6338644bd3e12574b6312277e22bcd6244"
       }
     },
-    "build_receipt_sha256": "335c66bddf1f17539751d225ce0045abf0b6d462e1a6e551699e941de1364bf4",
-    "candidate": "knc-mq-a3ab0be8c35cb872acb6",
+    "compiler": "MPSS 3.8.6 GNU GCC 5.1.1 (k1om-mpss-linux)",
+    "driver_files": {
+      "CMakeLists.txt": "cc69196965e6a0f1ebf5fd53ab96f96a63bf382535e57b7f90cd5a6bdf821440",
+      "main.cpp": "c4bf58e182fa5e343aa151e10854811f4750d6c0deda5c395e1d353f605ea470",
+      "package-knc-profiles.sh": "b51488dfd940873c37fdf77e6494b56ed1fd721e6fed3b137e74b3142f20f8bf"
+    },
     "libgomp_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
     "native_acceptance": false,
-    "native_evidence": "upstream export: operators/graphs passed; TinyDolphin Q5_K_M bitwise comparison with qualified r3 at rows8, prompt120/decode180; not app integration acceptance",
+    "native_evidence": "Host checks and cross-build/ISA audit only; native validation and speed pending.",
     "parent_runtime_id": "phichat142-modern-9610d4c7df2513c6",
     "parent_sha256": "0ab988a1f5c65beb01284f281726cb3f2e0cc9678cbbd33dd1382622bca700df",
     "profile": "xeon-phi-7120p",
-    "revision": "standalone-export-r4",
-    "runtime_id": "phichat142-modern-0410f93aaeede4e3",
-    "source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0"
+    "retained_legacy_source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+    "retained_standard_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+    "runtime_id": "phichat142-modern-3d25ba4134e4db3f",
+    "source_commit": "d57e0e6e4882445bc625aaee47f91db469f9fc22",
+    "upstream_base": "4413a192410fad1f054e9216114087a3e01527a0"
   }
 ]

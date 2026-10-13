@@ -3,6 +3,8 @@
 set -euo pipefail
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 runtime=${1:?}; baseline=${2:?}; token=${3:?}; archive=${4:?}; identity=${5:?}; source=${6:?}
+modern_source=${7:-6783b11fb0889d68d0046176b4cc92ceee1961b0}
+case $modern_source in 6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22) ;; *) fail 'Unsupported modern source revision';; esac
 [[ $runtime =~ ^/root/knc-phase3-run-modern14[012]-[a-f0-9]{32}$ ]] || fail path
 [[ $baseline =~ ^/root/knc-phase3-run-[A-Za-z0-9-]+$ ]] || fail baseline
 [[ $token =~ ^[a-f0-9]{32}$ ]] || fail token
@@ -57,6 +59,9 @@ if [[ -f $runtime/shared-runtime-id.txt ]]; then
     for binary in "$runtime/shared/bin/"* "$runtime/shared/lib/libgomp.so.1"; do check_elf "$binary"; done
     modern_engine="$runtime/shared/bin/phi-modern"
     modern_test="$runtime/shared/bin/test-modern-ops"
+    if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 ]]; then
+        modern_test="$runtime/shared/bin/test-knc-dot"
+    fi
     step shared-multi-quant-graph
     # Exercise each row tile with mixed K-quants, strides and fallbacks.
     for rows in 1 2 4 8; do
@@ -108,6 +113,13 @@ step legacy-cli-startup
 unset PHI_KNC_Q5_MODE PHI_KNC_F32_MODE PHI_KNC_EXTENDED PHI_KNC_TRACE
 step modern-operators
 "$modern_test"
+if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 ]]; then
+    step rebased-backend-operators
+    "$runtime/shared/bin/test-backend-ops" -b CPU -o MUL_MAT -p 'type_a=q[3456]_K,type_b=f32,m=(1|7|8|17|33|65),n=(1|3),k=512,'
+    step rebased-quantization-and-sampling
+    "$runtime/shared/bin/test-quantize-fns"
+    "$runtime/shared/bin/test-sampling"
+fi
 # Throughput benchmarking belongs in developer qualification, not installation.
 step modern-cli-startup
 "$modern_engine" --describe > "$runtime/modern-identity.json"
@@ -115,7 +127,7 @@ step modern-cli-startup
 if [[ -f $runtime/optimized-runtime-id.txt || -f $runtime/shared-runtime-id.txt ]]; then
     grep -q 'auto-resources-v1' "$runtime/modern-help.txt" || fail 'Automatic allocation capability missing'
 fi
-[[ $(cat "$runtime/modern-source.txt") == 6783b11fb0889d68d0046176b4cc92ceee1961b0 ]] || fail 'modern source pin'
+[[ $(cat "$runtime/modern-source.txt") == "$modern_source" ]] || fail 'modern source pin'
 printf '%s\n' "$source" > "$runtime/build-passed.txt"
 printf '%s\n' "$identity" > "$runtime/modern-runtime-passed.txt"
 rm -f "$runtime/$archive"

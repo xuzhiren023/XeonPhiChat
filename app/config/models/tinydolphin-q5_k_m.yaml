@@ -20,7 +20,7 @@
   "experimental_context_tokens": 4096,
   "context_4k_extra_runtime_mib": 256,
   "runtime_family": "modern-knc",
-  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "required_source_commit": "d57e0e6e4882445bc625aaee47f91db469f9fc22",
   "availability": "experimental_native",
   "native_acceptance": false,
   "required_runtime_feature": "shared-multi-quant-v1",

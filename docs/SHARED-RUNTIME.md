@@ -1,29 +1,26 @@
-# Shared runtime in 1.5.4
+# Shared runtime in 1.5.7
 
-Every enabled model routes to `shared/bin/phi-modern`. This includes the two uniform Q5_K models, mixed LFM/Llama Q5_K_M, Llama Q2_K and TinyDolphin. The engine supports dense `llama` and `lfm2`; Gaston `lfm2moe` and Step3-VL remain blocked. A model's required `shared-multi-quant-v1` capability prevents silent fallback to the former standard, Q5-only or historical worker.
+All six enabled dense models route to `shared/bin/phi-modern`, built against optimized llama.cpp commit `d57e0e6e4882445bc625aaee47f91db469f9fc22`. Its upstream base is `4413a192410fad1f054e9216114087a3e01527a0`. Mixed Q5_K_M, Q2_K and uniform Q5_K remain supported by the catalog; this update does not enable Gaston MoE, Step3-VL or a new card profile.
 
-| Card | Pinned upstream candidate | Evidence before app packaging |
-| --- | --- | --- |
-| 7120P | `knc-mq-a3ab0be8c35cb872acb6`, standalone export r4 | Native operator/graph checks; TinyDolphin Q5_K_M bitwise comparison with qualified r3 at row tile 8, 120 prompt / 180 decode threads |
-| 3120A | `knc-mq-dc2cee6d8fb2420e1a06`, r3 | Cross-build and ISA audit; native validation remains pending |
+Both 3120A and 7120P use exact cross-built MPSS GCC 5.1.1 binaries. ELF, ISA, ABI and host-reference checks exist; native qualification and performance for this revision are pending. The UI displays the revision without inheriting the old TinyDolphin speed badge. Defaults are row tile 4, with 168 workers on 3120A and 180 on 7120P. Runtime placement reserves CPU 0's whole core using actual sibling topology. Context, batch and response allocation remain dynamic.
 
-The other chat also built a 5110P variant. Phi Chat currently has 3120A and 7120P hardware profiles; this release does not advertise 5110P app support. Exact executable, OpenMP library, parent archive and candidate identities are recorded in [shared-runtime-provenance.json](shared-runtime-provenance.json). Modern llama.cpp base: `6783b11fb0889d68d0046176b4cc92ceee1961b0`.
+`phi-modern` is the private PhiChat-compatible driver linked to the new library, not the public `llama-simple` example. Its exact source and CMake file are retained under `tools/native-runner`. The binary's `--describe` reports the upstream base and a historical protocol version; the commit, binary SHA-256 and runtime ID identify the actual build. [Build inputs](../assets/upstream-runtime-build.json) and [composed payloads](shared-runtime-provenance.json) record those identities.
 
-TinyDolphin/7120P uses the tested row-8 policy and shows the green performance check. Other 7120P models use row 4 and 180 prompt/decode workers; 3120A uses row 4 and 168 workers. These are conservative defaults, not measured optimal settings for every model. Old Q5-only performance badges and throughput measurements are not transferred to the new build. All selections display the shared-runtime label; the tooltip says "Using" only after Load succeeds. TinyDolphin's hash-verified GGUF uses ChatML with EOS ID 32000; its original prompt format is preserved.
+Setup verifies archive bytes, stages an isolated runtime and runs the shared graph oracle at row tiles 1/2/4/8, current `test-knc-dot`, 52 filtered backend cases, quantization and sampling checks, retained watchdog checks and CLI startup. Only then does it publish that card's runtime selection. No acceptance receipt is shipped. Model inference, Stop, memory, temperature and actual affinity still need validation on connected hardware. No card is accessed by the host tests or package composer.
 
-Worker placement is derived from the card's actual sibling topology, reserving CPU 0's entire core and checking process affinity during generation. Context, batch and response allocation remain model/memory dependent. Guard, heartbeat, temperature, memory, Stop, strict SSH, workload ownership and isolated restoration remain required.
+Previous 1.5.6 and earlier runtime pins remain available by exact ID for restoration and rollback. The 1.5.6 installation and packages remain separate. Old speed results do not qualify the new binaries. Native archives contain the retained legacy watchdog/support files plus the new shared engine and its own tests/library.
 
-Setup checks the full archive hash, uploads it to an isolated directory and reads it back for verification. It executes the shared graph oracle for row tiles 1, 2, 4 and 8, operator tests, legacy guard-suite checks and actual shared CLI startup before recording that card's runtime selection. Packages contain no `modern-runtime-passed.txt` or inherited acceptance. Upstream numerical evidence does not replace a complete Phi Chat native model/Stop/thermal/memory acceptance run. No real services, network configuration, boot identity or card workload were changed while testing this installer repair.
+## Build the payloads
 
-## Rebuilding the release payloads
-
-Developer packaging requires Python 3.8+ and the exact audited binary inputs; users do not need Python or a compiler. Preserve the original 1.5.3 payloads in a separate input folder and run:
+Developer commands (Python 3.8+, PowerShell 5.1 and Bash); ordinary users only need the complete Windows ZIP and installed MPSS drivers:
 
 ```powershell
-python tools/Build-SharedRuntime.py --base-assets C:/Build/phi153-payloads --build-3120a C:/Build/mq-3120a-r3 --build-7120p C:/Build/mq-export-r4 --libgomp C:/Build/libgomp.so.1
+python tools/Build-UpstreamRuntime.py --base-assets C:/Build/phi153-payloads --evidence-archive C:/Build/knc-upstream-evidence.tar.gz
 python tests/Test-SharedRuntime.py --bash 'C:/Program Files/Git/bin/bash.exe' --payloads
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/Test-Host.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/Build-Release.ps1
 ```
 
-The composer pins every input, rejects unsafe tar members, removes the obsolete Q5-only engine and inherited acceptance markers, verifies every resulting member and updates the release/app manifests. Output paths must be fresh. Existing native archives and app installations are preserved separately.
+The evidence archive is pinned by SHA-256; its exact binaries are verified again individually. The composer writes fresh output only, removes inherited acceptance, verifies every generated member and updates manifests. The prior `Build-SharedRuntime.py` recipe documents the earlier 6783b11 export and is retained for historical rebuilds. `tools/native-runner/package-knc-profiles.sh` preserves the exact original compiler/link invocation and build-machine paths for reference; the CMake file is an alternative driver build entry point. Recompiling needs the exact source commit, pinned MPSS toolchain and SKU-specific settings. Different executable bytes need new hashes and separate qualification.
+
+For developer staging-control comparisons, use `GGML_KNC_MQ=0` before starting the process. `--baseline-kernels` disables extended dot dispatch but does not disable staging reuse. It must not be described as a staging-off control. `--scalar-kernels` disables the optimized path.

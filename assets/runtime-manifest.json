@@ -1,20 +1,20 @@
 {
   "assets": [
     {
-      "bytes": 69376000,
+      "bytes": 102768640,
       "file": "runtime-3120A.tar",
       "kind": "modern",
       "profile": "xeon-phi-3120a",
-      "runtime_id": "phichat142-modern-0a9429d60cdf8c42",
-      "sha256": "9977342a2b17895ace8789e4d5e8eacf16e272fcf2c713d5a20c6e7418f4c485"
+      "runtime_id": "phichat142-modern-a684780203d60696",
+      "sha256": "076f2e46d5f7174d20c9ad393a01db6a51c38695f03a6b1f83cd60f6289de941"
     },
     {
-      "bytes": 69386240,
+      "bytes": 102778880,
       "file": "runtime-7120P.tar",
       "kind": "modern",
       "profile": "xeon-phi-7120p",
-      "runtime_id": "phichat142-modern-0410f93aaeede4e3",
-      "sha256": "f6dfd7402c04df45b8d7fef7f342644a2855b433b5ee7bd1c80245d56349fd6f"
+      "runtime_id": "phichat142-modern-3d25ba4134e4db3f",
+      "sha256": "69fdb3e5dea8d6b8f66125c481058180a434cee41e4081a69ffb7a20cb023ff4"
     },
     {
       "bytes": 4554240,
@@ -24,5 +24,5 @@
     }
   ],
   "schema_version": 1,
-  "version": "1.5.6"
+  "version": "1.5.7"
 }

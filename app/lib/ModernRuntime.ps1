@@ -9,17 +9,20 @@ function Get-ModernSelectionPath([string]$Data,$Health) {
 function Get-ModernPayload($Health,[string]$Version='1.4.2',[string]$RuntimeId='') {
     if ($Version -notin @('1.4.0','1.4.1','1.4.2')) { throw 'Unsupported modern runtime version.' }
     $files=if ($Version -cne '1.4.2') { @('config/modern-runtime-'+$Version+'.json') }
-           elseif ($RuntimeId) { @('config/modern-runtime.json','config/modern-runtime-1.5.3-paired.json','config/modern-runtime-1.4.2-original.json','config/modern-runtime-q5-repair-r1.json','config/modern-runtime-preview-standard.json') }
+           elseif ($RuntimeId) { @('config/modern-runtime.json','config/modern-runtime-1.5.6-shared.json','config/modern-runtime-1.5.3-paired.json','config/modern-runtime-1.4.2-original.json','config/modern-runtime-q5-repair-r1.json','config/modern-runtime-preview-standard.json') }
            else { @('config/modern-runtime.json') }
     $matches=@(foreach ($file in $files) {
         $pin=Read-JsonFile (Join-Path $script:root $file)
-        if ($pin.version -cne $Version -or $pin.source_commit -cne $script:cfg.source_commit -or $pin.kernel_version -cne '0.2.1' -or $pin.modern_source_commit -cne '6783b11fb0889d68d0046176b4cc92ceee1961b0') { throw 'Invalid modern text runtime package pin.' }
+        if ($pin.version -cne $Version -or $pin.source_commit -cne $script:cfg.source_commit -or $pin.kernel_version -cne '0.2.1' -or $pin.modern_source_commit -cnotin @('6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22')) { throw 'Invalid modern text runtime package pin.' }
         $variants=@($pin.payloads | Where-Object { $_.profile -ceq $Health.profile.profile_id })
         if ($RuntimeId -and $variants.Count -eq 0) { continue }
         if ($variants.Count -ne 1) { throw 'No modern text kernel variant for the detected card.' }
         $p=$variants[0]
         if ($p.sha256 -notmatch '^[a-f0-9]{64}$' -or $p.file -notmatch '^runtime-(3120A|7120P)\.tar$' -or $p.runtime_id -notmatch '^phichat14[012]-modern-[a-f0-9]{16}$' -or $p.bytes -lt 1024 -or $p.bytes -gt 100MB) { throw 'Invalid runtime payload identity.' }
-        if (!$RuntimeId -or $p.runtime_id -ceq $RuntimeId) { $p }
+        if (!$RuntimeId -or $p.runtime_id -ceq $RuntimeId) {
+            $p | Add-Member modern_source_commit $pin.modern_source_commit -Force
+            $p
+        }
     })
     if ($matches.Count -ne 1) { throw 'Unknown or ambiguous native runtime identity; preserve the selection and restore the matching package pin.' }
     return $matches[0]
@@ -72,7 +75,7 @@ function Install-ModernCardRuntime($Baseline,[string]$PackageDir='',[string]$Ver
         Remove-Item -LiteralPath $returned
         $script:activity='Validating GNU IMCI runtime on the Xeon Phi; temperature and Stop protection remain active.'
         Set-JobStatus $script:activity
-        $command="exec '$remote/guard' 900 $($script:cfg.heartbeat_timeout_seconds) bash '$remote/modern-runtime-install.sh' '$remote' '$remote' '$($script:cardLockToken)' '$($payload.file)' '$($payload.runtime_id)' '$($script:cfg.source_commit)'"
+        $command="exec '$remote/guard' 900 $($script:cfg.heartbeat_timeout_seconds) bash '$remote/modern-runtime-install.sh' '$remote' '$remote' '$($script:cardLockToken)' '$($payload.file)' '$($payload.runtime_id)' '$($script:cfg.source_commit)' '$($payload.modern_source_commit)'"
         $null=Invoke-JobProcess $script:ssh ($script:sshOptions+@('-T',$script:target,$command)) 930 (Join-Path $script:job 'native-validation.txt') -Guarded
         $receipt=(Invoke-Card "cat '$remote/modern-runtime-passed.txt'").Trim()
         if ($receipt -cne $payload.runtime_id) { throw 'Native runtime validation receipt is missing or mismatched.' }
@@ -106,7 +109,7 @@ function Resolve-ModernRuntime($Baseline,[switch]$RestoreMissing) {
     $result | Add-Member -NotePropertyName modern_runtime_version -NotePropertyValue $s.version -Force
     $result | Add-Member -NotePropertyName modern_runtime_id -NotePropertyValue $s.runtime_id -Force
     $result | Add-Member -NotePropertyName modern_features -NotePropertyValue @($(if ($payload.PSObject.Properties['features']) {$payload.features})) -Force
-    $result | Add-Member -NotePropertyName modern_source_commit -NotePropertyValue '6783b11fb0889d68d0046176b4cc92ceee1961b0' -Force
+    $result | Add-Member -NotePropertyName modern_source_commit -NotePropertyValue $payload.modern_source_commit -Force
     return $result
 }
 function Disable-ModernRuntime {

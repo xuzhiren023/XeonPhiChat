@@ -2,7 +2,7 @@
 
 Extract this ZIP before importing. Keep its `models` directory and filenames intact. This pack contains model weights, not the Windows application.
 
-1. Install Phi Chat 1.5.6 from its separate Windows ZIP.
+1. Install Phi Chat 1.5.7 from its separate Windows ZIP.
 2. Run `Add-Models.cmd` from the installed application or extracted Windows installer.
 3. Enter the extracted pack folder containing `models`. The app checks the complete file sizes and SHA-256 hashes before copying.
 

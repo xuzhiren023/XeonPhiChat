@@ -1,0 +1,253 @@
+{
+  "candidate_commit": "d57e0e6e4882445bc625aaee47f91db469f9fc22",
+  "upstream_base": "4413a192410fad1f054e9216114087a3e01527a0",
+  "compiler": "MPSS 3.8.6 GNU GCC 5.1.1 (k1om-mpss-linux)",
+  "artifact_archive_sha256": "802eba9db5e48cc3cfcd6e1a45f9e16a4a4b441c7722b3d439f759285b41d128",
+  "host_validation": {
+    "quantization": "pass",
+    "gguf": "pass",
+    "sampling": "pass",
+    "backend_cases_passed": 52,
+    "staging_asan_ubsan_rows_per_profile": 27648,
+    "affinity_combinations_passed": 24,
+    "tiny_mixed_models": 3,
+    "model_state_max_logit_difference": 0,
+    "logits_per_comparison": 160010
+  },
+  "schema_version": 1,
+  "source_repository": "https://github.com/xuzhiren023/llama.cpp",
+  "native_acceptance": false,
+  "driver_files": {
+    "main.cpp": "c4bf58e182fa5e343aa151e10854811f4750d6c0deda5c395e1d353f605ea470",
+    "CMakeLists.txt": "cc69196965e6a0f1ebf5fd53ab96f96a63bf382535e57b7f90cd5a6bdf821440",
+    "package-knc-profiles.sh": "b51488dfd940873c37fdf77e6494b56ed1fd721e6fed3b137e74b3142f20f8bf"
+  },
+  "profiles": {
+    "3120A": {
+      "files": [
+        {
+          "file": "bin/phi-modern",
+          "bytes": 13065710,
+          "sha256": "5e2d8a05689fcee319049e7a323a21f926ccbb71b65d69a7b115b5aa3939f963",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-knc-dot",
+          "bytes": 8023791,
+          "sha256": "efce753f74242fa9b70415513fe8aef29d6aece73a6c85cddc7ed60b53819d60",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-knc-mq",
+          "bytes": 8024162,
+          "sha256": "748f290cbf18581559e1da6eca0f7364d1c4b320a6bab246239dc6b4ff8f77d4",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-quantize-fns",
+          "bytes": 8025462,
+          "sha256": "b1aa75a4e39092f6c5300a2ff8a4fb69697bada237ad9f9178a919c320209c5b",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-sampling",
+          "bytes": 12607945,
+          "sha256": "6fe76d612ce1ad0c8748a525b79ae5ed8fbe6d7cfa7732a64afc0fe4c7d814da",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "lib/libgomp.so.1",
+          "bytes": 160718,
+          "sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+          "machine": "Intel K1OM",
+          "needed": [
+            "libc.so.6",
+            "libdl.so.2",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-backend-ops",
+          "bytes": 10466162,
+          "sha256": "f829588cc3e2d57e6e0512b16a15318bec59222a9a1e9aa700d6029a64d3f3cf",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        }
+      ]
+    },
+    "7120P": {
+      "files": [
+        {
+          "file": "bin/phi-modern",
+          "bytes": 13065774,
+          "sha256": "6fc212e005da83eaa5b3c476b1db8af43fc9ec019df166d39d65718990c0e7c3",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-knc-dot",
+          "bytes": 8023791,
+          "sha256": "8274fb28d2e241914ea4247ce92ac98b0742ef5a28f544e1deb2bf334f3aeb51",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-knc-mq",
+          "bytes": 8024226,
+          "sha256": "6a136434fb1e8e6fb7d7b0af002089ceff22e90e9a490ed6340f66b79fd557bd",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-quantize-fns",
+          "bytes": 8025526,
+          "sha256": "c26d925b90b29d24305281726697d7001083873f06840209ba8d077ed9c7cf3f",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-sampling",
+          "bytes": 12608009,
+          "sha256": "e16c42c827ec0f35bb4c9f9d13ce6f6338644bd3e12574b6312277e22bcd6244",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "lib/libgomp.so.1",
+          "bytes": 160718,
+          "sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+          "machine": "Intel K1OM",
+          "needed": [
+            "libc.so.6",
+            "libdl.so.2",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        },
+        {
+          "file": "bin/test-backend-ops",
+          "bytes": 10466226,
+          "sha256": "279d2319acb151dda9edd56db8bab80d835347b36bd66f48e225e0c6802b12a9",
+          "machine": "Intel K1OM",
+          "needed": [
+            "ld-linux-k1om.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgomp.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "max_glibc": "2.14"
+        }
+      ]
+    }
+  }
+}

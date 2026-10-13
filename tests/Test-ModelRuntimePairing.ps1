@@ -22,13 +22,13 @@ foreach($id in $expected.Keys) {
 }
 $tiny=Get-ModelProfile $AppRoot 'tinydolphin-q5_k_m'
 $policy=Get-ThreadChoice $p $tiny $runtime
-Check ($policy.prompt -eq 120 -and $policy.mq_rows -eq 8) 'TinyDolphin uses the tested 7120P prompt/decode/row setting'
+Check ($policy.prompt -eq 180 -and $policy.mq_rows -eq 4) 'Rebased TinyDolphin starts with the same conservative policy as other models'
 $prompt=New-ChatPrompt $tiny @([pscustomobject]@{role='user';content='hello'}) 'system'
 Check ($prompt.text.StartsWith('<|im_start|>system') -and !$prompt.text.Contains('<|start_header_id|>')) 'TinyDolphin retains ChatML on the new engine'
 $reject=$false;try{Get-ModelEngineVariant (Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m')}catch{$reject=$true}
 Check $reject 'unsupported architecture cannot acquire an engine pairing'
 $choices=@(Get-ModelChoices $AppRoot $p)
-Check (@($choices|Where-Object optimized).Count -eq 1) 'performance check follows the new engine evidence, not old Q5-only qualification'
+Check (@($choices|Where-Object optimized).Count -eq 0) 'performance check follows the new engine evidence, not old Q5-only qualification'
 Check (@(Get-ModelChoices $AppRoot $small|Where-Object optimized).Count -eq 0) 'unsupported card never shows the performance check'
 Check (@(Get-ModelChoices $AppRoot|Where-Object optimized).Count -eq 0) 'unknown hardware never shows the performance check'
 $reject=$false;try {Assert-ModelReady ([pscustomobject]@{engine_variant='standard'}) (Get-ModelProfile $AppRoot 'lfm2.5-2.6b-matrices-q5_k') $runtime $null} catch {$reject=$_.Exception.Message -like '*pairing changed*'}
@@ -42,15 +42,15 @@ $fast=New-ChatSession 'tinydolphin-q5_k_m'
 $mixed=New-ChatSession 'lfm2.5-2.6b-q5_k_m'
 $script:sessions[$fast.id]=$fast;$script:sessions[$mixed.id]=$mixed
 Select-Conversation $fast
-Check ($controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Optimized for fast chat') 'tested TinyDolphin/7120P selection shows the green performance badge'
+Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Runtime d57e0e6') 'rebased build displays its revision without an inherited performance badge'
 Check ($controls.RuntimeStatus.ToolTip -like 'Selected:*') 'selection does not claim an unloaded engine is running'
 $script:loadedModel=[pscustomobject]@{serial='TEST';engine_variant='shared'};$script:loadedSelection=$fast.model
 Show-SelectedModelState
-Check ($controls.RuntimeStatus.ToolTip -ceq 'Using shared optimized runtime.') 'successful Load confirms the shared engine'
+Check ($controls.RuntimeStatus.ToolTip -ceq 'Using runtime d57e0e6.') 'successful Load confirms the shared engine'
 Select-Conversation $mixed
-Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Shared optimized runtime') 'mixed weights use the shared runtime without an inherited performance claim'
+Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Runtime d57e0e6') 'mixed weights use the shared runtime without an inherited performance claim'
 Select-Conversation $fast
-Check ($controls.Model.SelectedItem.optimized) 'returning to the tested model restores its check'
+Check (!$controls.Model.SelectedItem.optimized) 'switching chats does not manufacture a performance qualification'
 # Render the selected badge and the small-window layout without opening a window.
 foreach($size in @(@(1180,820),@(820,560))) {
     $window.Width=$size[0];$window.Height=$size[1]

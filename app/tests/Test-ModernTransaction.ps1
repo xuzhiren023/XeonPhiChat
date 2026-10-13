@@ -22,7 +22,7 @@ $script:cardLockToken=('a'*32);$script:locked=$false;$script:guarded=$false;$scr
 $bytes=New-Object byte[] 2048
 [IO.File]::WriteAllBytes((Join-Path $package 'runtime-3120A.tar'),$bytes)
 $payload=[pscustomobject]@{profile='xeon-phi-3120a';file='runtime-3120A.tar';runtime_id=('phichat142-modern-'+('b'*16));bytes=2048;sha256=(Get-FileHash (Join-Path $package 'runtime-3120A.tar')).Hash.ToLowerInvariant()}
-Write-JsonFile (Join-Path $script:root 'config/modern-runtime.json') ([pscustomobject]@{version='1.4.2';source_commit=$script:cfg.source_commit;kernel_version='0.2.1';modern_source_commit='6783b11fb0889d68d0046176b4cc92ceee1961b0';payloads=@($payload)})
+Write-JsonFile (Join-Path $script:root 'config/modern-runtime.json') ([pscustomobject]@{version='1.4.2';source_commit=$script:cfg.source_commit;kernel_version='0.2.1';modern_source_commit='d57e0e6e4882445bc625aaee47f91db469f9fc22';payloads=@($payload)})
 function Install-RuntimeGuard { param($Baseline,$Remote); Assert $script:locked 'guard staging without ownership' }
 function Acquire-CardWorkloadLock { Assert (!$script:locked) 'lock twice';$script:locked=$true }
 function Release-CardWorkloadLock { $script:locked=$false }
@@ -67,6 +67,7 @@ $selection=Install-ModernCardRuntime $baseline $package
 Assert ($script:guarded -and !$script:locked -and (Test-Path $path)) 'successful fixture was not published'
 $resolved=Resolve-ModernRuntime $baseline
 Assert ($resolved.remote_base -ceq $selection.remote_base -and $resolved.runtime_archive -ceq 'unchanged-baseline.tar') 'runtime routing changed baseline backup'
+Assert ($resolved.modern_source_commit -ceq 'd57e0e6e4882445bc625aaee47f91db469f9fc22') 'new runtime source identity was not propagated'
 Assert ($baseline.remote_base -ceq '/root/knc-phase3-run-baseline') 'baseline object mutated'
 # A failed reinstall must keep the previous selected runtime byte-for-byte.
 $before=[IO.File]::ReadAllText($path);$script:mode='native'
@@ -94,4 +95,5 @@ Disable-ModernRuntime
 $restored=Resolve-ModernRuntime $baseline
 Assert ($restored.modern_runtime_version -ceq '1.4.0' -and $restored.remote_base -ceq $oldSelection.remote_base) 'previous modern runtime rollback failed'
 Assert (!(Test-Path ($path+'.previous.json'))) 'rollback receipt was not consumed'
+Assert ($restored.modern_source_commit -ceq '6783b11fb0889d68d0046176b4cc92ceee1961b0') 'rollback lost the original source revision'
 Write-Host 'PASS: 1.4.0 selection survives app update; 1.4.2 activation and rollback restore its exact runtime identity.'

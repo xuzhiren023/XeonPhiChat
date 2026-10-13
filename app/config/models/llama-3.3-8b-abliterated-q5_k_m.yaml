@@ -20,7 +20,7 @@
   "chat_template": "gguf_metadata",
   "memory_mode": "shared_mmap",
   "runtime_family": "modern-knc",
-  "required_source_commit": "6783b11fb0889d68d0046176b4cc92ceee1961b0",
+  "required_source_commit": "d57e0e6e4882445bc625aaee47f91db469f9fc22",
   "availability": "experimental_native",
   "native_acceptance": false,
   "hash_provenance": "Complete GGUF downloaded and SHA-256 verified locally; PhiChat verifies new/changed local files before chat.",

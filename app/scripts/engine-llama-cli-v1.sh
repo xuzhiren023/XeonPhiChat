@@ -9,10 +9,16 @@ phi_select_engine() {
         modern-knc)
             [[ ${MODERN_RUNTIME_ID:-} =~ ^phichat14[012]-modern-[a-f0-9]{16}$ ]] || fail 'modern runtime identity'
             [[ $(cat "$runtime/modern-runtime-passed.txt") == "$MODERN_RUNTIME_ID" ]] || fail 'modern runtime startup receipt'
-            [[ $(cat "$runtime/modern-source.txt") == 6783b11fb0889d68d0046176b4cc92ceee1961b0 ]] || fail 'modern engine source'
+            [[ $(cat "$runtime/modern-source.txt") == "${MODERN_SOURCE_COMMIT:-6783b11fb0889d68d0046176b4cc92ceee1961b0}" ]] || fail 'modern engine source'
+            case ${MODERN_SOURCE_COMMIT:-6783b11fb0889d68d0046176b4cc92ceee1961b0} in
+                6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22) ;;
+                *) fail 'Unsupported modern source revision';;
+            esac
             engine="$runtime/llama/phi-modern"
             case ${MODERN_ENGINE_VARIANT:-standard} in
-            standard) ;;
+            standard)
+                [[ ${MODERN_SOURCE_COMMIT:-6783b11fb0889d68d0046176b4cc92ceee1961b0} == 6783b11fb0889d68d0046176b4cc92ceee1961b0 ]] || fail 'Rebased models require the shared engine'
+                ;;
             shared)
                 [[ -f $runtime/shared-runtime-id.txt && $(cat "$runtime/shared-runtime-id.txt") == "$MODERN_RUNTIME_ID" ]] || fail 'Shared runtime identity'
                 engine="$runtime/shared/bin/phi-modern"

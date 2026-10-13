@@ -10,13 +10,19 @@ $pin=Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime.json')
 foreach ($payload in $pin.payloads) {
     $health=[pscustomobject]@{profile=[pscustomobject]@{profile_id=$payload.profile}}
     $found=Get-ModernPayload $health '1.4.2' $payload.runtime_id
-    if ($found.sha256 -cne $payload.sha256) { throw 'Saved runtime ID resolved to a different archive.' }
+    if ($found.sha256 -cne $payload.sha256 -or $found.modern_source_commit -cne $pin.modern_source_commit) { throw 'Saved runtime ID resolved to a different archive or source.' }
     $wrong=@($pin.payloads | Where-Object { $_.profile -cne $payload.profile })[0]
     $failed=$false
     try { $null=Get-ModernPayload $health '1.4.2' $wrong.runtime_id } catch { $failed=$true }
     if (!$failed) { throw 'Runtime from a different card profile was accepted.' }
     Write-Output ('PASS: exact runtime ID/SHA for '+$payload.profile+'; wrong-profile runtime rejected.')
 }
+foreach ($saved in (Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime-1.5.6-shared.json')).payloads) {
+    $health=[pscustomobject]@{profile=[pscustomobject]@{profile_id=$saved.profile}}
+    $found=Get-ModernPayload $health '1.4.2' $saved.runtime_id
+    if ($found.sha256 -cne $saved.sha256 -or $found.modern_source_commit -cne '6783b11fb0889d68d0046176b4cc92ceee1961b0') { throw '1.5.6 runtime restore pin changed.' }
+}
+Write-Output 'PASS: previous 1.5.6 runtime IDs, hashes and source pins remain available for restore'
 $previous=Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime-1.5.3-paired.json')
 foreach ($payload in $previous.payloads) {
     $health=[pscustomobject]@{profile=[pscustomobject]@{profile_id=$payload.profile}}
