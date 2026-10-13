@@ -4,7 +4,7 @@ set -euo pipefail
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 runtime=${1:?}; baseline=${2:?}; token=${3:?}; archive=${4:?}; identity=${5:?}; source=${6:?}
 modern_source=${7:-6783b11fb0889d68d0046176b4cc92ceee1961b0}
-case $modern_source in 6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22) ;; *) fail 'Unsupported modern source revision';; esac
+case $modern_source in 6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22|61e97998bf49c2d425563920b7e83e52b5ae57a6) ;; *) fail 'Unsupported modern source revision';; esac
 [[ $runtime =~ ^/root/knc-phase3-run-modern14[012]-[a-f0-9]{32}$ ]] || fail path
 [[ $baseline =~ ^/root/knc-phase3-run-[A-Za-z0-9-]+$ ]] || fail baseline
 [[ $token =~ ^[a-f0-9]{32}$ ]] || fail token
@@ -59,7 +59,7 @@ if [[ -f $runtime/shared-runtime-id.txt ]]; then
     for binary in "$runtime/shared/bin/"* "$runtime/shared/lib/libgomp.so.1"; do check_elf "$binary"; done
     modern_engine="$runtime/shared/bin/phi-modern"
     modern_test="$runtime/shared/bin/test-modern-ops"
-    if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 ]]; then
+    if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 || $modern_source == 61e97998bf49c2d425563920b7e83e52b5ae57a6 ]]; then
         modern_test="$runtime/shared/bin/test-knc-dot"
     fi
     step shared-multi-quant-graph
@@ -121,6 +121,11 @@ if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 ]]; then
     "$runtime/shared/bin/test-sampling"
 fi
 # Throughput benchmarking belongs in developer qualification, not installation.
+if [[ $modern_source == 61e97998bf49c2d425563920b7e83e52b5ae57a6 ]]; then
+    [[ $archive == runtime-7120P.tar ]] || fail 'Numerics candidate is qualified on 7120P only'
+    step image-metadata-regression
+    "$runtime/shared/bin/test-knc-mtmd" "$runtime/shared/tests/step3vl-mmproj.gguf"
+fi
 step modern-cli-startup
 "$modern_engine" --describe > "$runtime/modern-identity.json"
 "$modern_engine" --help > "$runtime/modern-help.txt"

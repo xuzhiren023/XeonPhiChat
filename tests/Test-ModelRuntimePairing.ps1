@@ -25,7 +25,8 @@ $policy=Get-ThreadChoice $p $tiny $runtime
 Check ($policy.prompt -eq 180 -and $policy.mq_rows -eq 4) 'Rebased TinyDolphin starts with the same conservative policy as other models'
 $prompt=New-ChatPrompt $tiny @([pscustomobject]@{role='user';content='hello'}) 'system'
 Check ($prompt.text.StartsWith('<|im_start|>system') -and !$prompt.text.Contains('<|start_header_id|>')) 'TinyDolphin retains ChatML on the new engine'
-$reject=$false;try{Get-ModelEngineVariant (Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m')}catch{$reject=$true}
+$unknown=(Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m').PSObject.Copy(); $unknown.architecture='unsupported'
+$reject=$false;try{Get-ModelEngineVariant $unknown}catch{$reject=$true}
 Check $reject 'unsupported architecture cannot acquire an engine pairing'
 $choices=@(Get-ModelChoices $AppRoot $p)
 Check (@($choices|Where-Object optimized).Count -eq 0) 'performance check follows the new engine evidence, not old Q5-only qualification'
@@ -42,13 +43,13 @@ $fast=New-ChatSession 'tinydolphin-q5_k_m'
 $mixed=New-ChatSession 'lfm2.5-2.6b-q5_k_m'
 $script:sessions[$fast.id]=$fast;$script:sessions[$mixed.id]=$mixed
 Select-Conversation $fast
-Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Runtime d57e0e6') 'rebased build displays its revision without an inherited performance badge'
+Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Multimodal runtime 61e9799') 'rebased build displays its revision without an inherited performance badge'
 Check ($controls.RuntimeStatus.ToolTip -like 'Selected:*') 'selection does not claim an unloaded engine is running'
 $script:loadedModel=[pscustomobject]@{serial='TEST';engine_variant='shared'};$script:loadedSelection=$fast.model
 Show-SelectedModelState
-Check ($controls.RuntimeStatus.ToolTip -ceq 'Using runtime d57e0e6.') 'successful Load confirms the shared engine'
+Check ($controls.RuntimeStatus.ToolTip -ceq 'Using multimodal runtime 61e9799.') 'successful Load confirms the shared engine'
 Select-Conversation $mixed
-Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Runtime d57e0e6') 'mixed weights use the shared runtime without an inherited performance claim'
+Check (!$controls.Model.SelectedItem.optimized -and $controls.RuntimeStatus.Text -ceq 'Multimodal runtime 61e9799') 'mixed weights use the shared runtime without an inherited performance claim'
 Select-Conversation $fast
 Check (!$controls.Model.SelectedItem.optimized) 'switching chats does not manufacture a performance qualification'
 # Render the selected badge and the small-window layout without opening a window.

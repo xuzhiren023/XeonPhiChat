@@ -4,6 +4,7 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'lib/BackendClient.ps1')
 . (Join-Path $PSScriptRoot 'lib/ChatSessions.ps1')
 . (Join-Path $PSScriptRoot 'lib/ChatView.ps1')
+. (Join-Path $PSScriptRoot 'lib/ImageView.ps1')
 . (Join-Path $PSScriptRoot 'lib/ChatInsights.ps1')
 $script:appRoot=$PSScriptRoot
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
@@ -17,7 +18,7 @@ $reader=New-Object Xml.XmlNodeReader($xaml)
 $window=[Windows.Markup.XamlReader]::Load($reader)
 $window.Title='Phi Chat '+([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION')).Trim())
 $controls=@{}
-foreach ($name in @('Model','Connect','Load','Restore','LoadStatus','LoadProgress','ResourceInfo','ThermalStatus','MemoryStatus','Speed','Forecast','ChatScroll','ChatMessages','Transcript','Input','Send','Stop','New','Save','Evidence','Status','Recent','Welcome','ConnectionState','Statistics','StatisticsPanel','StatsState','PromptSpeed','StatsElapsed','StatsOutput','StatsPrompt','StatsContext','StatsNote','ContextUsage','ContextArc','ContextFull','ContextLabel','RuntimeStatus')) { $controls[$name]=$window.FindName($name) }
+foreach ($name in @('Model','Connect','Load','Restore','LoadStatus','LoadProgress','ResourceInfo','ThermalStatus','MemoryStatus','Speed','Forecast','ChatScroll','ChatMessages','Transcript','Input','Send','Stop','New','Save','Evidence','Status','Recent','Welcome','ConnectionState','Statistics','StatisticsPanel','StatsState','PromptSpeed','StatsElapsed','StatsOutput','StatsPrompt','StatsContext','StatsNote','ContextUsage','ContextArc','ContextFull','ContextLabel','RuntimeStatus','Attach','Attachments','DropOverlay')) { $controls[$name]=$window.FindName($name) }
 $modelChoices=@(Get-ModelChoices $PSScriptRoot)
 $controls.Model.ItemsSource=$modelChoices
 $default=@($modelChoices | Where-Object { $_.name -ceq $cfg.default_model })
@@ -33,6 +34,9 @@ function Save-Sessions {
     if (!$script:sessionEpoch) { return }
     $script:conversation.draft=$controls.Input.Text
     Save-ChatSessions $script:sessionFile $script:sessionEpoch $script:sessions $script:conversation.id
+    $retained=@($script:sessions.Values)
+    if ($script:active -and $script:active.action -ceq 'Chat') { $retained+=@($script:active.conversation) }
+    Remove-UnreferencedImages $connection.data_dir $retained
     $script:dirty=$false; $script:lastSave=[DateTime]::UtcNow
 }
 function Update-RecentChats {
@@ -54,7 +58,7 @@ function Select-Conversation($Session) {
     $script:switching=$true
     try { Update-ModelChoices; $controls.Input.Text=$Session.draft; $controls.Transcript.Text=$Session.transcript }
     finally { $script:switching=$false }
-    Show-ChatBubbles; Update-RecentChats; Show-SelectedModelState; Update-ForecastPreview; Update-ChatInsights
+    Show-Attachments; Show-ChatBubbles; Update-RecentChats; Show-SelectedModelState; Update-ForecastPreview; Update-ChatInsights
     $script:dirty=$true
 }
 function Reset-ChatConversation {
@@ -90,8 +94,12 @@ function Update-ModelRuntimeStatus {
         return
     }
     $controls.RuntimeStatus.Visibility='Visible'
-    $label=switch ($choice.engine_variant) {'shared' {'Runtime d57e0e6'} 'optimized' {'Optimized Q5_K runtime'} 'standard' {'Standard runtime'} default {'Classic runtime'}}
+    $label=switch ($choice.engine_variant) {'shared' {if ($script:connectedProfile.profile_id -ceq 'xeon-phi-7120p') {'Multimodal runtime 61e9799'} else {'Runtime d57e0e6'}} 'optimized' {'Optimized Q5_K runtime'} 'standard' {'Standard runtime'} default {'Classic runtime'}}
     $using=((Test-SelectedReady) -and $script:loadedModel.PSObject.Properties['engine_variant'] -and $script:loadedModel.engine_variant -ceq $choice.engine_variant)
+    if ($using -and $script:loadedModel.PSObject.Properties['modern_source_commit']) {
+        $revision=[string]$script:loadedModel.modern_source_commit
+        $label=if ($revision -ceq '61e97998bf49c2d425563920b7e83e52b5ae57a6') {'Multimodal runtime 61e9799'} else {'Runtime '+$revision.Substring(0,7)}
+    }
     $controls.RuntimeStatus.Text=if ($choice.optimized) {'Optimized for fast chat'} else {$label}
     $controls.RuntimeStatus.Foreground=if ($choice.optimized) {'#6DDC9F'} else {'#999999'}
     $controls.RuntimeStatus.ToolTip=if ($using) {'Using '+$label.ToLowerInvariant()+'.'} else {'Selected: '+$label+'. Load the model to use it.'}
@@ -100,7 +108,10 @@ function Update-ActionControls {
     $idle=($null -eq $script:active)
     $available=($idle -and !$script:probe -and $script:connectedSerial -and $script:sessionEpoch -and $null -ne $controls.Model.SelectedItem -and $controls.Model.SelectedItem.enabled)
     $controls.Load.IsEnabled=[bool]$available
-    $controls.Send.IsEnabled=([bool]$available -and (Test-SelectedReady) -and ![string]::IsNullOrWhiteSpace($controls.Input.Text))
+    $controls.Send.IsEnabled=([bool]$available -and (Test-SelectedReady) -and (![string]::IsNullOrWhiteSpace($controls.Input.Text) -or $script:conversation.images.Count -gt 0))
+    $vision=Test-ImageModel (Get-ModelProfile $script:appRoot $script:selectedModel)
+    $controls.Attach.IsEnabled=($idle -and $vision -and $script:conversation.images.Count -lt 4)
+    $controls.Attach.ToolTip=if ($vision) {'Attach images'} else {'Choose Step3-VL in a new chat for images'}
     $controls.Model.IsEnabled=($idle -and !$script:conversation.locked)
     $controls.Connect.IsEnabled=($idle -and !$script:probe); $controls.Restore.IsEnabled=($idle -and !$script:probe)
     $controls.Stop.Visibility=if ($idle) {'Collapsed'} else {'Visible'}
@@ -117,9 +128,10 @@ function Show-SelectedModelState {
 function Clear-CardSessions {
     $script:sessionEpoch=''; $script:historyLoaded=$false; $script:connectedSerial=''; $script:connectedProfile=$null; $script:loadedModel=$null; $script:loadedSelection=''
     if (Test-Path -LiteralPath $script:sessionFile) { Remove-Item -LiteralPath $script:sessionFile -Force }
+    Remove-UnreferencedImages $connection.data_dir @()
     $script:sessions=@{}; $script:conversation=New-ChatSession $script:selectedModel; $script:sessions[$script:conversation.id]=$script:conversation
     $script:dirty=$false
-    $controls.Input.Clear(); $controls.Transcript.Clear(); Update-ModelChoices; Show-ChatBubbles; Update-RecentChats; Update-ActionControls; Update-ChatInsights
+    $controls.Input.Clear(); $controls.Transcript.Clear(); Show-Attachments; Update-ModelChoices; Show-ChatBubbles; Update-RecentChats; Update-ActionControls; Update-ChatInsights
 }
 function Accept-CardSession($Card) {
     $epoch=$Card.serial+'/'+$Card.boot_id
@@ -134,6 +146,7 @@ function Accept-CardSession($Card) {
         $script:historyLoaded=$true
     }
     $script:sessionEpoch=$epoch; $script:connectedSerial=$Card.serial; $script:connectedProfile=$Card.profile
+    Remove-UnreferencedImages $connection.data_dir @($script:sessions.Values)
     $script:lastMemorySnapshot=$Card.memory
     $controls.ConnectionState.Text=$Card.profile.card_model.Replace('Intel Xeon Phi ','').Replace(' class','')+' online'
     $controls.ThermalStatus.Text=('{0} C | automatic thermal protection' -f $Card.temperature_c)
@@ -142,18 +155,20 @@ function Accept-CardSession($Card) {
 }
 function Start-JobAction([string]$Action) {
     if ($script:active -or $script:probe) { return }
-    if ($Action -eq 'Chat' -and (!$controls.Send.IsEnabled -or [string]::IsNullOrWhiteSpace($controls.Input.Text))) { return }
+    if ($Action -eq 'Chat' -and (!$controls.Send.IsEnabled)) { return }
     if ($Action -in @('Load','Chat') -and (!$script:connectedSerial -or !$controls.Model.SelectedItem.enabled)) { return }
     $bubble=$null; $session=$script:conversation; $priorTranscript=$session.transcript; $priorMetrics=$session.metrics
     $request=[pscustomobject]@{action=$Action;model=$script:selectedModel;automatic_resources=$true;session_epoch=$script:sessionEpoch;batch=0;context_tokens=0;output_tokens=0;owner_pid=$PID;connected_serial=$script:connectedSerial;ready=$script:loadedModel;messages=@()}
     if ($Action -eq 'Chat') {
         $submitted=$controls.Input.Text
+        if (![string]::IsNullOrWhiteSpace($submitted)) { $submitted=$submitted.Trim() } else { $submitted='Describe this image.' }
+        $submittedImages=@($session.images)
         Lock-ChatSession $session $script:selectedModel $submitted
         $session.metrics=New-ChatMetrics
-        $null=$session.messages.Add([pscustomobject]@{role='user';content=$submitted})
+        $null=$session.messages.Add([pscustomobject]@{role='user';content=$submitted;images=$submittedImages})
         $session.transcript+="YOU`r`n$submitted`r`n`r`nPHI`r`n"
-        $null=Add-ChatBubble 'user' $submitted; $bubble=Add-ChatBubble 'assistant' ''
-        $controls.Welcome.Visibility='Collapsed'; $controls.Input.Clear(); $session.draft=''
+        $null=Add-ChatBubble 'user' $submitted $submittedImages; $bubble=Add-ChatBubble 'assistant' ''
+        $controls.Welcome.Visibility='Collapsed'; $controls.Input.Clear(); $session.draft=''; $session.images=@(); Show-Attachments
         $request.messages=@($session.messages.ToArray()); Update-RecentChats; Save-Sessions
     }
     try {
@@ -166,7 +181,7 @@ function Start-JobAction([string]$Action) {
         if ($Action -eq 'Chat') {
             $session.messages.RemoveAt($session.messages.Count-1); $session.transcript=$priorTranscript; $session.metrics=$priorMetrics
             $session.bubbles.RemoveAt($session.bubbles.Count-1); $session.bubbles.RemoveAt($session.bubbles.Count-1)
-            $controls.Input.Text=$submitted; Show-ChatBubbles; Save-Sessions
+            $controls.Input.Text=$submitted; $session.images=$submittedImages; Show-Attachments; Show-ChatBubbles; Save-Sessions
         }
         $controls.Status.Text=$_.Exception.Message; Update-ActionControls
     }
@@ -199,7 +214,7 @@ $controls.Statistics.Add_Click({
 $controls.ContextUsage.Add_Click({ $controls.StatisticsPanel.Visibility='Visible'; $controls.Statistics.Content='Hide statistics'; Update-ChatInsights })
 $controls.Model.Add_SelectionChanged({
     if ($script:updatingModels -or !$controls.Model.SelectedItem) { return }
-    if (!$script:conversation.locked) { $script:selectedModel=$controls.Model.SelectedItem.name; $script:conversation.model=$script:selectedModel; $script:dirty=$true; Show-SelectedModelState; Update-ForecastPreview; Update-ChatInsights }
+    if (!$script:conversation.locked) { $script:selectedModel=$controls.Model.SelectedItem.name; $script:conversation.model=$script:selectedModel; if (!(Test-ImageModel (Get-ModelProfile $script:appRoot $script:selectedModel))) { $script:conversation.images=@(); Show-Attachments }; $script:dirty=$true; Show-SelectedModelState; Update-ForecastPreview; Update-ChatInsights }
 })
 $controls.Input.Add_TextChanged({ if (!$script:switching) { $script:dirty=$true }; Update-ActionControls })
 $controls.Input.Add_PreviewKeyDown({ param($sender,$e)
@@ -253,6 +268,7 @@ function Update-ChatJobs {
             $a.estimatedRate=$a.rate.Add($piece,$a.watch.Elapsed.TotalSeconds)
             if ($complete -or $a.watch.Elapsed.TotalSeconds -ge $a.nextInsight) {
                 Update-JobInsights $a $status $complete; Update-ChatInsights; $script:dirty=$true
+                if (!$complete -and !$a.stopRequested -and $script:conversation.id -ceq $a.conversation.id) { $controls.Status.Text=$a.conversation.metrics.phase+'...' }
                 $a.nextInsight=$a.watch.Elapsed.TotalSeconds+0.5
             }
         }
@@ -266,7 +282,10 @@ function Update-ChatJobs {
             else {
                 $a.bubble.state='failed'; $a.bubble.text=$text
                 $a.conversation.messages.RemoveAt($a.conversation.messages.Count-1); $a.conversation.transcript=$a.priorTranscript
-                $a.conversation.draft=$a.conversation.bubbles[$a.conversation.bubbles.Count-2].text
+                $failedUser=$a.conversation.bubbles[$a.conversation.bubbles.Count-2]
+                $a.conversation.draft=$failedUser.text
+                $a.conversation.images=@(Get-MessageImages $failedUser)
+                if ($script:conversation.id -ceq $a.conversation.id) { Show-Attachments }
                 if ($script:conversation.id -ceq $a.conversation.id -and !$controls.Input.Text) { $controls.Input.Text=$a.conversation.draft }
                 if (!(Test-RecoverableChatFailure $status)) { $script:loadedModel=$null; $script:loadedSelection='' }
                 $controls.Status.Text=if ($status) {$status.message} else {'Worker stopped. Open evidence for details.'}
@@ -279,6 +298,7 @@ function Update-ChatJobs {
         } else { $controls.Status.Text='Connected'; $script:nextProbe=[DateTime]::MinValue }
         Remove-Item -LiteralPath (Join-Path $a.dir 'response.txt') -Force -ErrorAction SilentlyContinue
         $a.process.Dispose(); $script:active=$null; Set-Busy $false; Show-SelectedModelState; Update-ForecastPreview; Update-ChatInsights
+        Remove-UnreferencedImages $connection.data_dir @($script:sessions.Values)
     } catch { $controls.Status.Text=$_.Exception.Message; $script:nextProbe=[DateTime]::UtcNow.AddSeconds(20) }
 }
 $timer.Add_Tick({ Update-ChatJobs })
@@ -288,6 +308,8 @@ $window.Add_Closing({
     if ($script:probe) { Stop-PhiBackendJob $script:probe.directory }
     $timer.Stop()
 })
+Initialize-ImageControls
+Show-Attachments
 Update-RecentChats
 Update-ActionControls
 Update-ChatInsights

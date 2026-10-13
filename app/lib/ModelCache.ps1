@@ -58,6 +58,7 @@ function Remove-OtherCardModels($Selected,$State) {
     if (!$script:cardLockOwned) { throw 'Cache cleanup requires the workload lock.' }
     $tool='/tmp/phi-chat-cache-'+$script:cardLockToken+'.sh'
     $models=@(Get-ChildItem -LiteralPath (Join-Path $script:root 'config/models') -Filter '*.yaml' | ForEach-Object { Get-ModelProfile $script:root $_.BaseName })
+    $models+=@($models | Where-Object {Test-ImageModel $_} | ForEach-Object {Get-ProjectorProfile $_})
     $events=New-Object Collections.Generic.List[object]
     $removedBytes=0L; $removed=0; $before=$null; $after=$null
     try {
@@ -79,6 +80,10 @@ function Remove-OtherCardModels($Selected,$State) {
             Assert-JobActive
             Update-LoadTemperature
             if ($entry.path -ceq $keep) { continue }
+            if (Test-ImageModel $Selected) {
+                $p=Get-ProjectorProfile $Selected
+                if ($entry.path -ceq ($State.remote_base+'/models/'+$p.id+'.gguf') -and $entry.identity -ceq $p.sha256 -and $entry.bytes -eq $p.file_size_bytes) { continue }
+            }
             $model=Get-CacheModel $entry $models $State
             if ($null -eq $model) {
                 $events.Add([pscustomobject]@{action='retained';card_path=$entry.path;bytes=$entry.bytes;reason='Unrecognized model; preserved.'})
@@ -88,7 +93,7 @@ function Remove-OtherCardModels($Selected,$State) {
             # on Windows once; filename/size alone never authorizes its removal.
             $verify=($entry.path.EndsWith('/model.gguf') -and ($entry.path -cne ($State.remote_base+'/model.gguf') -or !$State.PSObject.Properties['model_sha256']) -and $entry.identity -ceq '-')
             if ($entry.identity -ne '-' -and $entry.identity -cne $model.sha256) {
-                if ($entry.path -ceq ($State.remote_base+'/models/'+$Selected.id+'.gguf')) { throw 'Selected cache path has a different model identity. File preserved; inspect model-cache-before.json.' }
+                if ($entry.path -ceq ($State.remote_base+'/models/'+$Selected.id+'.gguf') -or ((Test-ImageModel $Selected) -and $entry.path -ceq ($State.remote_base+'/models/'+$Selected.id+'-projector.gguf'))) { throw 'Selected cache path has a different model identity. File preserved; inspect model-cache-before.json.' }
                 $events.Add([pscustomobject]@{action='retained';card_path=$entry.path;bytes=$entry.bytes;reason='Identity differs from pinned model; preserved.'})
                 continue
             }

@@ -1,4 +1,7 @@
 modern == "modern-knc" && /^PHI_PROMPT_REJECTED [0-9]+$/ { count=$2; rejected=1; complete=1; next }
+# This runner never echoes user prompt text. Preserve its error summary even
+# when model/projector initialization fails before the numeric count exists.
+modern == "modern-knc" && /^(PHI_ERROR:|FAIL:|error:|llama_model_load: error|mtmd_init_from_file: error|clip_init: failed)/ { print > "/dev/stderr"; next }
 # Filter the pinned CLI's verbose stderr IN MEMORY. Never save prompt/token text.
 # -f removes one trailing LF; the resulting quoted prompt occupies exactly the
 # original file's NR records. Skip that block by length, not by its contents, so

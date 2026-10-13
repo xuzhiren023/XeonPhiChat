@@ -54,6 +54,17 @@ def main():
                 topology.write_bytes(text.replace('allowed\t0-', 'allowed\t1-').encode())
                 result=bash('awk -v cores={} -v workers={} -f {} {}'.format(cores,cores-1,q(awk),q(topology)))
                 check(result.returncode!=0, 'restricted affinity rejected instead of oversubscribing')
+        smaps=temp/'smaps.txt'
+        records=('1000-9000 r--s 0 00:01 1 model.gguf\nSize: 32 kB\nRss: 24 kB\n'
+                 'a000-c000 rw-p 0 00:00 0 [heap]\nSize: 8 kB\nRss: 8 kB\n')
+        # The KNC proc stream repeated complete VMA records during a native
+        # large-context allocation. Each address range must contribute once.
+        smaps.write_bytes((records*5).encode())
+        result=bash('awk -v path=model.gguf -f {} {}'.format(q(ROOT/'app/scripts/model-map.awk'),q(smaps)))
+        check(result.returncode==0 and result.stdout.strip()=='32 24 32 0', 'repeated VMA rows do not inflate model or additional RSS: '+result.stdout+result.stderr)
+        smaps.write_bytes((records+records.replace('r--s','rw-p')).encode())
+        result=bash('awk -v path=model.gguf -f {} {}'.format(q(ROOT/'app/scripts/model-map.awk'),q(smaps)))
+        check(result.returncode==0 and int(result.stdout.split()[-1])>0, 'duplicate header does not hide an unsafe model mapping')
         identity='phichat142-modern-'+'a'*16
         runtime=temp/'runtime with spaces'
         runtime.mkdir()
@@ -81,25 +92,35 @@ phi_select_engine
         check(bash(script).returncode!=0, 'missing shared engine never falls back to old binary')
     if args.payloads:
         manifest=json.loads((ROOT/'assets/runtime-manifest.json').read_text())
-        config=json.loads((ROOT/'app/config/modern-runtime.json').read_text())
-        pins=config['payloads']
+        configs=[json.loads((ROOT/'app/config'/name).read_text()) for name in
+                 ('modern-runtime.json','modern-runtime-numerics-r3.json')]
         for asset in manifest['assets']:
             path=ROOT/'assets/payloads'/asset['file']
             check(path.stat().st_size==asset['bytes'] and hashlib.sha256(path.read_bytes()).hexdigest()==asset['sha256'], 'release payload hash/size '+asset['file'])
             if asset['kind']!='modern': continue
-            pin=next(x for x in pins if x['profile']==asset['profile'])
+            config,pin=next((c,x) for c in configs for x in c['payloads']
+                            if x['profile']==asset['profile'] and x['runtime_id']==asset['runtime_id'])
             check(all(pin[k]==asset[k] for k in ('runtime_id','sha256','bytes','file')), 'installer and app select same payload')
             with tarfile.open(path) as tf:
                 names=tf.getnames()
                 check('modern-runtime-passed.txt' not in names and 'build-passed.txt' not in names, 'no inherited native acceptance')
                 check(not any(n.startswith('optimized/') for n in names), 'obsolete Q5-only engine not shipped')
                 evidence=json.load(tf.extractfile('shared/provenance.json'))
-                check(evidence['source_commit']==config['modern_source_commit']==tf.extractfile('modern-source.txt').read().decode().strip(), 'compiled candidate source pin is propagated')
-                check(evidence['native_acceptance'] is False, 'package carries no native acceptance claim')
-                check(set(evidence['binaries'])=={'phi-modern','test-knc-dot','test-knc-mq','test-backend-ops','test-quantize-fns','test-sampling'}, 'current runner and native tests are all present')
-                for name,item in evidence['binaries'].items():
+                check(evidence.get('source_commit',evidence.get('source'))==config['modern_source_commit']==tf.extractfile('modern-source.txt').read().decode().strip(), 'compiled candidate source pin is propagated')
+                if 'knc-text-image-r1' in pin.get('features',[]):
+                    build=json.loads((ROOT/'assets/multimodal-runtime-build.json').read_text())
+                    check(evidence['patch_sha256']==build['patch_sha256'], 'required compiler metadata fix is retained')
+                    binaries={n[len('shared/bin/'):]: {'sha256':s}
+                              for n,s in evidence['files'].items() if n.startswith('shared/bin/')}
+                    expected={'phi-modern','test-knc-dot','test-knc-mq','test-knc-mtmd'}
+                else:
+                    check(evidence['native_acceptance'] is False, 'package carries no native acceptance claim')
+                    binaries=evidence['binaries']
+                    expected={'phi-modern','test-knc-dot','test-knc-mq','test-backend-ops','test-quantize-fns','test-sampling'}
+                check(set(binaries)==expected, 'current runner and native tests are all present')
+                for name,item in binaries.items():
                     data=tf.extractfile('shared/bin/'+name).read()
-                    check(hashlib.sha256(data).hexdigest()==item['sha256'] and len(data)==item['bytes'], 'exact audited native binary')
+                    check(hashlib.sha256(data).hexdigest()==item['sha256'] and len(data)==item.get('bytes',len(data)), 'exact audited native binary')
                     check(data[:6]==b'\x7fELF\x02\x01' and struct.unpack_from('<H',data,18)[0]==181, 'native K1OM ELF')
                     check(b'$ORIGIN/../lib' in data, 'private OpenMP library resolution')
                 for src,dst in [('shared-knc-env.sh','configure.sh'),('shared-knc-affinity.awk','knc-affinity.awk')]:

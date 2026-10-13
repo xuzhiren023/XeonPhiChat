@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": "1.5.7",
+  "version": "1.6.0",
   "models": [
     {
       "id": "lfm2.5-2.6b-matrices-q5_k",
@@ -19,10 +19,21 @@
       "path": "models/uniform-q5-k/LFM2.5-8B-A1B-Uncensored-Gaston-MATRICES-Q5_K.gguf",
       "bytes": 5830593408,
       "sha256": "852cd73ed6ba7d8fcd6ebeae577a75fa7de5f3239c9fe0dce7bf8cc077e20ec3",
-      "runtime_status": "blocked_lfm2moe",
+      "runtime_status": "experimental_lfm2moe",
       "native_acceptance": false,
       "provenance_file": "assets/model-provenance/lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k.json",
       "audit_file": "assets/model-provenance/lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k.audit.json"
+    },
+    {
+      "id": "step3-vl-10b-q5_k_m-projector",
+      "kind": "vision-projector",
+      "model_id": "step3-vl-10b-q5_k_m",
+      "label": "Step3-VL vision projector Q6_K",
+      "path": "models/uniform-q5-k/mmproj-Step3-VL-10b-61e9799-Q6_K.gguf",
+      "bytes": 1893755040,
+      "sha256": "b4d777752a55a73c8b518dd35b1c34e0bf2324a6d66059be3b7da3d5a89a7bc8",
+      "runtime_status": "experimental_step3vl",
+      "native_acceptance": false
     }
   ]
 }

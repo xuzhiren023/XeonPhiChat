@@ -23,7 +23,7 @@ cleanup() {
         kill "$filter_pid" 2>/dev/null || true
         wait "$filter_pid" 2>/dev/null || true
     fi
-    rm -f "$job/prompt.txt"
+    rm -f "$job/prompt.txt" "$job"/image-[0-3].png
     rm -f "$job/prompt.stderr"
     printf 'exit_code=%s\n' "$rc" > "$job/report/exit-code.txt"
     if [[ -n $lock_owned ]] && [[ $(cat /tmp/knc-phase3-workload.lock/phi-chat-owner 2>/dev/null) == "$LOCK_TOKEN" ]]; then
@@ -136,7 +136,6 @@ mapping_seen=''
 printf 'PHICHAT_PROGRESS init 0 0 0\n' >&2
 while kill -0 "$model_pid" 2>/dev/null; do
     phi_capture_affinity "$model_pid"
-    hwm=$(awk '$1 == "VmHWM:" {print $2}' "/proc/$model_pid/status" 2>/dev/null || true)
     # smaps counts the model's mapped pages in RSS. Subtract them once from
     # process RSS: those physical pages already belong to the RAM-backed file.
     if ! map_info=$(awk -v path="$MODEL_PATH" -f "$job/model-map.awk" "/proc/$model_pid/smaps" 2>/dev/null); then
@@ -148,6 +147,17 @@ while kill -0 "$model_pid" 2>/dev/null; do
         [[ $value =~ ^[0-9]+$ ]] || fail 'Invalid model mapping telemetry'
     done
     ((unsafe_maps == 0 && model_rss <= rss)) || fail 'Model mapping is not read-only/shared, or RSS telemetry is inconsistent'
+    # smaps is a stream and can restart as VMAs split during allocation. Use
+    # the kernel's process counters for the total, with one bounded file credit.
+    counters=$(awk '$1 == "VmRSS:" {r=$2} $1 == "VmHWM:" {h=$2} END {if (r != "" && h != "") print r, h}' "/proc/$model_pid/status" 2>/dev/null || true)
+    if [[ ! $counters =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
+        if ! kill -0 "$model_pid" 2>/dev/null || grep -q '^State:.*Z' "/proc/$model_pid/status" 2>/dev/null; then break; fi
+        fail 'Cannot read process memory counters'
+    fi
+    read -r rss hwm <<< "$counters"
+    model_cap_kib=$(((MODEL_BYTES + 4095) / 4096 * 4))
+    ((model_rss <= model_cap_kib)) || model_rss=$model_cap_kib
+    ((model_rss <= rss)) || model_rss=$rss
     if ((mapped * 1024 >= MODEL_BYTES * 9 / 10)) && [[ -z $mapping_seen ]]; then
         mapping_seen=1
         cat "/proc/$model_pid/maps" > "$job/report/model-maps.txt" 2>/dev/null || true
@@ -166,6 +176,7 @@ while kill -0 "$model_pid" 2>/dev/null; do
     elif [[ -f $job/report/timing.txt ]]; then
         read -r stage consumed < <(awk '
             BEGIN { stage="init"; tokens=0 }
+            /^encoding image slice|^clip_encode: copying image/ { stage="vision" }
             /^generate:/ { stage="prefill" }
             /Tokens consumed so far = [0-9]+/ {
                 s=$0; sub(/^.*Tokens consumed so far = /,"",s)

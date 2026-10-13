@@ -15,6 +15,7 @@ $script:request=$null; $script:health=$null; $script:healthIndex=0; $script:proc
 $script:cardLockToken=''; $script:cardLockOwned=$false
 $script:memoryCheck=$null; $script:cacheSummary=''
 $script:preparedRemote=''; $script:preparedMemory=''; $script:sessionMetadata=$null
+$script:promptImages=@(); $script:remoteProjector='';
 $script:allocationReused=$false; $script:preparationSeconds=0.0
 $script:operatorCancelled=$false; $script:cleanupConfirmed=$true
 $requestPath=Join-Path $script:job 'request.json'
@@ -108,13 +109,15 @@ try {
     $state | Add-Member engine_variant (Get-ModelEngineVariant $model) -Force
     Write-JsonFile (Join-Path $script:job 'runtime.json') $state
     if (Test-ModernTextModel $model) {
-        if (!$state.PSObject.Properties['modern_runtime_id'] -or $state.modern_source_commit -cne $model.required_source_commit) { throw 'Click Install / restore runtime, wait for success, then Connect and Load model. If the package cache is missing, run Setup.cmd from the extracted Phi Chat installer.' }
+        if (!(Test-ModernModelSource $model $state)) { throw 'Click Install / restore runtime, wait for success, then Connect and Load model. If the package cache is missing, run Setup.cmd from the extracted Phi Chat installer.' }
         if ($model.PSObject.Properties['required_runtime_version'] -and (!$state.PSObject.Properties['modern_runtime_version'] -or [version]$state.modern_runtime_version -lt [version]$model.required_runtime_version)) { throw 'Install the supplied PhiChat 1.4.1 runtime for checkpoint-specific stop tokens.' }
     }
     Assert-ModelBudget $model $script:health.profile
     if (!$script:request.PSObject.Properties['connected_serial'] -or $script:request.connected_serial -cne $script:health.serial) { throw 'The connected card changed. Click Connect again before loading a model.' }
     if ($script:request.action -eq 'Load') {
         # This operation prepares files only; it never sends or generates a prompt.
+        $localProjector=''
+        if (Test-ImageModel $model) { $localProjector=Get-LocalModel (Get-ProjectorProfile $model) }
         $localModel=Get-LocalModel $model
         $metadata=Read-ModelResources $localModel $model
         Acquire-CardWorkloadLock
@@ -124,6 +127,14 @@ try {
             Require-CardMemory $model
             $ready=[pscustomobject]@{model_id=$model.id;model_sha256=$model.sha256;source_commit=$state.source_commit;serial=$script:health.serial;remote_base=$state.remote_base;remote_model=$remoteModel}
             $ready | Add-Member engine_variant (Get-ModelEngineVariant $model)
+            $ready | Add-Member modern_source_commit $state.modern_source_commit
+            if ($localProjector) {
+                $projectorPath=Install-CardProjector $model $state $localProjector
+                $ready | Add-Member remote_projector $projectorPath
+                $ready | Add-Member projector_sha256 $model.projector.sha256
+                $model=Get-VisionResourceModel $model
+                Require-CardMemory $model
+            }
             $resources=Get-AutoResourcePlan $model $script:health.profile $metadata $script:memoryCheck.snapshot $state
             $ready | Add-Member resource_metadata $metadata
             $ready | Add-Member resources $resources
@@ -147,6 +158,13 @@ try {
     try {
         $remoteModel=Prepare-ChatSession $ready $model $state
         if ($script:request.PSObject.Properties['session_epoch'] -and $script:request.session_epoch -cne ($script:health.serial+'/'+$script:sessionMetadata.boot)) { throw 'Card session changed. Reconnect before sending.' }
+        $requestedImages=@($script:request.messages | ForEach-Object { Get-MessageImages $_ })
+        if ($requestedImages.Count -and !(Test-ImageModel $model)) { Stop-ChatInput 'This model accepts text only.' }
+        if (Test-ImageModel $model) {
+            $script:remoteProjector=Assert-PreparedProjector $ready $model $state
+            $selectedInput=New-ChatPrompt $model @($script:request.messages) $script:cfg.system_prompt 0
+            $model=Get-VisionResourceModel $model @($selectedInput.images)
+        }
         if ($automatic) {
             if (!$ready.PSObject.Properties['resource_metadata']) { Stop-ChatInput 'Reload the model to enable automatic resource allocation.' }
             $resources=Get-AutoResourcePlan $model $script:health.profile $ready.resource_metadata (Read-MemorySnapshot $script:preparedMemory) $state

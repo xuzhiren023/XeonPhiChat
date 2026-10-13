@@ -1,0 +1,24 @@
+{
+  "kernel_version": "0.2.1",
+  "modern_source_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
+  "payloads": [
+    {
+      "bytes": 82964480,
+      "features": [
+        "auto-resources-v1",
+        "shared-multi-quant-v1",
+        "knc-text-image-r1"
+      ],
+      "file": "runtime-7120P.tar",
+      "main_sha256": "e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54",
+      "profile": "xeon-phi-7120p",
+      "runtime_id": "phichat142-modern-910493bed33a64fd",
+      "sha256": "cace6cea6088e4eb41b8dbb98644a3f85f36244f233386ac24ce635d3becc144",
+      "compatible_model_source_commits": [
+        "d57e0e6e4882445bc625aaee47f91db469f9fc22"
+      ]
+    }
+  ],
+  "source_commit": "03a8b80c7d502797325788f604248dd4aabdf5ef",
+  "version": "1.4.2"
+}

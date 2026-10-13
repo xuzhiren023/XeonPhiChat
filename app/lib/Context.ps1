@@ -32,7 +32,7 @@ function Read-ModelResources([string]$Path,$Model) {
     $value=if ($m.ContainsKey($arch+'.attention.value_length')) { [long]$m[$arch+'.attention.value_length'] } else { $embedding/$heads }
     if ($key -lt 1 -or $value -lt 1) { throw 'Invalid attention dimensions.' }
     # F16 K+V: per-layer metadata distinguishes attention and recurrent blocks.
-    $result=[pscustomobject]@{native_context_tokens=[int]$ctx;kv_bytes_per_token=([double]2*$kvTotal*($key+$value));activation_bytes_per_token=([double]16*$embedding*$layers);attention_heads=$heads;allocation_supported=($arch -cne 'lfm2moe')}
+    $result=[pscustomobject]@{native_context_tokens=[int]$ctx;kv_bytes_per_token=([double]2*$kvTotal*($key+$value));activation_bytes_per_token=([double]16*$embedding*$layers);attention_heads=$heads;allocation_supported=$true}
     if ($arch -ceq 'lfm2moe') {
         foreach ($field in @('expert_count','expert_used_count','expert_feed_forward_length','leading_dense_block_count','shortconv.l_cache')) {
             if (!$m.ContainsKey($arch+'.'+$field)) { throw ('Missing MoE metadata: '+$field) }
@@ -41,28 +41,32 @@ function Read-ModelResources([string]$Path,$Model) {
         $leading=[long]$m[$arch+'.leading_dense_block_count']; $ff=[long]$m[$arch+'.expert_feed_forward_length']
         $cache=[long]$m[$arch+'.shortconv.l_cache']
         if ($experts -lt 1 -or $used -lt 1 -or $used -gt $experts -or $leading -lt 0 -or $leading -ge $layers -or $ff -lt 1 -or $cache -lt 1) { throw 'Invalid MoE metadata.' }
-        $result.activation_bytes_per_token=$null
+        # Charge all routed intermediates, not just one dense FFN. Weights are
+        # charged separately in full, regardless of experts_per_token.
+        $result.activation_bytes_per_token=[double]($result.activation_bytes_per_token+16*$layers*$used*$ff+8*$layers*$experts)
+        $result | Add-Member recurrent_state_mib ([math]::Ceiling(16.0*$layers*$embedding*$cache/1MB))
         $result | Add-Member expert_count $experts
         $result | Add-Member experts_per_token $used
-        $result | Add-Member allocation_reason 'MoE routing, expert scratch and recurrent state need a validated native memory profile. Active experts do not reduce resident weight bytes.'
+        $result | Add-Member allocation_reason 'Includes routing, selected-expert intermediates and recurrent state; all expert weights stay resident.'
     }
     return $result
 }
 function Assert-ResourceArchitecture($Model) {
-    if ($Model.architecture -ceq 'lfm2moe') { Stop-ChatInput 'LFM2-MoE memory allocation is unavailable until its KNC runtime and memory profile are validated.' }
+    if ($Model.architecture -ceq 'lfm2moe') { Assert-ModelRuntime $Model }
 }
 function Get-ResourceRuntimeMiB($Model,$Metadata,[int]$Context,[int]$Batch) {
     Assert-ResourceArchitecture $Model
     # Keep the entire baseline envelope; add cache growth and prefill buffers.
     $cache=[math]::Max(0,$Context-[int]$Model.context_tokens)*$Metadata.kv_bytes_per_token/1MB
     $compute=$Batch*($Metadata.activation_bytes_per_token+8.0*$Metadata.attention_heads*$Context)/1MB
-    return [long][math]::Ceiling($Model.estimated_peak_runtime_mib+$cache+$compute)
+    $state=if ($Metadata.PSObject.Properties['recurrent_state_mib']) { $Metadata.recurrent_state_mib } else { 0 }
+    return [long][math]::Ceiling($Model.estimated_peak_runtime_mib+$cache+$compute+$state)
 }
 function Get-AutoResourcePlan($Model,$Profile,$Metadata,$Snapshot,$State=$null) {
     Assert-ResourceArchitecture $Model
     Assert-ModelBudget $Model $Profile
     if ($null -eq $Metadata -or $null -eq $Snapshot) { Stop-ChatInput 'Load the model to read its context capacity and available card memory.' }
-    $weights=[math]::Ceiling($Model.file_size_bytes/1MB)
+    $weights=[math]::Ceiling($Model.file_size_bytes/1MB)+$(if ($Model.PSObject.Properties['extra_resident_mib']) {$Model.extra_resident_mib} else {0})
     $budget=[math]::Min(($Profile.safe_memory_budget_mib-$weights),([math]::Floor($Snapshot.available_kib/1024)-$Profile.available_reserve_mib))
     $target=(Get-ThreadChoice $Profile $Model $State).prompt
     $batch=1
@@ -85,7 +89,7 @@ function Get-ContextModel($Model,$Profile,[int]$ContextTokens=2048,$Metadata=$nu
     if ($ContextTokens -lt 128 -or $ContextTokens -gt $maximum) { Stop-ChatInput 'Context exceeds the verified model capacity. Reload the model.' }
     $selected=$Model.PSObject.Copy(); $selected.context_tokens=$ContextTokens
     if ($null -ne $Metadata) { $selected.estimated_peak_runtime_mib=Get-ResourceRuntimeMiB $Model $Metadata $ContextTokens $Batch }
-    $selected.minimum_memory_mib=[long][math]::Max($Model.minimum_memory_mib,([math]::Ceiling($Model.file_size_bytes/1MB)+$selected.estimated_peak_runtime_mib))
+    $selected.minimum_memory_mib=[long][math]::Max($Model.minimum_memory_mib,([math]::Ceiling($Model.file_size_bytes/1MB)+$selected.estimated_peak_runtime_mib+$(if ($Model.PSObject.Properties['extra_resident_mib']) {$Model.extra_resident_mib} else {0})))
     try { Assert-ModelBudget $selected $Profile } catch { Stop-ChatInput $_.Exception.Message }
     return $selected
 }

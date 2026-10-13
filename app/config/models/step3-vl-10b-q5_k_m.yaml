@@ -1,26 +1,34 @@
 {
   "id": "step3-vl-10b-q5_k_m",
-  "label": "Step3-VL-10B Q5_K_M (runtime pending)",
+  "label": "Step3-VL 10B Q5_K_M",
   "architecture": "qwen3",
   "repository": "seanbailey518/Step3-VL-10B-GGUF",
   "revision": "4e88ea55358ca8091e495a59414fd4a5d43d6932",
   "filename": "Step3-VL-10B-Q5_K_M.gguf",
   "file_size_bytes": 5851113280,
   "sha256": "b4123e8e3579a21dab0f1fc9c46e90038c5c2ff01673d939ca8e0fe12208e7de",
-  "estimated_peak_runtime_mib": 2048,
+  "estimated_peak_runtime_mib": 1024,
   "minimum_memory_mib": 8192,
   "target_profiles": [
     "xeon-phi-7120p"
   ],
   "upstream_repository": "stepfun-ai/Step3-VL-10B",
   "upstream_revision": "5026053b0c2f5dfaa08fc2d149384162c3c8bca1",
-  "description": "Community GGUF conversion of Step3-VL-10B; 7120P decoder candidate. Vision and projector execution remain pending.",
+  "description": "Text and images. Requires the matching vision pack for image input.",
   "projector": {
-    "filename": "mmproj-Step3-VL-10b-F16.gguf",
-    "file_size_bytes": 3964522624,
-    "sha256": "a2bd0d24d5b1edd03b2c18f218dcda63512e7bc361b4ed3acc0b48e6f6437577",
+    "filename": "mmproj-Step3-VL-10b-61e9799-Q6_K.gguf",
+    "file_size_bytes": 1893755040,
+    "sha256": "b4d777752a55a73c8b518dd35b1c34e0bf2324a6d66059be3b7da3d5a89a7bc8",
     "required_for_vision": true,
-    "native_acceptance": false
+    "native_acceptance": false,
+    "local_only": true,
+    "source_sha256": "541f08bdb3f4799a31a7d37708ba7990fa173bdb14b233c1485076afe34a08a9",
+    "quantizer_commit": "23b0202a189c44a54625aadcb37a946dd1d6278d",
+    "source_repository": "JamePeng2023/Step3-VL-10B-GGUF",
+    "source_revision": "f0bc308167bb03e463e10ba8dfaa4879092d0e84",
+    "source_filename": "mmproj-Step3-VL-10b-F16.gguf",
+    "source_bytes": 3972829344,
+    "quantization": "Q6_K"
   },
   "schema_version": 3,
   "quantization": "Q5_K_M",
@@ -28,13 +36,19 @@
   "chat_template": "gguf_metadata",
   "memory_mode": "shared_mmap",
   "runtime_family": "modern-knc",
-  "required_source_commit": "de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b",
-  "availability": "catalog_only",
+  "required_source_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
+  "availability": "experimental_native",
   "native_acceptance": false,
-  "hash_provenance": "Hugging Face repository API LFS metadata; model bytes not downloaded or locally validated",
-  "memory_budget_note": "Unmeasured decoder-only estimate. Shared mmap and measured peak memory required. Projector bytes are additional; vision is not admitted by this estimate.",
-  "inference_command": "pending-modern-knc-adapter",
+  "hash_provenance": "Complete language GGUF downloaded and SHA-256 verified locally.",
+  "memory_budget_note": "Decoder, projector file, projector allocation and vision scratch are accounted separately at Send.",
+  "inference_command": "phi-modern shared",
   "model_path": "models/Step3-VL-10B-Q5_K_M.gguf",
   "model_family": "step3vl",
-  "architecture_note": "Actual Step3-VL checkpoint decoder uses the Qwen3 GGUF architecture; its vision projector is Step3VL. This does not authorize substitute Qwen3 weights."
+  "architecture_note": "Actual Step3-VL checkpoint decoder uses the Qwen3 GGUF architecture; its vision projector is Step3VL. This does not authorize substitute Qwen3 weights.",
+  "required_runtime_feature": "knc-text-image-r1",
+  "required_runtime_version": "1.4.2",
+  "vision_adapter": "step3vl-v1",
+  "stop_token_ids": [
+    151645
+  ]
 }

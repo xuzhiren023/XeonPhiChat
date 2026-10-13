@@ -1,3 +1,9 @@
+# Shared runtime in 1.6.0
+
+The 7120P default is now the fixed `61e9799` multimodal runtime. All eight catalog models use it; Step3-VL gains image input and Gaston gains MoE execution. The 3120A retains its `d57e0e6` text build. See [image/runtime contract](IMAGES.md), [exact new build provenance](../assets/multimodal-runtime-build.json), and [hardware validation](VALIDATION.md).
+
+The following records the retained 1.5.7 build and its previous validation. It is not new multimodal acceptance.
+
 # Shared runtime in 1.5.7
 
 All six enabled dense models route to `shared/bin/phi-modern`, built against optimized llama.cpp commit `d57e0e6e4882445bc625aaee47f91db469f9fc22`. Its upstream base is `4413a192410fad1f054e9216114087a3e01527a0`. Mixed Q5_K_M, Q2_K and uniform Q5_K remain supported by the catalog; this update does not enable Gaston MoE, Step3-VL or a new card profile.

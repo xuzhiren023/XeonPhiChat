@@ -81,7 +81,7 @@ namespace PhiChat {
             string line;
             while ((line=await input.ReadLineAsync().ConfigureAwait(false)) != null) {
                 var match=System.Text.RegularExpressions.Regex.Match(line,
-                    @"^PHICHAT_PROGRESS (init|check|prefill) ([0-9]{1,9}) ([0-9]{1,12}) ([0-9]{1,12})$");
+                    @"^PHICHAT_PROGRESS (init|check|vision|prefill) ([0-9]{1,9}) ([0-9]{1,12}) ([0-9]{1,12})$");
                 if (!match.Success) { text.AppendLine(line); continue; }
                 double now=watch.Elapsed.TotalSeconds;
                 string stage=match.Groups[1].Value;

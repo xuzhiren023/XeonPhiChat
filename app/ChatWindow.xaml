@@ -34,9 +34,9 @@
     </Border>
    </StackPanel>
    <Grid Grid.Row="2"><ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="ChatMessages" MaxWidth="800" Margin="0,16"/></ScrollViewer><TextBlock x:Name="Welcome" Text="What can I help with?" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/></Grid>
-   <Border Grid.Row="3" Background="#303030" CornerRadius="24" Padding="18,12" MaxWidth="800" Margin="0,16,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <TextBox x:Name="Input" MinHeight="52" MaxHeight="160" Background="Transparent" Foreground="#ECECEC" BorderThickness="0" FontSize="15" Padding="2,8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" ToolTip="Message Phi Chat. Enter to send; Shift+Enter for a new line."/>
-    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Orientation="Horizontal"><Button x:Name="Stop" Content="Stop" Visibility="Collapsed" Margin="8,0,0,0"/><Button x:Name="Send" Content="Send" Margin="8,0,0,0" Background="#ECECEC" Foreground="#212121" IsEnabled="False"/></StackPanel>
+   <Border Grid.Row="3" Background="#303030" CornerRadius="24" Padding="18,12" MaxWidth="800" Margin="0,16,0,0"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><WrapPanel x:Name="Attachments" Grid.ColumnSpan="3" Visibility="Collapsed"/><Button x:Name="Attach" Grid.Row="1" Content="+" FontSize="26" Width="36" Height="36" Padding="0" Background="Transparent" VerticalAlignment="Bottom" Margin="0,0,8,2" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Attach images" ToolTip="Attach images"/>
+    <TextBox x:Name="Input" Grid.Row="1" Grid.Column="1" MinHeight="52" MaxHeight="160" Background="Transparent" Foreground="#ECECEC" BorderThickness="0" FontSize="15" Padding="2,8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" ToolTip="Message Phi Chat. Enter to send; Shift+Enter for a new line."/>
+    <StackPanel Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" Orientation="Horizontal"><Button x:Name="Stop" Content="Stop" Visibility="Collapsed" Margin="8,0,0,0"/><Button x:Name="Send" Content="Send" Margin="8,0,0,0" Background="#ECECEC" Foreground="#212121" IsEnabled="False"/></StackPanel>
    </Grid></Border>
    <StackPanel Grid.Row="4" MaxWidth="800"><ProgressBar x:Name="LoadProgress" Minimum="0" Maximum="100" Height="3" Visibility="Collapsed" Foreground="#B8B8B8" Background="#303030" Margin="12,8"/>
     <DockPanel Margin="4,6,0,0"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -45,6 +45,7 @@
     </StackPanel><TextBlock x:Name="Status" Text="Connecting to Xeon Phi..." Foreground="#999999" FontSize="12" Margin="6,6,10,0" TextWrapping="Wrap"/></DockPanel>
    </StackPanel>
    <TextBox x:Name="Transcript" Visibility="Collapsed"/>
+   <Border x:Name="DropOverlay" Grid.RowSpan="5" Background="#EE212121" BorderBrush="#888888" BorderThickness="2" CornerRadius="24" Visibility="Collapsed" IsHitTestVisible="False" Panel.ZIndex="10"><StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock Text="+" FontSize="52" HorizontalAlignment="Center"/><TextBlock Text="Drop images here" FontSize="24" FontWeight="SemiBold" Margin="0,16,0,8"/><TextBlock Text="Add them to your message" Foreground="#AAAAAA" HorizontalAlignment="Center"/></StackPanel></Border>
   </Grid>
  </Grid>
 </Window>

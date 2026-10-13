@@ -1,0 +1,132 @@
+diff --git a/docs/backend/KNC-VALIDATION.md b/docs/backend/KNC-VALIDATION.md
+index f2038a3..265ea85 100644
+--- a/docs/backend/KNC-VALIDATION.md
++++ b/docs/backend/KNC-VALIDATION.md
+@@ -43,8 +43,22 @@ The local preservation audit compares 839 release files and 336 installed-runtim
+ 
+ ## Native qualification gate
+ 
+-The connected card's SSH identity differs from saved trust. Native correctness, actual worker affinity and small trained-model throughput remain pending verification through a trusted console or recovery connection. No trust records or installed runtime are changed to bypass this gate. There are no new KNC tokens/sec results for this rebase, and previous-base measurements do not qualify it.
++Guarded native testing resumed on a 7120P on 2026-10-13 using the installed PhiChat 1.5.7 SSH trust and workload guard. The isolated image-fix runner has SHA-256 `e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54`. The installed binary and its runtime selection remain unchanged.
+ 
+-After identity verification, run the operator and graph checks before short, alternating baseline/control/staging model runs. Use the same model hash, prompt, context, batch, worker layout and matching OpenMP library; capture full-vocabulary logits, state reset, prompt/decode timings, worker affinities and thermal guard evidence. Record source and binary hashes. Repeat on each of 3120A, 5110P and 7120P before claiming per-card native qualification.
++The image corruption came from MPSS GCC 5 emitting an inlined float metadata store through an uninitialized address register. The store wrote the projector epsilon into caller memory. A KNC-only `noinline` on the metadata getter fixes the destination without changing compute kernels. The new projector metadata regression fails before the fix and passes after it over three load/free cycles. Long absolute image-logit output paths now work.
+ 
+-The supported compiler target is the core library, simple example and focused tests. Common/server and multimodal frontends, reasoning templates and long-context quality remain outside this qualification. Human review and maintenance ownership are required before an upstream submission, especially for the broad GCC 5 compatibility prerequisite.
++| Native check | Result |
++|---|---|
++| Integrated dispatch and packed-boundary checks | 110,796 pass |
++| Graph/oracle tests, staging rows 1/2/4/8 | Pass |
++| Tiny Llama/LFM2/LFM2MoE/Qwen3, Q3/Q4/Q5_K_M; Step3 image graph; input rejections | 44 functional cases pass |
++| Staging enabled vs disabled, same KNC dot kernels | 108/108 logit files bitwise equal |
++| Installed runtime vs candidate, supported tiny Llama/LFM2 fixtures | 24/24 logit files bitwise equal; installed runner rejects the other two architectures |
++| TinyDolphin 1.1B Q5_K_M, installed runtime vs candidate | 512,032 logits bitwise equal; generated text equal |
++| Existing x86-host numerical gate | 66/108 files pass; full qualification remains blocked |
++
++The x86 comparison still uses NRMSE <= 0.002 and absolute error <= 0.03 + 0.005 * abs(reference). No tolerance was relaxed. The installed runtime reproduces the Llama Q3 and LFM2 Q4 failures. Tensor traces show small floating-point differences crossing FP16/Q8 rounding boundaries; this is separate from activation staging, which is bitwise equal to its matching KNC control. These observations do not qualify every remaining cross-host difference as harmless. Broad float-rounding experiments were rejected: they did not clear the gate and regressed trained-model throughput and logits against the installed runtime.
++
++For TinyDolphin, three alternating warmed trials used a four-token prompt, 16 output tokens, context 512, batch 16 and 180 pinned workers. Median decode throughput was 3.895 tokens/s for the candidate and 3.813 for the installed runtime; median prompt throughput was 6.374 and 6.140 tokens/s respectively. The roughly 2% decode difference is too small and the runs too short to establish a general speedup. Final-run temperatures were 52-60 C. Model worker affinity was checked at 60 or 180 threads with the whole OS core excluded.
++
++This candidate is not approved for installation: cross-host numerical qualification remains open. Native 3120A/5110P validation, trained image understanding, full-size model memory limits, reasoning templates and long-context quality are also pending. Synthetic image fixtures demonstrate graph execution and image-dependent logits, not semantic vision quality. Human review and maintenance ownership are required before an upstream submission, especially for the broad GCC 5 compatibility prerequisite.
+diff --git a/examples/knc/README.md b/examples/knc/README.md
+index 66a1a9b..6f7f1d5 100644
+--- a/examples/knc/README.md
++++ b/examples/knc/README.md
+@@ -62,7 +62,7 @@ Install NumPy and PyYAML in the isolated host environment, then:
+ ```sh
+ python3 examples/knc/make-fixtures.py --quantizer /build/host/bin/knc-fixture-quantize --output /fixtures/knc-models
+ python3 examples/knc/test-runner.py --runner /build/host/bin/llama-knc-runner --fixtures /fixtures/knc-models --output /results/knc-models
+-/build/host/bin/test-knc-mtmd
++/build/host/bin/test-knc-mtmd /fixtures/knc-models/step3vl-mmproj.gguf
+ /build/host/bin/test-knc-mtmd-upstream
+ ```
+ 
+@@ -70,6 +70,10 @@ Fixtures contain random weights with a small synthetic tokenizer. They exercise
+ 
+ For kernel isolation, `--baseline-kernels` disables activation staging and the extended Q2/Q3/Q4/Q6 dot kernels; it retains the original accelerated Q5 path. `--scalar-kernels` disables optimized dot kernels and staging. These controls compare kernel behavior within this candidate; neither is a substitute for timing the preserved installed runtime with identical weights, prompt, context, threads and cache state.
+ 
++To isolate activation staging alone, compare `GGML_KNC_MQ=1` with `GGML_KNC_MQ=0` using the same binary and inputs. Do not also pass `--baseline-kernels`: that changes the dot implementations and their floating-point reduction order. Keep this comparison separate from the cross-host reference check; passing one does not imply passing the other.
++
++The optional projector argument to `test-knc-mtmd` checks float metadata and caller memory over three load/free cycles. It covers an MPSS GCC 5 miscompilation of the inlined float metadata loader: the generated store used an uninitialized address register. The KNC-only `noinline` workaround applies to metadata loading, not compute kernels. Run this check under the same native guard as inference. Keep the long absolute paths used by the test runner; shortening them can hide corruption.
++
+ ## Remaining optimization work
+ 
+ Activation staging still accelerates eligible dense Q3/Q4/Q5/Q6 matrix multiplications. Routed MoE `MUL_MAT_ID` uses the existing generic dispatch and KNC dot routines; expert-specific staging needs profiling before another optimization. Vision introduces substantial floating-point/convolution work that K-quant text kernels do not accelerate. After native correctness, measure text prefill, expert routing, image encoding and token decoding separately on each SKU, then select per-card settings from matched measurements.
+diff --git a/examples/knc/test-image.cpp b/examples/knc/test-image.cpp
+index 4fccfc9..37d01df 100644
+--- a/examples/knc/test-image.cpp
++++ b/examples/knc/test-image.cpp
+@@ -1,7 +1,11 @@
+ #include "mtmd-image.h"
++#include "gguf.h"
+ 
+ #include <cstdio>
++#include <memory>
+ #include <stdexcept>
++#include <string>
++#include <vector>
+ 
+ static void check(bool value, const char * name) {
+     if (!value) {
+@@ -9,7 +13,33 @@ static void check(bool value, const char * name) {
+     }
+ }
+ 
+-int main() {
++static void check_metadata(const char * path) {
++    std::unique_ptr<gguf_context, decltype(&gguf_free)> meta(
++        gguf_init_from_file(path, { true, nullptr }), gguf_free);
++    check(bool(meta), "projector metadata load");
++    const int key = gguf_find_key(meta.get(), "clip.vision.attention.layer_norm_epsilon");
++    check(key >= 0 && gguf_get_kv_type(meta.get(), key) == GGUF_TYPE_FLOAT32, "projector epsilon metadata");
++    const float expected = gguf_get_val_f32(meta.get(), key);
++    for (int cycle = 0; cycle < 3; ++cycle) {
++        std::vector<std::string> canaries;
++        for (int i = 0; i < 32; ++i) {
++            canaries.emplace_back(64 + i, char('A' + i % 26));
++        }
++        clip_context_params params{};
++        params.flash_attn_type = CLIP_FLASH_ATTN_TYPE_DISABLED;
++        auto loaded = clip_init(path, params);
++        std::unique_ptr<clip_ctx, decltype(&clip_free)> vision(loaded.ctx_v, clip_free);
++        std::unique_ptr<clip_ctx, decltype(&clip_free)> audio(loaded.ctx_a, clip_free);
++        std::unique_ptr<clip_ctx, decltype(&clip_free)> generated(loaded.ctx_gen_a, clip_free);
++        check(bool(vision), "vision projector load");
++        check(clip_get_hparams(vision.get())->eps == expected, "projector epsilon store");
++        for (int i = 0; i < 32; ++i) {
++            check(canaries[i] == std::string(64 + i, char('A' + i % 26)), "projector load overwrote caller memory");
++        }
++    }
++}
++
++int main(int argc, char ** argv) {
+     try {
+         using processor = mtmd_image_preprocessor_step3vl;
+         clip_hparams hp;
+@@ -28,6 +58,11 @@ int main() {
+         const auto wide = processor::build_slice_instructions(hp, { 2400, 300 });
+         check(wide.slices.size() == 8 && wide.grid_size.height == 1, "wide image window grid");
+         std::puts("PASS: Step3-VL crop geometry");
++        check(argc <= 2, "usage: test-knc-mtmd [projector.gguf]");
++        if (argc == 2) {
++            check_metadata(argv[1]);
++            std::puts("PASS: projector metadata and caller memory");
++        }
+         return 0;
+     } catch (const std::exception & e) {
+         std::fprintf(stderr, "FAIL: %s\n", e.what());
+diff --git a/tools/mtmd/clip.cpp b/tools/mtmd/clip.cpp
+index 2b40b5c..1fd0b1d 100644
+--- a/tools/mtmd/clip.cpp
++++ b/tools/mtmd/clip.cpp
+@@ -3972,6 +3972,10 @@ struct clip_model_loader {
+         output = (int) val;
+     }
+ 
++#ifdef __k1om__
++    // MPSS GCC 5 can use an uninitialized address register for the inlined float store.
++    __attribute__((noinline))
++#endif
+     void get_f32(const std::string & key, float & output, bool required = true) const {
+         const int i = gguf_find_key(ctx_gguf.get(), key.c_str());
+         if (i < 0) {

@@ -35,7 +35,7 @@ function Read-MemorySnapshot([string]$Text) {
 }
 function Get-MemoryRequirement($Model,$Profile,[switch]$IncludeModelFile) {
     if ($Model.PSObject.Properties['architecture'] -and $Model.architecture -ceq 'lfm2moe') {
-        throw 'LFM2-MoE runtime memory is unqualified. All expert weights remain resident; active-expert count is not a memory budget.'
+        Assert-ModelRuntime $Model
     }
     Assert-ModelBudget $Model $Profile
     $fileMiB=if ($IncludeModelFile) { [long][math]::Ceiling($Model.file_size_bytes/1MB) } else { 0L }

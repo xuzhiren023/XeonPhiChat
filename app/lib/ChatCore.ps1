@@ -4,6 +4,8 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'Hardware.ps1')
 . (Join-Path $PSScriptRoot 'Memory.ps1')
 . (Join-Path $PSScriptRoot 'Context.ps1')
+. (Join-Path $PSScriptRoot 'Images.ps1')
+. (Join-Path $PSScriptRoot 'Vision.ps1')
 . (Join-Path $PSScriptRoot 'Forecast.ps1')
 . (Join-Path $PSScriptRoot 'CapturedProcess.ps1')
 if (!('PhiChat.LiveCapture' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'LiveText.cs') }
@@ -14,10 +16,10 @@ function Write-JsonFile([string]$Path, $Value) {
     [PhiChat.StateFiles]::WriteText($Path,($Value | ConvertTo-Json -Depth 12))
 }
 function Test-ModernTextModel($Model) {
-    return ($Model.architecture -ceq 'lfm2' -or ($Model.PSObject.Properties['runtime_family'] -and $Model.runtime_family -ceq 'modern-knc' -and $Model.architecture -ceq 'llama'))
+    return ($Model.architecture -cin @('lfm2','lfm2moe','qwen3') -or ($Model.PSObject.Properties['runtime_family'] -and $Model.runtime_family -ceq 'modern-knc' -and $Model.architecture -ceq 'llama'))
 }
 function Test-SharedRuntimeModel($Model) {
-    return ((Test-ModernTextModel $Model) -and $Model.PSObject.Properties['required_runtime_feature'] -and $Model.required_runtime_feature -ceq 'shared-multi-quant-v1')
+    return ((Test-ModernTextModel $Model) -and $Model.PSObject.Properties['required_runtime_feature'] -and $Model.required_runtime_feature -cin @('shared-multi-quant-v1','knc-text-image-r1'))
 }
 function Get-ModelEngineVariant($Model) {
     Assert-ModelRuntime $Model
@@ -38,15 +40,17 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
     if ($modern) {
         if (!$m.PSObject.Properties['runtime_family'] -or $m.runtime_family -cne 'modern-knc' -or
             ($m.chat_template -cne 'gguf_metadata' -and !($m.id -ceq 'tinydolphin-2.8-1.1b-q5_k_m' -and $m.chat_template -ceq 'chatml')) -or $m.schema_version -ne 3 -or
-            $m.required_source_commit -notin @('de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b','6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22')) { throw 'Invalid modern KNC model profile.' }
+            $m.required_source_commit -notin @('de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b','6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22','61e97998bf49c2d425563920b7e83e52b5ae57a6')) { throw 'Invalid modern KNC model profile.' }
     } elseif ($m.chat_template -ceq 'gguf_metadata') { throw 'Legacy model requires its validated chat template.' }
     return $m
 }
 function Assert-ModelRuntime($Model) {
-    if ($Model.architecture -ceq 'lfm2moe') {
-        throw 'LFM2-MoE needs a validated KNC MoE runtime. This build cannot run it; importing Q5_K weights does not enable execution.'
-    }
-    if ((($Model.id -in @('lfm2.5-2.6b-q5_k_m','lfm2.5-2.6b-matrices-q5_k') -and $Model.architecture -ceq 'lfm2') -or
+    if ((($Model.id -ceq 'lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k' -and $Model.architecture -ceq 'lfm2moe') -or
+         ($Model.id -ceq 'step3-vl-10b-q5_k_m' -and $Model.architecture -ceq 'qwen3')) -and
+        $Model.required_source_commit -ceq '61e97998bf49c2d425563920b7e83e52b5ae57a6' -and
+        $Model.required_runtime_feature -ceq 'knc-text-image-r1' -and $Model.availability -ceq 'experimental_native') { return }
+    if ($Model.architecture -cin @('lfm2moe','qwen3')) { throw 'This model requires its pinned multimodal runtime profile.' }
+    if ((($Model.id -in @('lfm2.5-2.6b-q5_k_m','lfm2.5-2.6b-matrices-q5_k') -and $Model.architecture -cin @('lfm2','lfm2moe')) -or
         ($Model.id -in @('tinydolphin-2.8-1.1b-q5_k_m','llama-3.3-8b-abliterated-q2_k','llama-3.3-8b-abliterated-q5_k_m','llama-3.3-8b-abliterated-matrices-q5_k') -and $Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model))) -and
         $Model.required_source_commit -cin @('6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22') -and
         $Model.availability -ceq 'experimental_native') { return }
@@ -97,6 +101,10 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
         if ($Messages[$i].role -cne $role -or [string]::IsNullOrWhiteSpace($Messages[$i].content)) { throw 'Invalid chat message order or empty message.' }
     }
     $start = if ($LatestOnly) { $Messages.Count-1 } else { 0 }
+    while ($start -lt $Messages.Count-1 -and @($Messages[$start..($Messages.Count-1)] | ForEach-Object { Get-MessageImages $_ }).Count -gt 4) { $start+=2 }
+    $images=@($Messages[$start..($Messages.Count-1)] | ForEach-Object { Get-MessageImages $_ })
+    if ($images.Count -gt 4) { Stop-ChatInput 'This runtime accepts up to four images per prompt.' }
+    if ($images.Count -and !(Test-ImageModel $Model)) { Stop-ChatInput 'This model accepts text only. Use Step3-VL for images.' }
     $sb = New-Object Text.StringBuilder
     $entries = @([pscustomobject]@{role='system';content=$System}) + @($Messages[$start..($Messages.Count-1)])
     if ($Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model) -and $Model.chat_template -ceq 'gguf_metadata') {
@@ -107,10 +115,11 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
         }
         $null=$sb.Append("<|start_header_id|>assistant<|end_header_id|>`n`n")
     } else {
-    if ($Model.architecture -ceq 'lfm2') { $null=$sb.Append('<|startoftext|>') }
+    if ($Model.architecture -cin @('lfm2','lfm2moe')) { $null=$sb.Append('<|startoftext|>') }
     foreach ($e in $entries) {
-        $content=[string]$e.content
-        if ($Model.architecture -ceq 'lfm2') {
+        $content=([string]$e.content).Replace('<__media__>','< media >')
+        if ($e.role -ceq 'user') { $content=('<__media__>' * @(Get-MessageImages $e).Count)+$content }
+        if ($Model.architecture -cin @('lfm2','lfm2moe','qwen3')) {
             if ($e.role -ceq 'system' -and !$content) { continue }
             if ($e.role -ceq 'assistant' -and $content.Contains('</think>')) { $content=$content.Substring($content.LastIndexOf('</think>',[StringComparison]::Ordinal)+8).Trim() }
         }
@@ -120,6 +129,7 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     if ($Model.chat_template -eq 'zephyr') { $null=$sb.Append("<|assistant|>`n") }
     else { $null=$sb.Append("<|im_start|>assistant`n") }
     if ($Model.architecture -ceq 'lfm2') { $null=$sb.Append('<think>') }
+    if ($Model.architecture -ceq 'qwen3') { $null=$sb.Append("<think>`n") }
     }
     $text = $sb.ToString()
     if ($text.IndexOf([char]0) -ge 0) { Stop-ChatInput 'The message contains a NUL character. Remove it and send again.' }
@@ -130,7 +140,7 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     }
     # Bytes are only a sufficient-fit shortcut for these byte-fallback
     # tokenizers. Long text is counted by the actual KNC tokenizer, not rejected.
-    return [pscustomobject]@{text=$text;omitted_pairs=($start/2);utf8_upper_bound=($bytes+1)}
+    return [pscustomobject]@{text=$text;images=$images;omitted_pairs=($start/2);utf8_upper_bound=($bytes+1)}
 }
 function Assert-ModelRuntimeFeatures($Model,$State) {
     if ($Model.PSObject.Properties['required_runtime_feature'] -and

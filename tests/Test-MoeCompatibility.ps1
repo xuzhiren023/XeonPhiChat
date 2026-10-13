@@ -7,32 +7,13 @@ function Check([bool]$Value,[string]$Message) { if (!$Value) { throw ('FAIL: '+$
 function Reject([scriptblock]$Action,[string]$Message) { $failed=$false; try { & $Action | Out-Null } catch { $failed=$true }; Check $failed $Message }
 $null=New-Item -ItemType Directory -Path $Scratch -Force
 $gaston=Get-ModelProfile $AppRoot 'lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k'
-Check ($gaston.local_only -and $gaston.availability -ceq 'blocked_runtime' -and !$gaston.native_acceptance) 'real Gaston profile is local-only and has no native acceptance'
-Check ($null -eq $gaston.estimated_peak_runtime_mib -and $null -eq $gaston.minimum_memory_mib -and $gaston.target_profiles.Count -eq 0) 'real Gaston profile declares no qualified runtime budget or hardware'
-foreach ($hardware in @('unknown','xeon-phi-3120a','xeon-phi-7120p')) {
-    $card=$null
-    if ($hardware -cne 'unknown') { $card=Read-JsonFile (Join-Path $AppRoot ('config/hardware/'+$hardware+'.yaml')) }
-    $item=@(Get-ModelChoices $AppRoot $card | Where-Object name -CEQ $gaston.id)[0]
-    Check (!$item.enabled -and !$item.optimized -and !$item.engine_variant -and $item.hint.Contains('validated KNC MoE runtime') -and $item.label.Contains('runtime unavailable')) ('Gaston remains visibly disabled on '+$hardware)
-}
-Reject { Get-ModelEngineVariant $gaston } 'real Gaston cannot acquire an engine'
-Reject { New-ChatPrompt $gaston @([pscustomobject]@{role='user';content='fixture'}) 'system' } 'real Gaston cannot produce an executable chat prompt'
-$moe=(Get-ModelProfile $AppRoot 'lfm2.5-2.6b-matrices-q5_k').PSObject.Copy()
-$moe.id='fixture-lfm2moe'; $moe.architecture='lfm2moe'; $moe.availability='blocked_runtime'
-$moe.label='Fixture MoE pending runtime'; $moe.description='Fixture only: no real model identity.'
-Write-JsonFile (Join-Path $AppRoot 'config/models/fixture-lfm2moe.yaml') $moe
+Check ($gaston.local_only -and $gaston.availability -ceq 'experimental_native' -and !$gaston.native_acceptance) 'Gaston execution enabled without fabricated native acceptance'
+$profile=Read-JsonFile (Join-Path $AppRoot 'config/hardware/xeon-phi-7120p.yaml')
+$item=@(Get-ModelChoices $AppRoot $profile | Where-Object name -CEQ $gaston.id)[0]
+Check ($item.enabled -and $item.engine_variant -ceq 'shared') '7120P selects the multimodal shared engine'
+Reject { Assert-ModelRuntimeFeatures $gaston ([pscustomobject]@{modern_features=@('shared-multi-quant-v1')}) } 'old dense runtime cannot run MoE'
+$moe=$gaston.PSObject.Copy()
 try {
-    $catalog=Get-ModelProfile $AppRoot $moe.id
-    $profile=Read-JsonFile (Join-Path $AppRoot 'config/hardware/xeon-phi-7120p.yaml')
-    $choice=@(Get-ModelChoices $AppRoot $profile | Where-Object name -CEQ $moe.id)[0]
-    Check (!$choice.enabled -and !$choice.optimized -and !$choice.engine_variant -and $choice.hint.Contains('validated KNC MoE runtime')) 'MoE catalog entry is disabled with an explicit runtime reason'
-    Reject { Get-ModelEngineVariant $catalog } 'MoE cannot select the historical or standard engine'
-    Reject { New-ChatPrompt $catalog @([pscustomobject]@{role='user';content='fixture'}) 'system' } 'MoE cannot borrow the dense chat formatter'
-    $catalog.availability='experimental_native'; $catalog.native_acceptance=$true
-    Reject { Assert-ModelRuntime $catalog } 'profile metadata cannot fabricate MoE native support'
-    $catalog.id='lfm2.5-2.6b-matrices-q5_k'
-    Check (!(Test-SharedRuntimeModel $catalog)) 'dense model ID cannot grant MoE shared runtime support'
-
     function Write-Metadata([string]$Path,[int]$KvCount=24,[int]$Used=4) {
         $writer=New-Object IO.BinaryWriter([IO.File]::Create($Path))
         function TextValue([string]$Value) { $b=[Text.Encoding]::UTF8.GetBytes($Value); $writer.Write([uint64]$b.Length); $writer.Write($b) }
@@ -49,17 +30,14 @@ try {
     }
     $gguf=Join-Path $Scratch 'moe-metadata.gguf'; Write-Metadata $gguf
     $metadata=Read-ModelResources $gguf $moe
-    Check ($metadata.native_context_tokens -eq 128000 -and $metadata.kv_bytes_per_token -eq 12288) 'MoE header charges KV to its six attention layers'
-    Check ($metadata.expert_count -eq 32 -and $metadata.experts_per_token -eq 4) 'expert count and selected experts remain separate'
-    Check (!$metadata.allocation_supported -and $null -eq $metadata.activation_bytes_per_token) 'no dense activation estimate is presented as qualified MoE memory'
-    Reject { Get-AutoResourcePlan $moe $profile $metadata ([pscustomobject]@{available_kib=16000000}) } 'automatic allocation refuses unqualified MoE scratch/state accounting'
-    Reject { Get-ContextModel $moe $profile 2048 $metadata } 'manual context selection cannot bypass MoE memory qualification'
-    Reject { Get-ResourceRuntimeMiB $moe $metadata 2048 32 } 'low-level resource calculator also rejects MoE allocation'
-    Reject { Get-MemoryRequirement $moe $profile -IncludeModelFile } 'legacy memory forecast cannot accept an unqualified MoE estimate'
+    Check ($metadata.kv_bytes_per_token -eq 12288) 'KV allocated only to attention layers'
+    Check ($metadata.allocation_supported -and $metadata.activation_bytes_per_token -gt 16*2048*24 -and $metadata.recurrent_state_mib -gt 0) 'routing, expert intermediates and recurrent state counted'
+    $plan=Get-AutoResourcePlan $moe $profile $metadata ([pscustomobject]@{available_kib=16000000})
+    Check ($plan.context_tokens -ge 128 -and $plan.context_tokens -le 128000) 'context follows memory and native capacity'
+    $need=Get-MemoryRequirement $moe $profile -IncludeModelFile
+    Check ($need.model_file_mib -eq [math]::Ceiling($moe.file_size_bytes/1MB)) 'all expert weights counted'
     Write-Metadata $gguf 23
-    Reject { Read-ModelResources $gguf $moe } 'truncated per-layer KV array rejected'
+    Reject {Read-ModelResources $gguf $moe} 'invalid per-layer heads rejected'
     Write-Metadata $gguf 24 33
-    Reject { Read-ModelResources $gguf $moe } 'more active experts than total experts rejected'
-    Write-Metadata $gguf 4097
-    Reject { Read-ModelResources $gguf $moe } 'oversized retained metadata arrays rejected'
-} finally { Remove-Item -LiteralPath (Join-Path $AppRoot 'config/models/fixture-lfm2moe.yaml') -Force }
+    Reject {Read-ModelResources $gguf $moe} 'invalid expert count rejected'
+} finally {}

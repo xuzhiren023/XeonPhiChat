@@ -59,7 +59,7 @@ foreach ($name in $allowed) {
         $sources+=@([pscustomobject]@{path=$file.FullName;name=('PhiChat-'+$version+'/'+$relative)})
     }
 }
-foreach ($name in @('VERSION','README.md','AGENTS.md','LICENSES.md','MIGRATION.json','.gitignore','.gitattributes','Setup.cmd','Setup.ps1','Start.cmd','Start.ps1','Add-Models.cmd','assets/runtime-manifest.json','assets/optimized-models.json','assets/upstream-runtime-build.json')) {
+foreach ($name in @('VERSION','README.md','AGENTS.md','LICENSES.md','MIGRATION.json','.gitignore','.gitattributes','Setup.cmd','Setup.ps1','Start.cmd','Start.ps1','Add-Models.cmd','assets/runtime-manifest.json','assets/optimized-models.json','assets/upstream-runtime-build.json','assets/multimodal-runtime-build.json')) {
     $path=Join-Safe $root $name
     if (!(Test-Path -LiteralPath $path)) { throw ('Required source file missing: '+$name) }
     $sources+=@([pscustomobject]@{path=$path;name=('PhiChat-'+$version+'/'+$name)})
@@ -82,7 +82,8 @@ if ($ModelDirectory) {
     $entries=@([pscustomobject]@{path=(Join-Path $root 'assets/optimized-models.json');name='optimized-models.json'},
         [pscustomobject]@{path=(Join-Path $root 'docs/MODEL-PACK.md');name='README.md'},
         [pscustomobject]@{path=(Join-Path $root 'docs/MODELS.md');name='docs/MODELS.md'},
-        [pscustomobject]@{path=(Join-Path $root 'docs/LFM2-MOE.md');name='docs/LFM2-MOE.md'})
+        [pscustomobject]@{path=(Join-Path $root 'docs/LFM2-MOE.md');name='docs/LFM2-MOE.md'},
+        [pscustomobject]@{path=(Join-Path $root 'docs/IMAGES.md');name='docs/IMAGES.md'})
     foreach ($model in $models) {
         $path=Join-Safe $ModelDirectory $model.path
         Assert-PhiAsset $path ([pscustomobject]@{file=$model.path;bytes=$model.bytes;sha256=$model.sha256})

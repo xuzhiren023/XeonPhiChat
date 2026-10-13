@@ -258,7 +258,10 @@ function Get-LocalModel($Model) {
     $found=Find-LocalModel $Model
     if ($found) { $path=$found }
     else {
-        if ($Model.PSObject.Properties['local_only'] -and $Model.local_only) { throw ('Local Q5_K file is missing: '+$Model.model_path+'. Install the optimized models pack with Setup.cmd -Mode AddModels; this generated model is not available from the upstream download.') }
+        if ($Model.PSObject.Properties['local_only'] -and $Model.local_only) {
+            if ($Model.id.EndsWith('-projector')) { throw 'Import the Step3-Vision pack with Add-Models.cmd, then Load model again.' }
+            throw ('Local Q5_K file is missing: '+$Model.model_path+'. Install the optimized models pack with Setup.cmd -Mode AddModels; this generated model is not available from the upstream download.')
+        }
         # Separate temporary paths prevent two app instances sharing a download.
         $part=$path+'.'+[Guid]::NewGuid().ToString('N')+'.part'
         try {
@@ -369,11 +372,12 @@ function Get-CheckedChatPrompt($Model,$State,[string]$RemoteModel,$Threads,[obje
     $allocated=($Model.context_tokens -ne $baseModel.context_tokens -and (Test-AllocationReceipt $allocationKey))
     $script:allocationReused=$allocated
     for ($attempt=1; $attempt -le 2; $attempt++) {
+        $script:promptImages=@($prompt.images)
         $count=$null
         $fits=($prompt.utf8_upper_bound -le $budget)
         # Reuse measured 4K allocation only for the same boot/model/settings.
         # Prompt counts are never reused; inconclusive bounds still tokenize.
-        if ($automatic -or !$fits -or ($Model.context_tokens -ne $baseModel.context_tokens -and !$allocated)) {
+        if ($automatic -or $script:promptImages.Count -or !$fits -or ($Model.context_tokens -ne $baseModel.context_tokens -and !$allocated)) {
             $check=Invoke-Generation $Model $State $RemoteModel $prompt.text $Threads $Tokens (Join-Path $script:job ('prompt-check-'+$attempt)) -CheckOnly
             $count=$check.prompt_tokens
             $fits=($count -le $budget -and !$check.prompt_rejected)
@@ -381,7 +385,7 @@ function Get-CheckedChatPrompt($Model,$State,[string]$RemoteModel,$Threads,[obje
         if ($fits) {
             if ($automatic) { $Tokens=[int]$Model.context_tokens-[int]$count-64; $script:request.output_tokens=$Tokens }
             if ($Model.context_tokens -ne $baseModel.context_tokens -and $null -ne $count) { Save-AllocationReceipt $allocationKey $check }
-            Write-JsonFile (Join-Path $script:job 'prompt-budget.json') ([pscustomobject]@{context_tokens=$Model.context_tokens;reserved_reply_tokens=$Tokens;margin_tokens=64;prompt_budget=$budget;prompt_tokens=$count;utf8_upper_bound=$prompt.utf8_upper_bound;omitted_pairs=$prompt.omitted_pairs;native_counted=($null -ne $count)})
+            Write-JsonFile (Join-Path $script:job 'prompt-budget.json') ([pscustomobject]@{context_tokens=$Model.context_tokens;reserved_reply_tokens=$Tokens;margin_tokens=64;prompt_budget=$budget;prompt_tokens=$count;utf8_upper_bound=$prompt.utf8_upper_bound;omitted_pairs=$prompt.omitted_pairs;native_counted=($null -ne $count);image_count=$script:promptImages.Count;prompt_positions=$count;position_contract='Step3 normal positions equal expanded tokens'})
             return $prompt
         }
         if ($prompt.omitted_pairs -eq 0 -and $Messages.Count -gt 1) {
@@ -409,7 +413,16 @@ function Invoke-Generation($Model,$State,[string]$RemoteModel,[string]$Prompt,$T
     $streamPath=Join-Path $script:job 'response.txt'
     if ($CheckOnly) { $streamPath=Join-Path $Directory 'check-output.txt' }
     $telemetryStart=$script:healthIndex
+    $inputImages=@(); $imageFiles=@()
+    if (Get-Variable -Name promptImages -Scope Script -ErrorAction SilentlyContinue) { $inputImages=@($script:promptImages) }
+    if ($inputImages.Count) {
+        if (!(Test-ImageModel $Model) -or 'knc-text-image-r1' -cnotin @($State.modern_features)) { Stop-ChatInput 'Image input requires the matching multimodal runtime.' }
+    }
     $values=[ordered]@{
+        IMAGE_COUNT=$inputImages.Count
+        PROJECTOR_PATH=$(if ($inputImages.Count) {$script:remoteProjector} else {'none'})
+        PROJECTOR_BYTES=$(if ($inputImages.Count) {$Model.projector.file_size_bytes} else {0})
+        PROJECTOR_SHA256=$(if ($inputImages.Count) {$Model.projector.sha256} else {'none'})
         RUNTIME_FAMILY=$(if (Test-ModernTextModel $Model) { 'modern-knc' } else { 'historical-knc' }); MODERN_RUNTIME_ID=$(if ($State.PSObject.Properties['modern_runtime_id']) { $State.modern_runtime_id } else { 'none' })
         MODERN_SOURCE_COMMIT=$(if ($State.PSObject.Properties['modern_source_commit']) { $State.modern_source_commit } else { 'none' })
         MODERN_TEST_MODE=$(if (!$CheckOnly -and (Test-ModernTextModel $Model) -and $script:request.PSObject.Properties['modern_test_mode']) { $script:request.modern_test_mode } else { 'none' })
@@ -422,7 +435,7 @@ function Invoke-Generation($Model,$State,[string]$RemoteModel,[string]$Prompt,$T
         CONTEXT=[int]$Model.context_tokens; RUN_MODE=$(if ($CheckOnly) { 'check' } else { 'generate' })
         RUNTIME_ADMIT_MIB=[int]$Model.estimated_peak_runtime_mib
         # Allow growth to the hardware budget, not just the initial estimate.
-        RUNTIME_LIMIT_MIB=([int]$script:health.profile.safe_memory_budget_mib-[int][math]::Ceiling($Model.file_size_bytes/1MB))
+        RUNTIME_LIMIT_MIB=([int]$script:health.profile.safe_memory_budget_mib-[int][math]::Ceiling($Model.file_size_bytes/1MB)-$(if ($Model.PSObject.Properties['extra_resident_mib']) {$Model.extra_resident_mib} else {0}))
         MEMORY_STOP_MIB=[int]$script:health.profile.available_reserve_mib
     }
     $lines=foreach ($entry in $values.GetEnumerator()) {
@@ -435,8 +448,15 @@ function Invoke-Generation($Model,$State,[string]$RemoteModel,[string]$Prompt,$T
     Write-Utf8 $settings (($lines -join [char]10)+[char]10)
     $failure=''
     try {
+        foreach ($im in $inputImages) {
+            $file=Assert-StoredImage $script:data $im
+            $copy=Join-Path $Directory ('image-'+$imageFiles.Count+'.png')
+            $imageFiles+=@($copy)
+            Copy-Item -LiteralPath $file -Destination $copy
+        }
         if (!$alreadyPrepared) { $null=Invoke-Card "mkdir '$remote'" }
         Send-CardFiles @($inputPath,$settings,(Join-Path $script:root 'scripts\chat-worker.sh'),(Join-Path $script:root 'scripts\engine-llama-cli-v1.sh'),(Join-Path $script:root 'scripts\elf-check.sh'),(Join-Path $script:root 'scripts\memory-info.awk'),(Join-Path $script:root 'scripts\model-map.awk'),(Join-Path $script:root 'scripts\prompt-count.awk')) ($remote+'/')
+        if ($imageFiles.Count) { Send-CardFiles $imageFiles ($remote+'/') }
         Update-PreparationHealth
         $wall=[int]$script:cfg.generation_timeout_seconds
         $command="exec '$($State.remote_base)/guard' $wall $($script:cfg.heartbeat_timeout_seconds) bash '$remote/chat-worker.sh' '$($State.remote_base)' '$remote'"
@@ -451,12 +471,13 @@ function Invoke-Generation($Model,$State,[string]$RemoteModel,[string]$Prompt,$T
     } catch { $failure=$_.Exception.Message }
     finally {
         Remove-Item -LiteralPath $inputPath -Force -ErrorAction SilentlyContinue
+        foreach ($file in $imageFiles) { Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue }
         # Bounded cleanup remains possible after cancellation or window closure.
         $script:cleanupMode=$true
         try { Receive-CardReport ($remote+'/report') (Join-Path $Directory 'report') }
         catch { $failure+=' Report collection: '+$_.Exception.Message }
         # Handles a transfer/start failure before the worker installed its trap.
-        try { $null=Invoke-Card "rm -f '$remote/prompt.txt'" } catch { $failure+=' Remote prompt cleanup unconfirmed; card path: '+$remote+'/prompt.txt' }
+        try { $null=Invoke-Card "rm -f '$remote/prompt.txt' '$remote/image-0.png' '$remote/image-1.png' '$remote/image-2.png' '$remote/image-3.png'" } catch { $failure+=' Remote prompt cleanup unconfirmed; card path: '+$remote+'/prompt.txt' }
         $script:cleanupMode=$false
     }
     if ($failure) {

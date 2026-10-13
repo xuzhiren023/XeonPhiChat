@@ -1,5 +1,23 @@
 # Validation
 
+## 1.6.0: images and the shared multimodal runtime
+
+The 7120P payload uses source `61e97998bf49c2d425563920b7e83e52b5ae57a6` plus the retained GCC metadata fix, executable SHA-256 `e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54`. All eight catalog models resolve to this exact shared engine on 7120P. The 3120A retains its previous pinned text engine. The producer's numerical replay and small vision fixtures are inherited evidence, separate from the trained-model checks below.
+
+The Windows PowerShell 5.1 host suite passed, including actual WPF attachment controls, image normalization, thumbnail removal, image-only input, history image ordering/trimming, stored drafts, offline cleanup, context/Stop behavior and model/runtime pairing. The UI was rendered and inspected. The file-picker/drop entry point was exercised through the real controls; a physical OS drag gesture was not automated. The shared-runtime package check passed 114 checks, including exact archive/binary identities, K1OM ELF headers, affinity configuration and the required metadata patch. A focused follow-up check covered the new Processing images status.
+
+The first trained Step3 run exposed an obsolete projector conversion: its downsamplers used old tensor names. The release pins the structurally compatible JamePeng conversion and its locally generated Q6_K artifact. Both the complete decoder and projector were hashed before loading. No hardware reset or network/MPSS reconfiguration was used.
+
+On 13 October 2026, the complete Step3-VL Q5_K_M decoder plus Q6_K projector returned **Blue** for a 120-by-80 blue image on the 7120P. Native counting expanded the request to 208 tokens/positions. The run used 2,048 context, batch 32 and verified 180-worker affinity. It generated 37 tokens at 1.181 tokens/s; first stream byte was 494.4 seconds after generation launch, plus 29.2 seconds of preparation. The encoder/prefill dominates the wait. Peak temperature was 68 C, peak additional RSS was 2,779.6 MiB, and minimum available memory was 4,503.1 MiB. The decoder mapping was counted once. Native unloading returned process RSS to about 82 MiB, and the job released its card lease and transient images.
+
+The earlier structurally compatible Q8 trial was stopped during encoding, without a completed response. Its dominant vision matrices use generic kernels in this runtime; Q6_K uses supported optimized matrix paths. This does not establish an exact Q8/Q6 speedup or broad visual accuracy. General photographs, OCR, long contexts and other cards are not qualified by the small color-image check.
+
+An automatic follow-up retained the original image and counted 227 tokens/positions in a 6,048-token context with batch 128. Stop interrupted its image encoder, returned `preserve_ready=true`, removed transient images and released the lease. A subsequent text request using the same readiness completed without reloading (24 tokens at 1.131 tokens/s, deliberately short). These exercise cancellation and continuation; the automatic follow-up was not run to a completed image answer.
+
+Gaston completed short arithmetic conversations on the same runtime with automatic allocation: 111,200 context tokens, batch 128 and 180 workers. The final run returned **14** for 6 plus 8, generating 58 tokens at 3.521 tokens/s. First stream byte arrived after 21.4 seconds, plus 23.4 seconds of preparation. Peak native RSS was 6,955.8 MiB, peak additional RSS 1,403.2 MiB, minimum free memory 7,710.9 MiB and peak temperature 61 C. This validates allocation and short generation, not full-context quality.
+
+These runs exposed transient duplicate/overlapping mappings while Linux streamed `smaps` during allocation. The worker now reads total resident memory from the kernel's `VmRSS`, deduplicates model mapping ranges and caps model credit at its page-rounded file size. Unsafe mappings remain rejected. The final native run and a repeated-mapping regression confirm that this bookkeeping no longer inflates reported memory or causes a false allocation stop.
+
 ## 1.5.7: optimized llama.cpp d57e0e6
 
 Both supported profiles package the exact MPSS GCC 5.1.1 cross-built `phi-modern` runner linked against `d57e0e6e4882445bc625aaee47f91db469f9fc22` (upstream base `4413a192410fad1f054e9216114087a3e01527a0`). The private CLI adapter retains the existing app protocol; its source and CMake recipe are included under `tools/native-runner`. Binary, library, driver-source and evidence-archive hashes are pinned in `assets/upstream-runtime-build.json`.

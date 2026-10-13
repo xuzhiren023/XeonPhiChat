@@ -23,6 +23,31 @@ foreach ($saved in (Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime-1.5
     if ($found.sha256 -cne $saved.sha256 -or $found.modern_source_commit -cne '6783b11fb0889d68d0046176b4cc92ceee1961b0') { throw '1.5.6 runtime restore pin changed.' }
 }
 Write-Output 'PASS: previous 1.5.6 runtime IDs, hashes and source pins remain available for restore'
+$candidatePin=Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime-numerics-r3.json')
+$candidate=$candidatePin.payloads[0]
+$candidateHealth=[pscustomobject]@{profile=[pscustomobject]@{profile_id='xeon-phi-7120p'}}
+$resolved=Get-ModernPayload $candidateHealth '1.4.2' $candidate.runtime_id
+if ($resolved.sha256 -cne $candidate.sha256 -or $resolved.main_sha256 -cne 'e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54' -or
+    $resolved.modern_source_commit -cne '61e97998bf49c2d425563920b7e83e52b5ae57a6') { throw 'Numerics candidate pin mismatch.' }
+foreach ($profile in @('xeon-phi-3120a','xeon-phi-5110p')) {
+    $rejected=$false
+    try { $null=Get-ModernPayload ([pscustomobject]@{profile=[pscustomobject]@{profile_id=$profile}}) '1.4.2' $candidate.runtime_id } catch { $rejected=$true }
+    if (!$rejected) { throw '7120P qualification was inherited by another card.' }
+}
+if ((Get-ModernPayload $candidateHealth).runtime_id -cne $candidate.runtime_id) { throw '7120P default does not select the multimodal runtime.' }
+Write-Output 'PASS: optional numerics runtime resolves by exact 7120P ID/hash; other cards rejected; default and rollback pins preserved.'
+$script:health=$candidateHealth
+$candidateState=[pscustomobject]@{modern_runtime_version='1.4.2';modern_runtime_id=$candidate.runtime_id;modern_source_commit=$candidatePin.modern_source_commit}
+foreach($model in Get-ChildItem (Join-Path $AppRoot 'config/models') -Filter '*.yaml' | ForEach-Object {Read-JsonFile $_.FullName}) {
+    if ($model.architecture -cin @('llama','lfm2') -and $model.required_source_commit -ceq 'd57e0e6e4882445bc625aaee47f91db469f9fc22') {
+        if (!(Test-ModernModelSource $model $candidateState)) { throw 'Qualified existing model revision rejected.' }
+    }
+}
+$unknown=[pscustomobject]@{required_source_commit=('0'*40)}
+if (Test-ModernModelSource $unknown $candidateState) { throw 'Unlisted model revision accepted.' }
+$candidateState.modern_source_commit='6783b11fb0889d68d0046176b4cc92ceee1961b0'
+if (Test-ModernModelSource ([pscustomobject]@{required_source_commit='d57e0e6e4882445bc625aaee47f91db469f9fc22'}) $candidateState) { throw 'Payload/source mismatch accepted.' }
+Write-Output 'PASS: pinned model-source compatibility; unknown revisions and inconsistent runtime state rejected.'
 $previous=Read-JsonFile (Join-Path $AppRoot 'config/modern-runtime-1.5.3-paired.json')
 foreach ($payload in $previous.payloads) {
     $health=[pscustomobject]@{profile=[pscustomobject]@{profile_id=$payload.profile}}

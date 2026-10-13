@@ -9,12 +9,21 @@
       "sha256": "076f2e46d5f7174d20c9ad393a01db6a51c38695f03a6b1f83cd60f6289de941"
     },
     {
-      "bytes": 102778880,
+      "bytes": 82964480,
+      "features": [
+        "auto-resources-v1",
+        "shared-multi-quant-v1",
+        "knc-text-image-r1"
+      ],
       "file": "runtime-7120P.tar",
-      "kind": "modern",
+      "main_sha256": "e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54",
       "profile": "xeon-phi-7120p",
-      "runtime_id": "phichat142-modern-3d25ba4134e4db3f",
-      "sha256": "69fdb3e5dea8d6b8f66125c481058180a434cee41e4081a69ffb7a20cb023ff4"
+      "runtime_id": "phichat142-modern-910493bed33a64fd",
+      "sha256": "cace6cea6088e4eb41b8dbb98644a3f85f36244f233386ac24ce635d3becc144",
+      "compatible_model_source_commits": [
+        "d57e0e6e4882445bc625aaee47f91db469f9fc22"
+      ],
+      "kind": "modern"
     },
     {
       "bytes": 4554240,
@@ -24,5 +33,5 @@
     }
   ],
   "schema_version": 1,
-  "version": "1.5.7"
+  "version": "1.6.0"
 }

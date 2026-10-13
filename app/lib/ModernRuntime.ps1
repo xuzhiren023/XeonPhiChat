@@ -9,11 +9,11 @@ function Get-ModernSelectionPath([string]$Data,$Health) {
 function Get-ModernPayload($Health,[string]$Version='1.4.2',[string]$RuntimeId='') {
     if ($Version -notin @('1.4.0','1.4.1','1.4.2')) { throw 'Unsupported modern runtime version.' }
     $files=if ($Version -cne '1.4.2') { @('config/modern-runtime-'+$Version+'.json') }
-           elseif ($RuntimeId) { @('config/modern-runtime.json','config/modern-runtime-1.5.6-shared.json','config/modern-runtime-1.5.3-paired.json','config/modern-runtime-1.4.2-original.json','config/modern-runtime-q5-repair-r1.json','config/modern-runtime-preview-standard.json') }
-           else { @('config/modern-runtime.json') }
+           elseif ($RuntimeId) { @('config/modern-runtime.json','config/modern-runtime-numerics-r3.json','config/modern-runtime-1.5.6-shared.json','config/modern-runtime-1.5.3-paired.json','config/modern-runtime-1.4.2-original.json','config/modern-runtime-q5-repair-r1.json','config/modern-runtime-preview-standard.json') }
+           else { if ($Health.profile.profile_id -ceq 'xeon-phi-7120p') { @('config/modern-runtime-numerics-r3.json') } else { @('config/modern-runtime.json') } }
     $matches=@(foreach ($file in $files) {
         $pin=Read-JsonFile (Join-Path $script:root $file)
-        if ($pin.version -cne $Version -or $pin.source_commit -cne $script:cfg.source_commit -or $pin.kernel_version -cne '0.2.1' -or $pin.modern_source_commit -cnotin @('6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22')) { throw 'Invalid modern text runtime package pin.' }
+        if ($pin.version -cne $Version -or $pin.source_commit -cne $script:cfg.source_commit -or $pin.kernel_version -cne '0.2.1' -or $pin.modern_source_commit -cnotin @('6783b11fb0889d68d0046176b4cc92ceee1961b0','d57e0e6e4882445bc625aaee47f91db469f9fc22','61e97998bf49c2d425563920b7e83e52b5ae57a6')) { throw 'Invalid modern text runtime package pin.' }
         $variants=@($pin.payloads | Where-Object { $_.profile -ceq $Health.profile.profile_id })
         if ($RuntimeId -and $variants.Count -eq 0) { continue }
         if ($variants.Count -ne 1) { throw 'No modern text kernel variant for the detected card.' }
@@ -35,6 +35,15 @@ function Assert-ModernSelection($Selection,$Payload) {
         throw 'Modern runtime selection does not match this card/build. Preserve evidence and restore the matching runtime.'
     }
     Assert-RemoteBase $Selection.remote_base
+}
+function Test-ModernModelSource($Model,$State) {
+    if (!$State.PSObject.Properties['modern_runtime_id'] -or !$State.PSObject.Properties['modern_source_commit']) { return $false }
+    if ($State.modern_source_commit -ceq $Model.required_source_commit) { return $true }
+    # Compatibility belongs to an exact pinned payload, not to a version label.
+    $payload=Get-ModernPayload $script:health ([string]$State.modern_runtime_version) ([string]$State.modern_runtime_id)
+    if ($payload.modern_source_commit -cne $State.modern_source_commit -or
+        !$payload.PSObject.Properties['compatible_model_source_commits']) { return $false }
+    return $Model.required_source_commit -cin @($payload.compatible_model_source_commits)
 }
 function Assert-ModernPayload([string]$Path,$Payload) {
     if (!(Test-Path -LiteralPath $Path -PathType Leaf) -or (Get-Item -LiteralPath $Path).Length -ne $Payload.bytes -or

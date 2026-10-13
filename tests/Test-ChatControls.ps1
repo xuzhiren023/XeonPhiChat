@@ -44,6 +44,9 @@ Write-JsonFile (Join-Path $job.dir 'prompt-budget.json') ([pscustomobject]@{cont
 Write-JsonFile (Join-Path $job.dir 'live-progress.json') ([pscustomobject]@{stage='check';native=[pscustomobject]@{Stage='check';Consumed=900;SampleSeconds=90}})
 Update-JobInsights $job $null $false
 Check ($first.metrics.output_tokens -eq 0 -and $null -eq $first.metrics.generation_tps) 'native precheck counts never masquerade as output tokens'
+Write-JsonFile (Join-Path $job.dir 'live-progress.json') ([pscustomobject]@{stage='vision';native=[pscustomobject]@{Stage='vision';Consumed=0;SampleSeconds=100}})
+Update-JobInsights $job $null $false
+Check ($first.metrics.phase -ceq 'Processing images' -and $first.metrics.output_tokens -eq 0) 'image encoding has its own progress phase'
 function Sample([double]$Seconds,[int]$Consumed,[string]$Stage='generating') {
     Write-JsonFile (Join-Path $job.dir 'live-progress.json') ([pscustomobject]@{stage=$Stage;native=[pscustomobject]@{Stage='prefill';Consumed=$Consumed;SampleSeconds=$Seconds}})
     Update-JobInsights $job $null $false; Update-ChatInsights

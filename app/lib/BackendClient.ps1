@@ -19,7 +19,7 @@ function Start-PhiWorkerProcess([string]$AppRoot,[string]$JobDirectory) {
 
 function Start-PhiBackendJob([string]$AppRoot,[string]$DataDirectory,$Request) {
     Assert-PhiJobProtocol $Request
-    $Request | Add-Member -NotePropertyName protocol_version -NotePropertyValue 1 -Force
+    $Request | Add-Member -NotePropertyName protocol_version -NotePropertyValue 2 -Force
     $directory=Join-Path $DataDirectory ('jobs/job-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
     $null=New-Item -ItemType Directory -Path $directory
     try {

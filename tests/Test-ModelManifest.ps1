@@ -7,14 +7,17 @@ function Check([bool]$Value,[string]$Message) { $script:checks++; if (!$Value) {
 function Read([string]$Relative) { Get-Content -LiteralPath (Join-Path $root $Relative) -Raw | ConvertFrom-Json }
 $manifest=Read 'assets/optimized-models.json'
 foreach ($entry in $manifest.models) {
-    $model=Read ('app/config/models/'+$entry.id+'.yaml')
+    if ($entry.PSObject.Properties['kind'] -and $entry.kind -ceq 'vision-projector') {
+        $parent=Read ('app/config/models/'+$entry.model_id+'.yaml'); $model=$parent.projector
+        $model | Add-Member model_path ('models/uniform-q5-k/'+$model.filename)
+    } else { $model=Read ('app/config/models/'+$entry.id+'.yaml') }
     Check ($entry.bytes -eq $model.file_size_bytes -and $entry.sha256 -ceq $model.sha256 -and $entry.path -ceq $model.model_path) ($entry.id+': import manifest and app agree on complete artifact identity')
 }
 $id='lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k'
 $gaston=@($manifest.models | Where-Object id -CEQ $id)[0]
 $model=Read ('app/config/models/'+$id+'.yaml')
 $provenance=Read $gaston.provenance_file
-Check ($gaston.runtime_status -ceq 'blocked_lfm2moe' -and !$gaston.native_acceptance -and !$provenance.knc_execution_validated) 'catalog and provenance do not claim native acceptance'
+Check ($gaston.runtime_status -ceq 'experimental_lfm2moe' -and !$gaston.native_acceptance -and !$provenance.knc_execution_validated) 'catalog and provenance do not claim native acceptance'
 Check ($provenance.bytes -eq 5830593408 -and $provenance.sha256 -ceq '852cd73ed6ba7d8fcd6ebeae577a75fa7de5f3239c9fe0dce7bf8cc077e20ec3' -and $gaston.sha256 -ceq $provenance.sha256) 'Gaston pins the completed Q5_K artifact, not source Q8_0'
 Check ($model.source_quantization -ceq 'Q8_0' -and $model.requantization -and !$model.imatrix_used_for_this_conversion -and $provenance.requantization -and !$provenance.imatrix_used_for_this_conversion) 'Q8_0 requantization and absent conversion imatrix are explicit'
 Check ($model.revision -ceq $provenance.source.revision -and $model.repository -ceq $provenance.source.repo -and $model.source_sha256 -ceq $provenance.source.files[0].sha256 -and $model.quantizer_commit -ceq $provenance.quantizer.commit) 'source and quantizer provenance agree across the catalog'

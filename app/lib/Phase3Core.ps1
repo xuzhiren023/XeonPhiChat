@@ -50,7 +50,7 @@ function Assert-ModelBudget($Model, $Profile) {
         throw 'Model minimum memory exceeds this card safe budget, or its budget is undeclared.'
     }
     if ($Model.estimated_peak_runtime_mib -le 0 -or
-        ($Model.estimated_peak_runtime_mib + [math]::Ceiling($Model.file_size_bytes / 1MB)) -gt $Model.minimum_memory_mib) {
+        ($Model.estimated_peak_runtime_mib + [math]::Ceiling($Model.file_size_bytes / 1MB) + $(if ($Model.PSObject.Properties['extra_resident_mib']) {$Model.extra_resident_mib} else {0})) -gt $Model.minimum_memory_mib) {
         throw 'Model budget does not cover the runtime and RAM-backed model file.'
     }
 }

@@ -23,7 +23,7 @@ function Update-JobInsights($Job,$Status,[bool]$Complete) {
     $m.generation_tps=$Job.estimatedRate; $m.generation_estimated=$true
     $live=Read-InsightFile $Job.dir 'live-progress.json'
     if ($live) {
-        $m.phase=switch ($live.stage) { 'generating' {'Generating'} 'prefill' {'Processing prompt'} 'check' {'Counting context'} default {'Preparing'} }
+        $m.phase=switch ($live.stage) { 'generating' {'Generating'} 'prefill' {'Processing prompt'} 'vision' {'Processing images'} 'check' {'Counting context'} default {'Preparing'} }
         $n=$live.native
         # Consumed includes the prompt and generated tokens. Check-mode samples
         # belong to a separate preflight and must never count as generation.

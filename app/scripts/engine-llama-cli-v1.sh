@@ -11,7 +11,7 @@ phi_select_engine() {
             [[ $(cat "$runtime/modern-runtime-passed.txt") == "$MODERN_RUNTIME_ID" ]] || fail 'modern runtime startup receipt'
             [[ $(cat "$runtime/modern-source.txt") == "${MODERN_SOURCE_COMMIT:-6783b11fb0889d68d0046176b4cc92ceee1961b0}" ]] || fail 'modern engine source'
             case ${MODERN_SOURCE_COMMIT:-6783b11fb0889d68d0046176b4cc92ceee1961b0} in
-                6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22) ;;
+                6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22|61e97998bf49c2d425563920b7e83e52b5ae57a6) ;;
                 *) fail 'Unsupported modern source revision';;
             esac
             engine="$runtime/llama/phi-modern"
@@ -57,6 +57,16 @@ phi_build_engine_args() {
         IFS=',' read -r -a stop_ids <<< "$STOP_TOKEN_IDS"
         ((${#stop_ids[@]} <= 16)) || fail 'Too many stop IDs'
         for stop_id in "${stop_ids[@]}"; do args+=(--stop-token "$stop_id"); done
+    fi
+    if [[ ${IMAGE_COUNT:-0} != 0 ]]; then
+        [[ ${IMAGE_COUNT:-} =~ ^[1-4]$ && ${MODERN_SOURCE_COMMIT:-} == 61e97998bf49c2d425563920b7e83e52b5ae57a6 ]] || fail 'Invalid image runtime/count'
+        [[ $PROJECTOR_PATH == "$runtime/models/step3-vl-10b-q5_k_m-projector.gguf" && $PROJECTOR_SHA256 =~ ^[a-f0-9]{64}$ && $PROJECTOR_BYTES =~ ^[0-9]+$ ]] || fail 'Invalid projector pairing'
+        [[ -f $PROJECTOR_PATH && $(cat "$PROJECTOR_PATH.identity") == "$PROJECTOR_SHA256" && $(LC_ALL=C ls -ln "$PROJECTOR_PATH" | awk '{print $5}') == "$PROJECTOR_BYTES" ]] || fail 'Projector absent or changed'
+        args+=(--mmproj "$PROJECTOR_PATH")
+        for ((i=0;i<IMAGE_COUNT;i++)); do
+            [[ -s $job/image-$i.png ]] || fail 'Image missing'
+            args+=(--image "$job/image-$i.png")
+        done
     fi
     if [[ $RUN_MODE == check ]]; then
         grep -q -- '--verbose-prompt' "$job/report/main-help.txt" || fail 'Pinned runtime lacks native prompt counting'

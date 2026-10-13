@@ -25,8 +25,8 @@ function New-MessageText([string]$Text,[string]$Color='#ECECEC') {
     $body.Padding=New-Object Windows.Thickness(0); $body.IsReadOnlyCaretVisible=$false
     return $body
 }
-function Add-ChatBubble([string]$Role,[string]$Text) {
-    $item=[pscustomobject]@{role=$Role;text=$Text;state=$(if ($Role -ceq 'assistant') {'streaming'} else {'done'});starts_thinking=($script:selectedModel -like 'lfm2*')}
+function Add-ChatBubble([string]$Role,[string]$Text,[object[]]$Images=@()) {
+    $item=[pscustomobject]@{role=$Role;text=$Text;images=$Images;state=$(if ($Role -ceq 'assistant') {'streaming'} else {'done'});starts_thinking=($script:selectedModel -like 'lfm2.5-2.6b*' -or $script:selectedModel -like 'step3*')}
     $null=$script:conversation.bubbles.Add($item)
     $script:liveBubble=Render-ChatBubble $item
     return $item
@@ -41,6 +41,14 @@ function Render-ChatBubble($Item) {
     $border.HorizontalAlignment=if ($user) { 'Right' } else { 'Stretch' }
     $border.MaxWidth=if ($user) { 600 } else { 780 }
     $panel=New-Object Windows.Controls.StackPanel
+    if ($user -and @(Get-MessageImages $Item).Count) {
+        $pictures=New-Object Windows.Controls.WrapPanel
+        foreach ($picture in @(Get-MessageImages $Item)) {
+            $thumb=New-ImageThumbnail $picture 180; $thumb.Margin=New-Object Windows.Thickness(0,0,8,10)
+            $null=$pictures.Children.Add($thumb)
+        }
+        $null=$panel.Children.Add($pictures)
+    }
     $body=New-MessageText $Item.text
     $reason=New-MessageText '' '#AAAAAA'
     $reason.FontSize=13; $reason.Margin=New-Object Windows.Thickness(12,8,0,14)

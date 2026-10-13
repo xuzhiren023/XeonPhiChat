@@ -103,10 +103,10 @@ try {
     $null=Import-PhiOptimizedModels $fixture $install $pack
     $null=Import-PhiOptimizedModels $fixture $install $pack
     Check (@(Get-ChildItem -LiteralPath (Join-Path $install 'app/models/uniform-q5-k')).Count -eq $models.models.Count) 'all pinned models import and retry verified'
-    $blocked=@($models.models | Where-Object { $_.PSObject.Properties['runtime_status'] -and $_.runtime_status -ceq 'blocked_lfm2moe' })
-    Check ($blocked.Count -eq 1) 'one pinned Gaston model remains blocked for native execution'
+    $blocked=@($models.models | Where-Object { $_.PSObject.Properties['runtime_status'] -and $_.runtime_status -ceq 'experimental_lfm2moe' })
+    Check ($blocked.Count -eq 1) 'one pinned Gaston model uses the experimental MoE runtime'
     $gaston=Import-PhiOptimizedModels $fixture $install $pack @($blocked[0].id)
-    Check ($gaston.count -eq 1 -and $gaston.blocked_model_ids[0] -ceq $blocked[0].id -and !$gaston.runtime_acceptance_changed) 'Gaston import reports blocked runtime without creating acceptance'
+    Check ($gaston.count -eq 1 -and $gaston.blocked_model_ids.Count -eq 0 -and !$gaston.runtime_acceptance_changed) 'Gaston import does not create native acceptance'
     $one=Join-Path $scratch 'single model pack'; New-Directory (Join-Path $one 'models/uniform-q5-k')
     Copy-Item -LiteralPath (Join-Safe $pack $models.models[0].path) -Destination (Join-Safe $one $models.models[0].path)
     $single=Import-PhiOptimizedModels $fixture $install $one

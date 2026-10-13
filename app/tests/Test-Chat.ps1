@@ -16,7 +16,7 @@ foreach ($model in @($td,$lfm,$q2)) { Assert-ModelBudget $model $a }
 Reject { Assert-ModelBudget $q5 $a } '3120A rejects oversized weights'
 Assert-ModelBudget $q5 $p
 Check (@(Get-ModelChoices $root $a | Where-Object enabled).Count -eq 3) '3120A has three supported model choices'
-Check (@(Get-ModelChoices $root $p | Where-Object enabled).Count -eq 6) '7120P also admits Llama Q5 and both new Q5_K models'
+Check (@(Get-ModelChoices $root $p | Where-Object enabled).Count -eq 8) '7120P also admits the MoE and Step3 profiles'
 $copy=$td.PSObject.Copy(); $copy.memory_mode='copy'
 Reject { Assert-ModelBudget $copy $a } 'copy-mode accounting is rejected'
 $prompt=New-ChatPrompt $td @([pscustomobject]@{role='user';content='Hello'}) 'Be helpful' 1024
@@ -29,7 +29,8 @@ Reject { New-ChatPrompt $td @([pscustomobject]@{role='assistant';content='Hi'}) 
 Reject { Get-ModelProfile $root '../invalid' } 'model path traversal rejected'
 Reject { Assert-RemoteBase '/root/runtime;reboot' } 'unsafe runtime path rejected'
 $step=Get-ModelProfile $root 'step3-vl-10b-q5_k_m'
-Reject { Assert-ModelRuntime $step } 'unqualified vision architecture remains blocked'
+Assert-ModelRuntime $step
+Reject { Assert-ModelRuntimeFeatures $step ([pscustomobject]@{modern_features=@('shared-multi-quant-v1')}) } 'vision requires multimodal runtime'
 Check ((Get-ThreadChoice $a $lfm).generation -eq 168 -and (Get-ThreadChoice $p $lfm).generation -eq 180) 'modern SKU worker settings preserved'
 $prompt=New-ChatPrompt $lfm @([pscustomobject]@{role='user';content='Hi'}) ''
 Check ($prompt.text -ceq "<|startoftext|><|im_start|>user`nHi<|im_end|>`n<|im_start|>assistant`n<think>") 'LFM exact generation template preserved'
