@@ -1,5 +1,28 @@
 # Validation
 
+## 1.6.3: MPSS priming repair and native acceptance (2026-10-14)
+
+Removed card-side `sha256sum` calls from priming. Windows verifies the pinned runtime archive before SCP; the card checks transfer size and K1OM ELF headers. Picture transfers no longer rehash attachments. Import-time image identity and release/model/runtime package pins remain. The native runner and OpenMP library bytes are unchanged from 1.6.2.
+
+The full Windows PowerShell 5.1 host suite passed (68 scripts parsed), including image transfer with the hash helper deliberately unavailable. The real 7120P backend then passed:
+
+| Check | Observed result |
+| --- | --- |
+| LFM2.5-VL 3B Q5_K_M prime | Ready in 36.55 s with already staged weights; automatic context 32,768, batch 128, 180 threads |
+| Two independent short text requests | Correct `4` and `8`; Send-to-prefill 2.71 / 3.33 s; first output 7.90 / 8.13 s |
+| 120×80 blue picture | Correct `Blue.`; Send-to-vision 2.59 s; first output 47.51 s; completed 48.35 s |
+| Stop and re-prime | Stopped after first streamed text; cancellation preserved readiness; re-primed 19.73 s after cancellation receipt |
+| Follow-up after Stop | Correct `12`; Send-to-prefill 2.56 s |
+| Switch to LFM2.5 2.6B Q5_K_M | Prior worker stopped; 2,664 MiB of vision model/projector file data released; text model uploaded and primed; automatic context 131,072, batch 128, 180 threads |
+| Text after model switch | Streamed the requested eight-token smoke response; Send-to-prefill 2.71 s |
+| Final shutdown | Cleanup confirmed; no resident process or workload lease remained |
+
+Timings above start before launching the per-message Windows worker, so they include that startup overhead. Broker-only ACK times are smaller. The text model's eight-token smoke response ended during reasoning; this checks the stream/budget path, not completed-answer quality. The model switch took 192.96 s including its 1.85 GiB weight upload; this one-time Load cost is separate from warm Send latency.
+
+All three resident starts recorded read-only shared mappings and verified thread affinity. Across the run, peak temperature was 64°C, minimum sampled allocatable GDDR was 10,963.6 MiB, and maximum additional runtime RSS was 2,146.6 MiB. After worker shutdown, raw free GDDR was 13,247.3 MiB; the selected text model remained intentionally cached. Existing installations and the MPSS/card boot configuration were preserved.
+
+Native scope is these two LFM models and this 7120P. Step3, Gaston, the other catalog models, and 3120A were not re-benchmarked here. Existing nine-model pin/dispatch host checks and prior synthetic correctness results remain separate. This fix does not accelerate Step3 image encoding.
+
 ## 1.6.2: resident priming candidate (offline validation)
 
 The Windows PowerShell 5.1 host suite passed, including the real WPF ready/priming transitions, framed output with split UTF-8 and control-looking model text, worker ownership, token metrics, request completion, Stop/re-prime and shutdown. Setup installs the extra runtime into its own pinned cache and stages its first model without leaving an installer-owned resident worker. All nine 7120P catalog entries resolve to the exact priming/base-runtime pair; 3120A keeps the previous path.

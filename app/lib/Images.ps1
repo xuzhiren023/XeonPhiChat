@@ -59,8 +59,8 @@ function Import-ChatImage([string]$Data,[string]$Path) {
 function Assert-StoredImage([string]$Data,$Image) {
     $path=Get-ImagePath $Data $Image
     $file=Get-Item -LiteralPath $path -ErrorAction Stop
-    if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -ne $Image.bytes -or
-        (Get-PhiFileHash -LiteralPath $path).Hash.ToLowerInvariant() -cne $Image.sha256) { Stop-ChatInput 'An attached image is missing or changed. Remove it and attach it again.' }
+    # Attachment identity is recorded once at import; transfer never rehashes the picture.
+    if ($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -ne $Image.bytes) { Stop-ChatInput 'An attached image is missing or changed. Remove it and attach it again.' }
     return $path
 }
 function Remove-UnreferencedImages([string]$Data,[object[]]$Sessions) {

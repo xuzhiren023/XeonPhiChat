@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "feature": "prime-v1",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "base_source_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
   "upstream_base": "4413a192410fad1f054e9216114087a3e01527a0",
   "source_repository": "https://github.com/xuzhiren023/llama.cpp",
@@ -42,7 +42,8 @@
     "library_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
     "base_runtime_id": "phichat142-modern-910493bed33a64fd"
   },
-  "hardware_acceptance": false,
-  "hardware_validation": "Pending explicit user approval; binary cross-built and ELF-inspected, never executed on Phi during this change.",
-  "offline_reference": "Synthetic x86 checks are separate from Phi correctness and throughput acceptance."
+  "hardware_acceptance": true,
+  "hardware_validation": "2026-10-14: 7120P resident priming, repeated text, small LFM2.5-VL image, Stop/reprime, model switch and shutdown passed. Native scope: LFM2.5-VL-3B-Q5_K_M and LFM2.5-2.6B-Q5_K_M. Binary bytes unchanged. See docs/VALIDATION.md; other catalog models were not re-benchmarked.",
+  "offline_reference": "Synthetic x86 checks are separate from Phi correctness and throughput acceptance.",
+  "first_packaged_version": "1.6.2"
 }

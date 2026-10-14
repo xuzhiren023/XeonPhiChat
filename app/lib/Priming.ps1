@@ -50,7 +50,6 @@ function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
         PREDICT=0;BATCH=$script:primeResources.batch_tokens;CONTEXT=$script:primeResources.context_tokens;SEED=$script:cfg.seed;RUN_MODE='generate';MQ_ROWS=4
         RUNTIME_ADMIT_MIB=$script:primeModel.estimated_peak_runtime_mib;RUNTIME_LIMIT_MIB=([int]$script:health.profile.safe_memory_budget_mib-[int][math]::Ceiling($BaseModel.file_size_bytes/1MB)-$(if ($script:primeModel.PSObject.Properties['extra_resident_mib']) {$script:primeModel.extra_resident_mib} else {0}))
         MEMORY_STOP_MIB=$script:health.profile.available_reserve_mib
-        PRIME_SHA256=$Pin.runner_sha256; PRIME_LIBRARY_SHA256=$Pin.library_sha256
         PROJECTOR_PATH=$(if (Test-ImageModel $BaseModel) {$script:remoteProjector} else {'none'})
         PROJECTOR_SHA256=$(if (Test-ImageModel $BaseModel) {$BaseModel.projector.sha256} else {'none'})
         PROJECTOR_BYTES=$(if (Test-ImageModel $BaseModel) {$BaseModel.projector.file_size_bytes} else {0})
@@ -63,7 +62,9 @@ function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
     if ($stops -cnotmatch '^([0-9]{1,6}(,[0-9]{1,6}){0,15})?$') {throw 'Invalid stop tokens.'}
     Write-Utf8 $settings (($lines -join "`n")+"`nSTOP_TOKEN_IDS='$stops'`n")
     Send-CardFiles @($archive,$settings,(Join-Path $script:root 'scripts/prime-worker.sh'),(Join-Path $script:root 'scripts/engine-llama-cli-v1.sh'),(Join-Path $script:root 'scripts/elf-check.sh'),(Join-Path $script:root 'scripts/memory-info.awk'),(Join-Path $script:root 'scripts/model-map.awk')) ($remote+'/')
-    $null=Invoke-Card "set -eu; cd '$remote'; mv prime-settings.sh settings.sh; mkdir prime inputs; test `"`$(sha256sum '$($Pin.file)' | awk '{print `$1}')`" = '$($Pin.sha256)'; tar -xf '$($Pin.file)' -C prime; rm '$($Pin.file)'"
+    # The pinned archive is verified on Windows; SCP supplies transport integrity.
+    # MPSS BusyBox does not consistently include a SHA-256 utility.
+    $null=Invoke-Card "set -eu; cd '$remote'; mv prime-settings.sh settings.sh; mkdir prime inputs; test `"`$(LC_ALL=C ls -ln '$($Pin.file)' | awk '{print `$5}')`" = '$($Pin.bytes)'; tar -xf '$($Pin.file)' -C prime; rm '$($Pin.file)'"
     $p=New-Object Diagnostics.Process
     $p.StartInfo.FileName=$script:ssh
     $command="exec '$($State.remote_base)/guard' 86400 $($script:cfg.heartbeat_timeout_seconds) bash '$remote/prime-worker.sh' '$($State.remote_base)' '$remote'"

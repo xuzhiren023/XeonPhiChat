@@ -15,6 +15,12 @@ $drawing=[Drawing.Graphics]::FromImage($bitmap)
 try { $drawing.Clear([Drawing.Color]::CornflowerBlue); $bitmap.Save($source,[Drawing.Imaging.ImageFormat]::Png) } finally {$drawing.Dispose();$bitmap.Dispose()}
 $im=Import-ChatImage $Scratch $source
 Check ((Assert-StoredImage $Scratch $im) -and $im.width -eq 120 -and $im.height -eq 80) 'image copied into verified session storage'
+& {
+    function Get-PhiFileHash { throw 'Image transfer must not hash the attachment.' }
+    Check ((Assert-StoredImage $Scratch $im) -ceq (Get-ImagePath $Scratch $im)) 'image transfer works without a SHA utility'
+    $badSize=$im.PSObject.Copy(); $badSize.bytes++
+    Reject {Assert-StoredImage $Scratch $badSize} 'truncated attachment is still rejected without hashing'
+}
 $model=Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m'
 $messages=@([pscustomobject]@{role='user';content='Look';images=@($im)},[pscustomobject]@{role='assistant';content='A picture'},[pscustomobject]@{role='user';content='What color?'})
 $prompt=New-ChatPrompt $model $messages '' 0

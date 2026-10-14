@@ -114,10 +114,8 @@ printf 'epoch,memfree_kib,vmrss_kib,vmhwm_kib,available_kib,cache_credit_kib,mod
 cd "$job"
 ln -s /dev/null main.log
 ln -s /dev/null llama.log
-# The archive and executable are pinned independently of the retained CLI.
-[[ $PRIME_SHA256 =~ ^[a-f0-9]{64}$ && $PRIME_LIBRARY_SHA256 =~ ^[a-f0-9]{64}$ ]] || fail 'Invalid priming identity'
-[[ $(sha256sum "$job/prime/bin/phi-prime" | awk '{print $1}') == "$PRIME_SHA256" ]] || fail 'Priming executable changed'
-[[ $(sha256sum "$job/prime/lib/libgomp.so.1" | awk '{print $1}') == "$PRIME_LIBRARY_SHA256" ]] || fail 'Priming library changed'
+# The host verified the pinned archive before SCP. No card hash utility is required.
+check_elf "$job/prime/lib/libgomp.so.1"
 engine="$job/prime/bin/phi-prime"
 check_elf "$engine"
 args=(-m "$MODEL_PATH" -c "$CONTEXT" -b "$BATCH" -t "$THREADS" -tb "$PROMPT_THREADS" -n 0 --serve "$job")
