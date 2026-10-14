@@ -8,3 +8,5 @@ The d57e0e6 rebase also retains the fork's [llama.cpp MIT license](licenses/llam
 
 Intel MPSS and Windows/OpenSSH system tools are supplied by the user's installed driver/Windows features. They are not copied from the developer PC into this release. Model weights are separate assets governed by upstream model licenses; see `docs/MODELS.md` and the pinned profiles.
 
+The 1.6.5 Windows installer includes the Step3 Q6_K vision projector under [Apache 2.0](licenses/step3/LICENSE). Its original model attribution and quantization changes are recorded in [projector provenance](licenses/step3/PROVENANCE.txt). Other model weights remain separate downloads or optional packs.
+

@@ -30,8 +30,16 @@ function Get-VisionResourceModel($Model,[object[]]$Images=@()) {
     if ($Images.Count -gt 0) {
         # mtmd copies projector tensors. Charge the RAM-backed file separately.
         # Reserve the supported vision graph and all decoded 4096px RGB inputs.
-        $imageBytes=0L
-        foreach ($image in $Images) { $imageBytes+=12L*$image.width*$image.height+2L*$image.bytes }
+        # All input files and decoded pictures coexist, but the native reader
+        # allocates one compressed input buffer at a time (runner::prepare).
+        # Charging that temporary buffer for every image prevents Step3 priming
+        # even though the complete supported image envelope fits the card.
+        $imageBytes=0L; $largestInput=0L
+        foreach ($image in $Images) {
+            $imageBytes+=12L*$image.width*$image.height+$image.bytes
+            $largestInput=[math]::Max($largestInput,[long]$image.bytes)
+        }
+        $imageBytes+=$largestInput
         $copy.estimated_peak_runtime_mib+=$projectorMiB+1024+[math]::Ceiling($imageBytes/1MB)
         $copy | Add-Member vision_active $true -Force
     }

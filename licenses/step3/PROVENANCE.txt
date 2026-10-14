@@ -1,0 +1,21 @@
+Bundled component: mmproj-Step3-VL-10b-61e9799-Q6_K.gguf
+Original model: Step3-VL-10B by StepFun
+https://huggingface.co/stepfun-ai/Step3-VL-10B/tree/5026053b0c2f5dfaa08fc2d149384162c3c8bca1
+The pinned upstream model card declares Apache-2.0. Its repository contains
+no separate LICENSE or NOTICE file. The accompanying LICENSE is the standard
+Apache License, Version 2.0, obtained from https://www.apache.org/licenses/LICENSE-2.0.txt.
+
+This distributed projector was modified by quantizing the compatible F16 GGUF
+to Q6_K. The original trained model was not retrained.
+F16 source: JamePeng2023/Step3-VL-10B-GGUF
+Revision: f0bc308167bb03e463e10ba8dfaa4879092d0e84
+Filename: mmproj-Step3-VL-10b-F16.gguf
+Source SHA-256: 541f08bdb3f4799a31a7d37708ba7990fa173bdb14b233c1485076afe34a08a9
+llama.cpp quantizer: 23b0202a189c44a54625aadcb37a946dd1d6278d
+Quantization: Q6_K, 8 threads
+Output bytes: 1893755040
+Output SHA-256: b4d777752a55a73c8b518dd35b1c34e0bf2324a6d66059be3b7da3d5a89a7bc8
+
+The matching decoder is downloaded separately from the pinned location in the
+application profile. This component's license does not license the first-party
+Phi Chat application. See LICENSES.md.

@@ -1,5 +1,29 @@
 # Validation
 
+## 1.6.5: automatic Step3 loading (2026-10-14)
+
+Load model now reuses pinned decoder/projector files from earlier Phi Chat installations, including `models/uniform-q5-k`. Valid admission receipts avoid repeat model hashing. Same-volume reuse uses hard links; ordinary copies support other volumes and cancellation. The Windows installer includes the exact Step3 Q6_K projector, its Apache 2.0 license and conversion provenance. Missing Step3 decoder weights still download from the existing immutable Hugging Face revision. No separate Step3-Vision pack or import is needed. Model weights remain outside Git and the source ZIP.
+
+Priming previously counted four compressed read buffers concurrently. The native reader holds one compressed input buffer at a time; accounting now retains all input files, all decoded-image reserves and the largest compressed buffer. This removes 96 MiB of duplicate reservation for the four-image maximum. The card memory budget, supported image dimensions/count, vision scratch, projector allocation and image-cache reserve are unchanged.
+
+The Windows PowerShell 5.1 host suite passed (72 parsed scripts), including a fresh setup fixture with the bundled dependency and receipt, old-version model reuse without downloads or rehashing, cross-volume copy fallback, cancellation, pinned decoder download, failed-download cleanup and Step3 priming admission. Hardware operations are mocked in this suite.
+
+Native checks used the 7120P and unchanged decode3 runtime `knc-decode3-ecf5e24ef6c0a4f3`, base source `61e97998bf49c2d425563920b7e83e52b5ae57a6`. The decoder remained `b4123e8e...208e7de` (5,851,113,280 bytes); the projector remained `b4d77775...89a7bc8` (1,893,755,040 bytes). Full identities are in the model profile.
+
+| Check | Observed result |
+| --- | --- |
+| Empty candidate model folder, Load Step3 | Both files reused automatically from 1.6.1; no pack import or model download |
+| First complete Load | 752.1 s, including backup/release of 2.6 GiB of previous card weights, transfer of both Step3 files, and priming |
+| Automatic resident allocation | Context 2,080; batch 16; generation/prompt workers 180/240; unchanged 12,288 MiB card budget |
+| Text streaming before/after reload | Prefill began 2.53/2.68 s after Send; approximately 2.60 generated tokens/s |
+| First picture, solid blue 120 × 80 | Correct final answer `Blue`; 191.7 s total, 146.2 s image encoding, 27.7 s image decoding into language context; one cache miss |
+| Reload | 40.0 s; both card files reused, zero files evicted, no weight transfer |
+| Memory and temperature | Peak 69°C; minimum allocatable memory 3,305.4 MiB; peak additional RSS 2,812.6 MiB |
+| Owned worker shutdown | Cleanup confirmed; no resident process or workload lease remained; card boot identity unchanged |
+
+Both resident workers retained shared-mapping and affinity evidence. The final raw free memory was about 6,534 MiB with Step3's files intentionally cached for the next load. The two text checks were bounded to 24 tokens and ended within model reasoning; they verify streaming/reuse, not completed-answer quality. The picture check reached its final answer. This is not a 720p speed comparison or broad visual-quality qualification. First-image encoding remains slow. No new runtime was introduced, no MPSS/card reset was performed, and unrelated card files were preserved. Native evidence is retained separately under the private `phichat-165` validation directory.
+
+
 ## 1.6.4: decode3 application qualification (2026-10-14)
 
 The isolated app ran the exact producer-qualified `knc-decode3-ecf5e24ef6c0a4f3` binary. The established base runtime and installed 1.6.3 were preserved. The full PowerShell 5.1 host suite passed (70 scripts parsed); changed shell scripts passed syntax checks. Source fixtures cover the new hardware/thread/cache policy, memory reserve and image stage metrics. Native scope is the 7120P with the two models below, through the actual Windows backend and resident broker.

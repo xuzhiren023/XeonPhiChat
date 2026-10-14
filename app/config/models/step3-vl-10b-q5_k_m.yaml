@@ -28,7 +28,8 @@
     "source_revision": "f0bc308167bb03e463e10ba8dfaa4879092d0e84",
     "source_filename": "mmproj-Step3-VL-10b-F16.gguf",
     "source_bytes": 3972829344,
-    "quantization": "Q6_K"
+    "quantization": "Q6_K",
+    "bundled": true
   },
   "schema_version": 3,
   "quantization": "Q5_K_M",

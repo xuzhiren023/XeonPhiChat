@@ -18,6 +18,17 @@ foreach ($file in Get-ChildItem (Join-Path $AppRoot 'config/models') -Filter '*.
     Check ($payload.file -ceq 'prime-7120P.tar') ('pinned resident runner selected for '+$model.id)
 }
 $script:health.profile.profile_id='xeon-phi-3120a'
+& {
+    $step=Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m'
+    $profile=Read-JsonFile (Join-Path $AppRoot 'config/hardware/xeon-phi-7120p.yaml')
+    $pin=(Read-JsonFile (Join-Path $AppRoot 'config/priming-runtime.json')).payloads[0]
+    $envelope=Add-PerformanceReserve (Get-PrimingResourceModel $step) (Get-PerformanceOptions $step $profile $pin 240)
+    # Metadata from the pinned Step3 GGUF; no model download or card required.
+    $metadata=[pscustomobject]@{native_context_tokens=65536;kv_bytes_per_token=147456;activation_bytes_per_token=2359296;attention_heads=32;allocation_supported=$true}
+    $plan=Get-AutoResourcePlan $envelope $profile $metadata ([pscustomobject]@{available_kib=8GB/1KB})
+    Check ($plan.context_tokens -ge 2048 -and $plan.batch_tokens -ge 1 -and $plan.runtime_mib+$envelope.extra_resident_mib+[math]::Ceiling($step.file_size_bytes/1MB) -le $profile.safe_memory_budget_mib) 'Step3 primes within the unchanged 7120P budget, including four full-size images and the image cache'
+    Reject {Get-AutoResourcePlan $envelope $profile $metadata ([pscustomobject]@{available_kib=1GB/1KB})} 'Step3 still rejects insufficient available card RAM'
+}
 Check ($null -eq (Get-PrimingPayload $model $runtime)) '3120A keeps its existing runtime instead of inheriting 7120P priming'
 $script:health.profile.profile_id='xeon-phi-7120p';$runtime.modern_runtime_id='wrong'
 Reject {Get-PrimingPayload $model $runtime} 'resident adapter requires the exact base runtime identity'

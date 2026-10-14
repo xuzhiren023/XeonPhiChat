@@ -75,6 +75,10 @@ try {
     Install-PhiAssets $fixture '' $install
     $prime=@($manifest.assets | Where-Object kind -CEQ 'priming')[0]
     Check (Test-Path -LiteralPath (Join-Path $install ('app/data/priming-runtime/payload-'+$prime.sha256+'/'+$prime.file))) 'priming dependency installs into its own pinned cache'
+    $vision=@($manifest.assets | Where-Object kind -CEQ 'vision-projector')[0]
+    $visionFile=Get-Item -LiteralPath (Join-Path $install ('app/'+$vision.model_path))
+    $visionReceipt=Read-Json (Join-Path $install ('app/data/model-'+$vision.model_id+'.json'))
+    Check ($visionFile.Length -eq $vision.bytes -and $visionReceipt.path -ceq $visionFile.FullName -and $visionReceipt.modified_ticks -eq $visionFile.LastWriteTimeUtc.Ticks -and $visionReceipt.sha256 -ceq $vision.sha256) 'fresh setup includes the Step3 projector and its reusable admission receipt'
     $baseline=Read-Json (Join-Path $install 'app/dependencies/phase3/artifacts/last-build.json')
     Check (!$baseline.native_acceptance -and $baseline.kind -ceq 'watchdog-bootstrap-only') 'bootstrap receipt cannot claim native validation'
     Add-Content -LiteralPath (Join-Path $fixture 'assets/payloads/runtime-7120P.tar') 'corrupt'
@@ -99,6 +103,7 @@ try {
     $models=Read-Json (Join-Path $root 'assets/optimized-models.json')
     foreach ($model in $models.models) {
         $file=Join-Safe $pack $model.path; Write-Utf8 $file ('test '+$model.id)
+        if ($model.id -ceq $vision.model_id) {Copy-Item -LiteralPath $visionFile.FullName -Destination $file -Force}
         $model.bytes=(Get-Item -LiteralPath $file).Length; $model.sha256=(Get-FileHash -LiteralPath $file).Hash.ToLowerInvariant()
     }
     Save-Json (Join-Path $fixture 'assets/optimized-models.json') $models

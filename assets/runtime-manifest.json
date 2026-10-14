@@ -42,8 +42,16 @@
       "base_runtime_id": "phichat142-modern-910493bed33a64fd",
       "runtime_id": "knc-decode3-ecf5e24ef6c0a4f3",
       "performance_capability": "knc-performance-v1"
+    },
+    {
+      "file": "mmproj-Step3-VL-10b-61e9799-Q6_K.gguf",
+      "bytes": 1893755040,
+      "sha256": "b4d777752a55a73c8b518dd35b1c34e0bf2324a6d66059be3b7da3d5a89a7bc8",
+      "kind": "vision-projector",
+      "model_id": "step3-vl-10b-q5_k_m-projector",
+      "model_path": "models/uniform-q5-k/mmproj-Step3-VL-10b-61e9799-Q6_K.gguf"
     }
   ],
   "schema_version": 1,
-  "version": "1.6.4"
+  "version": "1.6.5"
 }

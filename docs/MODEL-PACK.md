@@ -10,4 +10,4 @@ Each pack can contain a subset of the models listed in `optimized-models.json`. 
 
 
 
-The Step3-Vision pack supplies its matching Q6_K projector. LFM2.5-VL downloads its official decoder and matching F16 projector automatically; it needs no separate pack.
+Phi Chat 1.6.5 already includes the matching Step3 Q6_K projector in its Windows installer; the older Step3-Vision pack is no longer required. LFM2.5-VL downloads its official decoder and matching F16 projector automatically; it needs no separate pack.

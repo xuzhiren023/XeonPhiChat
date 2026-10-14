@@ -13,6 +13,10 @@ foreach ($entry in $manifest.models) {
     } else { $model=Read ('app/config/models/'+$entry.id+'.yaml') }
     Check ($entry.bytes -eq $model.file_size_bytes -and $entry.sha256 -ceq $model.sha256 -and $entry.path -ceq $model.model_path) ($entry.id+': import manifest and app agree on complete artifact identity')
 }
+$release=Read 'assets/runtime-manifest.json'
+$bundled=@($release.assets | Where-Object kind -CEQ 'vision-projector')
+$step=Read 'app/config/models/step3-vl-10b-q5_k_m.yaml'
+Check ($bundled.Count -eq 1 -and $step.projector.bundled -and $bundled[0].sha256 -ceq $step.projector.sha256 -and $bundled[0].bytes -eq $step.projector.file_size_bytes -and $bundled[0].file -ceq $step.projector.filename -and $bundled[0].model_id -ceq ($step.id+'-projector')) 'Windows release includes the exact projector expected by Step3 Load'
 $id='lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k'
 $gaston=@($manifest.models | Where-Object id -CEQ $id)[0]
 $model=Read ('app/config/models/'+$id+'.yaml')

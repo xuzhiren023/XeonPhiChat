@@ -1,5 +1,6 @@
 . (Join-Path $PSScriptRoot 'Preparation.ps1')
 . (Join-Path $PSScriptRoot 'ModelCache.ps1')
+. (Join-Path $PSScriptRoot 'ModelFiles.ps1')
 function Write-LiveProgress($Capture,$Diagnostic,[double]$Seconds,[bool]$Complete) {
     $sample=if ($null -ne $Diagnostic) { $Diagnostic.Snapshot } else { $null }
     $bytes=if ($null -ne $Capture) { $Capture.BytesWritten } else { 0L }
@@ -256,11 +257,13 @@ function Get-LocalModel($Model) {
     if (Test-Path -LiteralPath $cache -PathType Leaf) { throw "The model-cache path is a file, not a directory: $cache. Existing data was preserved." }
     $null=New-Item -ItemType Directory -Path $cache -Force
     $path=Join-Path $cache $Model.filename
+    if ($Model.PSObject.Properties['local_only'] -and $Model.local_only) { $path=Join-Path $script:connection.project_dir $Model.model_path }
     $found=Find-LocalModel $Model
+    if (!$found) { $found=Restore-PreviousModel $Model $path }
     if ($found) { $path=$found }
     else {
         if ($Model.PSObject.Properties['local_only'] -and $Model.local_only) {
-            if ($Model.id.EndsWith('-projector')) { throw 'Import the Step3-Vision pack with Add-Models.cmd, then Load model again.' }
+            if ($Model.id.EndsWith('-projector')) { throw 'The installed Step3 vision component is missing. Run Setup.cmd from the complete Windows ZIP to repair this installation, then retry Load model.' }
             throw ('Local Q5_K file is missing: '+$Model.model_path+'. Install the optimized models pack with Setup.cmd -Mode AddModels; this generated model is not available from the upstream download.')
         }
         # Separate temporary paths prevent two app instances sharing a download.
