@@ -30,8 +30,18 @@
       "file": "baseline-runtime.tar",
       "kind": "guard-backup",
       "sha256": "e344c67c4a255e87d20bbfa7fce870fe20216956087a2f59663faa51404f9264"
+    },
+    {
+      "file": "prime-7120P.tar",
+      "profile": "xeon-phi-7120p",
+      "kind": "priming",
+      "bytes": 14540800,
+      "sha256": "ef140effe976768591e17389114439c9662c3f7606bcfab4ba9204c7f3b004e6",
+      "runner_sha256": "f570f45b4964b27320ca30d69c12ea33b0496ae9c5f36ad4ed0af66e5fc36426",
+      "library_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+      "base_runtime_id": "phichat142-modern-910493bed33a64fd"
     }
   ],
   "schema_version": 1,
-  "version": "1.6.1"
+  "version": "1.6.2"
 }

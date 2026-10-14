@@ -9,4 +9,5 @@
 *.md text eol=lf
 *.xaml text eol=lf
 tools/native-runner/* text eol=lf
+tools/native-runner/priming/** text eol=lf
 

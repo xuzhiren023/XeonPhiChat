@@ -51,6 +51,7 @@ function Assert-JobActive {
         throw 'Stopped by operator.'
     }
     if ($script:request.owner_pid -gt 0 -and !(Get-Process -Id $script:request.owner_pid -ErrorAction SilentlyContinue)) { throw 'Chat window closed; stopping the card workload.' }
+    if ($script:request.PSObject.Properties['owner_start_ticks'] -and (Get-Process -Id $script:request.owner_pid).StartTime.ToUniversalTime().Ticks -ne [long]$script:request.owner_start_ticks) {throw 'Chat window was replaced; stopping its primed worker.'}
 }
 function Get-ChatCancellationStatus {
     if ($script:request -and $script:request.PSObject.Properties['action'] -and $script:request.action -ceq 'Chat' -and $script:operatorCancelled -and

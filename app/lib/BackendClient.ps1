@@ -6,6 +6,7 @@ if (!(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ChatCore.ps1'))) {
 # execution are loaded only by the separate Invoke-PhiJob worker process.
 . (Join-Path $PSScriptRoot 'ChatCore.ps1')
 . (Join-Path $PSScriptRoot 'JobProtocol.ps1')
+. (Join-Path $PSScriptRoot 'PrimeClient.ps1')
 
 function Start-PhiWorkerProcess([string]$AppRoot,[string]$JobDirectory) {
     $process=New-Object Diagnostics.Process

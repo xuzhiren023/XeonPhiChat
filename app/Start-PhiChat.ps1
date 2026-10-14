@@ -85,7 +85,11 @@ function Remove-Conversation($Session) {
     Update-RecentChats; Update-ActionControls; Save-Sessions
 }
 function Test-SelectedReady {
-    return ($null -ne $script:loadedModel -and $script:loadedSelection -ceq $script:selectedModel -and $script:loadedModel.serial -ceq $script:connectedSerial)
+    if ($null -eq $script:loadedModel -or $script:loadedSelection -cne $script:selectedModel -or $script:loadedModel.serial -cne $script:connectedSerial) {return $false}
+    if ($script:loadedModel.PSObject.Properties['resident']) {
+        try {$resident=Read-ResidentState $connection.data_dir $script:loadedModel.resident $PID;return ($resident -and $resident.state -ceq 'ready')} catch {return $false}
+    }
+    return $true
 }
 function Update-ModelRuntimeStatus {
     $choice=$controls.Model.SelectedItem
@@ -111,7 +115,7 @@ function Update-ActionControls {
     $controls.Send.IsEnabled=([bool]$available -and (Test-SelectedReady) -and (![string]::IsNullOrWhiteSpace($controls.Input.Text) -or $script:conversation.images.Count -gt 0))
     $vision=Test-ImageModel (Get-ModelProfile $script:appRoot $script:selectedModel)
     $controls.Attach.IsEnabled=($idle -and $vision -and $script:conversation.images.Count -lt 4)
-    $controls.Attach.ToolTip=if ($vision) {'Attach images'} else {'Choose Step3-VL in a new chat for images'}
+    $controls.Attach.ToolTip=if ($vision) {'Attach images'} else {'Choose LFM2.5-VL or Step3-VL in a new chat for images'}
     $controls.Model.IsEnabled=($idle -and !$script:conversation.locked)
     $controls.Connect.IsEnabled=($idle -and !$script:probe); $controls.Restore.IsEnabled=($idle -and !$script:probe)
     $controls.Stop.Visibility=if ($idle) {'Collapsed'} else {'Visible'}
@@ -122,10 +126,21 @@ function Update-ActionControls {
 function Set-Busy([bool]$Busy) { Update-ActionControls }
 function Show-SelectedModelState {
     $controls.LoadStatus.Text=if (Test-SelectedReady) {'Ready: '+$controls.Model.SelectedItem.label} else {'Load '+$controls.Model.SelectedItem.label}
+    if ($script:loadedModel -and $script:loadedSelection -ceq $script:selectedModel -and $script:loadedModel.PSObject.Properties['resident']) {
+        try {
+            $resident=Read-ResidentState $connection.data_dir $script:loadedModel.resident $PID
+            if ($resident -and $resident.state -ceq 'ready') {
+                $controls.LoadStatus.Text='Primed: '+$controls.Model.SelectedItem.label
+                if ($resident.PSObject.Properties['resources']) {$script:loadedModel.resources=$resident.resources}
+            }
+            elseif ($resident -and $resident.state -ceq 'priming') {$controls.LoadStatus.Text='Priming...'}
+        } catch {}
+    }
     $controls.Load.Content=if (Test-SelectedReady) {'Reload model'} else {'Load model'}
     Update-ActionControls
 }
 function Clear-CardSessions {
+    if ($script:loadedModel -and $script:loadedModel.PSObject.Properties['resident']) {try {Stop-ResidentSession $connection.data_dir $script:loadedModel.resident $PID} catch {}}
     $script:sessionEpoch=''; $script:historyLoaded=$false; $script:connectedSerial=''; $script:connectedProfile=$null; $script:loadedModel=$null; $script:loadedSelection=''
     if (Test-Path -LiteralPath $script:sessionFile) { Remove-Item -LiteralPath $script:sessionFile -Force }
     Remove-UnreferencedImages $connection.data_dir @()
@@ -241,6 +256,7 @@ function Update-ChatJobs {
             } finally { $probe.process.Dispose(); $script:nextProbe=[DateTime]::UtcNow.AddSeconds(20) }
         }
         if (!$script:active) {
+            if ($script:loadedModel -and $script:loadedModel.PSObject.Properties['resident']) {Show-SelectedModelState}
             if (!$script:probe -and [DateTime]::UtcNow -ge $script:nextProbe) {
                 $request=[pscustomobject]@{action='Probe';batch=0;owner_pid=$PID}
                 $script:probe=Start-PhiBackendJob $PSScriptRoot $connection.data_dir $request
@@ -306,6 +322,7 @@ $window.Add_Closing({
     try { Save-Sessions } catch {}
     if ($script:active) { Stop-PhiBackendJob $script:active.dir }
     if ($script:probe) { Stop-PhiBackendJob $script:probe.directory }
+    if ($script:loadedModel -and $script:loadedModel.PSObject.Properties['resident']) {try {Stop-ResidentSession $connection.data_dir $script:loadedModel.resident $PID} catch {}}
     $timer.Stop()
 })
 Initialize-ImageControls

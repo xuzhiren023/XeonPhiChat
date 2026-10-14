@@ -49,10 +49,12 @@ function Read-PhiAssetManifest([string]$Root) {
     if ($manifest.schema_version -ne 1 -or $manifest.version -cne (Get-PhiVersion $Root)) { throw 'Unsupported release asset manifest.' }
     $names=@{}
     foreach ($asset in $manifest.assets) {
-        if ($asset.file -notmatch '^(runtime-(3120A|7120P)|baseline-runtime)\.tar$' -or $asset.sha256 -notmatch '^[a-f0-9]{64}$' -or $asset.bytes -lt 1024 -or $names.ContainsKey($asset.file)) { throw 'Invalid release asset identity.' }
+        if ($asset.file -notmatch '^(runtime-(3120A|7120P)|baseline-runtime|prime-7120P)\.tar$' -or $asset.sha256 -notmatch '^[a-f0-9]{64}$' -or $asset.bytes -lt 1024 -or $names.ContainsKey($asset.file)) { throw 'Invalid release asset identity.' }
+        $kind=if ($asset.file -ceq 'baseline-runtime.tar') {'guard-backup'} elseif ($asset.file -ceq 'prime-7120P.tar') {'priming'} else {'modern'}
+        if ($asset.kind -cne $kind) {throw 'Release asset kind differs from its file identity.'}
         $names[$asset.file]=$true
     }
-    if ($names.Count -ne 3) { throw 'The release must contain both hardware runtimes and the watchdog backup.' }
+    if ($names.Count -ne 4) { throw 'The release must contain both hardware runtimes, the watchdog backup and the priming runtime.' }
     return $manifest
 }
 function Get-PhiAssets([string]$Root,[string]$AssetsDirectory) {
@@ -103,7 +105,7 @@ function Install-PhiAssets([string]$Root,[string]$AssetsDirectory,[string]$Desti
     $manifest=Get-PhiAssets $Root $AssetsDirectory
     $app=Join-Path $Destination 'app'
     foreach ($asset in $manifest.assets) {
-        $relative=if ($asset.kind -ceq 'guard-backup') { 'dependencies/phase3/runtime.tar' } else { 'data/modern-runtime/payload-'+$asset.sha256+'/'+$asset.file }
+        $relative=if ($asset.kind -ceq 'guard-backup') { 'dependencies/phase3/runtime.tar' } elseif ($asset.kind -ceq 'priming') { 'data/priming-runtime/payload-'+$asset.sha256+'/'+$asset.file } else { 'data/modern-runtime/payload-'+$asset.sha256+'/'+$asset.file }
         $target=Join-Safe $app $relative
         New-Directory (Split-Path $target -Parent)
         Copy-Item -LiteralPath (Join-Safe $AssetsDirectory $asset.file) -Destination $target -Force
@@ -144,6 +146,8 @@ function Invoke-PhiSetupJob([string]$Destination,[string]$Action,[string]$Model=
     . (Join-Path $app 'lib/BackendClient.ps1')
     $connection=Read-PhiConnection $app
     $request=[pscustomobject]@{action=$Action;owner_pid=$PID;batch=0}
+    # Setup stages the first model. The chat window owns its resident worker.
+    if ($Action -ceq 'Load') {$request | Add-Member prime_model $false}
     if ($Model) { $request | Add-Member model $Model; $request | Add-Member connected_serial $Serial }
     $job=Start-PhiBackendJob $app $connection.data_dir $request
     try {

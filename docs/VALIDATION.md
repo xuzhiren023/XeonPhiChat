@@ -1,5 +1,15 @@
 # Validation
 
+## 1.6.2: resident priming candidate (offline validation)
+
+The Windows PowerShell 5.1 host suite passed, including the real WPF ready/priming transitions, framed output with split UTF-8 and control-looking model text, worker ownership, token metrics, request completion, Stop/re-prime and shutdown. Setup installs the extra runtime into its own pinned cache and stages its first model without leaving an installer-owned resident worker. All nine 7120P catalog entries resolve to the exact priming/base-runtime pair; 3120A keeps the previous path.
+
+Thirteen synthetic x86 cases passed: Llama, LFM2, LFM2-MoE and Qwen3 in Q3_K_M, Q4_K_M and Q5_K_M, plus the Qwen3/Step3 F32 image fixture. Each compared resident output with a fresh CLI process, repeated the original prompt after an unrelated conversation, rejected an oversized input and recovered, and checked repeated-request memory. The vision case additionally alternated red/blue images, compared resident/fresh image output and returned to text. Automatic output allocation was checked on the Llama Q5 case. Across five post-warm-up repeats, maximum observed RSS range was 1,776 KiB; this is a small synthetic-host observation, not a Phi memory acceptance.
+
+The new adapter was cross-compiled using MPSS GCC 5.1.1 and linked with unchanged retained static libraries. All 1,794 library-source files matched the pinned 61e9799 source plus metadata fix after normalizing CRLF/LF; library hashes are retained in the build manifest. The K1OM ELF executable and its OpenMP library were inspected and separately pinned. The adapter SHA-256 is `f570f45b4964b27320ca30d69c12ea33b0496ae9c5f36ad4ed0af66e5fc36426`; archive SHA-256 is `ef140effe976768591e17389114439c9662c3f7606bcfab4ba9204c7f3b004e6`.
+
+**No Phi hardware test, deployment, app upgrade, MPSS change or card connection was performed for 1.6.2.** Hardware validation and the few-second Send-to-input-processing target await the user's green light. Existing 1.6.1 and earlier native results below do not qualify this new adapter. Step3 picture encoding remains a separate performance issue. See [Priming](PRIMING.md).
+
 ## 1.6.1: model loading repair and LFM2.5-VL
 
 Model admission no longer depends on the PowerShell `Get-FileHash` command. The app uses the .NET SHA-256 implementation, including model, runtime and image verification. The receipt regression deliberately makes `Get-FileHash` unavailable and covers initial hashing, reuse, changed files and invalid hashes. The full Windows PowerShell 5.1 host suite passed, including WPF image controls, context/Stop behavior, setup fixtures and all nine model choices. Shared-runtime integration passed 63 source/protocol checks; the native payloads are unchanged from 1.6.0.
@@ -10,7 +20,7 @@ Two independent native image conversations returned **Blue** and **Red** for con
 
 Stop during LFM2.5-VL image encoding returned `preserve_ready=true`, removed transient inputs and released the card lease. A subsequent text request on the same loaded readiness returned **12** for 7 plus 5 without Load. That run used the same automatic context/batch, generated at 2.601 tokens/s and peaked at 60 C. Its preparation took 19.7 seconds, followed by 7.5 seconds of native initialization and prompt processing before the first output at 19.7 seconds after generation launch. No card reset, driver/service or network reconfiguration was used.
 
-The preparation investigation confirmed that automatic requests start a full native count/allocation process and then a second generation process. A proposed resident-worker design is recorded in [Architecture](ARCHITECTURE.md#preparation-latency-proposed-resident-worker). It is not implemented in 1.6.1; these results do not claim a few-second Send-to-prefill time. Gaston's prior text checks and Step3's prior image checks remain inherited evidence below, separate from this release's LFM2.5-VL checks.
+The preparation investigation confirmed that automatic requests start a full native count/allocation process and then a second generation process. A proposed resident-worker design is recorded in [Architecture](ARCHITECTURE.md#preparation-latency-resident-worker). It is not implemented in 1.6.1; these results do not claim a few-second Send-to-prefill time. Gaston's prior text checks and Step3's prior image checks remain inherited evidence below, separate from this release's LFM2.5-VL checks.
 
 ## 1.6.0: images and the shared multimodal runtime
 

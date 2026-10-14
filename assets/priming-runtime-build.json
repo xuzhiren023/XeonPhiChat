@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "feature": "prime-v1",
+  "version": "1.6.2",
+  "base_source_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
+  "upstream_base": "4413a192410fad1f054e9216114087a3e01527a0",
+  "source_repository": "https://github.com/xuzhiren023/llama.cpp",
+  "metadata_fix_sha256": "49b6dda4135d501dddae6a24ca5afba729eec4fd6fc9dc985be2376ec42645d1",
+  "compiler": "MPSS GCC 5.1.1 / MPSS 3.8.6",
+  "profile": "xeon-phi-7120p",
+  "build_method": "New adapter compiled and linked against unchanged static libraries from the retained 61e9799 metadata-fixed build. Compared all 1794 library-source files, normalizing CRLF/LF only: no content differences. Full fresh-build recipe retained separately.",
+  "cxx_flags": [
+    "-mknc",
+    "-fno-fast-math",
+    "-fno-tree-vectorize",
+    "-fno-tree-slp-vectorize",
+    "-O2",
+    "-DNDEBUG",
+    "-std=gnu++14"
+  ],
+  "inherited_static_libraries": {
+    "libggml-base.a": "8783bb91b28a958c9d7dd8aab52eccf3d9bc7204bebebdd998fdb0f029c397fd",
+    "libggml-cpu.a": "b77a767738ada94eccf9a015f043550f0affea717f3ce4bbaf69eb09dade6bfa",
+    "libggml.a": "5527a0d85ec3221f22d8d04ab17d73f3a7510e659bf15fc9293894a0cf9c2f9c",
+    "libllama.a": "31d0663f935a1d3e7ecccbdc9b26f6132b6bc3d077cc28ef8c7de452111085f5",
+    "libmtmd.a": "4d8f3aebb738e6aff26fa871d80929c8d7d81c011147f3f4ab803832f802ef15",
+    "libvendor-hash.a": "d93480db01e91f4b5d6ab6a2ae0e80d239bf283381b8a34cfecabb8d77c7bcd6"
+  },
+  "retained_files": {
+    "knc.cpp": "f6e85deb00b42e75fbb6e46b73b3ed42258310d2d6e8ed0077384c2fb55ad548",
+    "CMakeLists.txt": "07ac01983c7fee08c805d986de66cdddc51dccff501a5fb3d7a39c60c92459ba",
+    "build.sh": "0f100636155b3db0c2f8e77de3aa569a21056edb3befcf4b0c08b8608f01e7c3",
+    "test-prime.py": "abadb1c6391e99d28368989923988652432048f772349eb41d5ebfbfe17cd072"
+  },
+  "payload": {
+    "file": "prime-7120P.tar",
+    "profile": "xeon-phi-7120p",
+    "kind": "priming",
+    "bytes": 14540800,
+    "sha256": "ef140effe976768591e17389114439c9662c3f7606bcfab4ba9204c7f3b004e6",
+    "runner_sha256": "f570f45b4964b27320ca30d69c12ea33b0496ae9c5f36ad4ed0af66e5fc36426",
+    "library_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+    "base_runtime_id": "phichat142-modern-910493bed33a64fd"
+  },
+  "hardware_acceptance": false,
+  "hardware_validation": "Pending explicit user approval; binary cross-built and ELF-inspected, never executed on Phi during this change.",
+  "offline_reference": "Synthetic x86 checks are separate from Phi correctness and throughput acceptance."
+}

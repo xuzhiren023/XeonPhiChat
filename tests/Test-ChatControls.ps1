@@ -121,6 +121,16 @@ $m.prompt_tokens=1200; Update-ChatInsights
 Check ($controls.ContextFull.Visibility -eq 'Visible' -and $controls.ContextLabel.Text -ceq '100%') 'a full context renders a complete ring without percentage overflow'
 $m.prompt_tokens=1; $m.output_tokens=0; Update-ChatInsights
 Check ($controls.ContextLabel.Text -ceq '<1%') 'small nonzero usage remains distinguishable from an empty chat'
+$residentDirectory=Join-Path $Scratch 'jobs/job-20261013-130000-abcdefab';$null=New-Item -ItemType Directory $residentDirectory
+$reference=[pscustomobject]@{directory=$residentDirectory;token=('a'*32);owner_pid=$PID}
+$script:loadedModel | Add-Member resident $reference -Force
+$state=[pscustomobject]@{state='priming';token=$reference.token;owner_pid=$PID;worker_pid=$PID;worker_start_ticks=(Get-Process -Id $PID).StartTime.ToUniversalTime().Ticks}
+Write-JsonFile (Join-Path $residentDirectory 'resident.json') $state
+$controls.Input.Text='Continue after Stop';Show-SelectedModelState
+Check (!$controls.Send.IsEnabled -and $controls.Input.IsEnabled -and $controls.LoadStatus.Text -ceq 'Priming...') 'background priming disables Send while keeping the composer usable'
+$state.state='ready';Write-JsonFile (Join-Path $residentDirectory 'resident.json') $state;Show-SelectedModelState
+Check ($controls.Send.IsEnabled -and $controls.LoadStatus.Text.StartsWith('Primed:')) 'resident readiness restores Send without opening a new chat'
 Clear-CardSessions
+Check (Test-Path -LiteralPath (Join-Path $residentDirectory 'cancel')) 'card-session invalidation signals the owned resident worker'
 Check ($controls.ContextLabel.Text -ceq '--' -and $controls.StatsOutput.Text -ceq '--') 'offline clears context usage and statistics'
 $window.Close()

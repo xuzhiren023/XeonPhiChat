@@ -73,6 +73,8 @@ try {
     Save-Json (Join-Path $fixture 'assets/runtime-manifest.json') $manifest
     $null=Get-PhiAssets $fixture ''
     Install-PhiAssets $fixture '' $install
+    $prime=@($manifest.assets | Where-Object kind -CEQ 'priming')[0]
+    Check (Test-Path -LiteralPath (Join-Path $install ('app/data/priming-runtime/payload-'+$prime.sha256+'/'+$prime.file))) 'priming dependency installs into its own pinned cache'
     $baseline=Read-Json (Join-Path $install 'app/dependencies/phase3/artifacts/last-build.json')
     Check (!$baseline.native_acceptance -and $baseline.kind -ceq 'watchdog-bootstrap-only') 'bootstrap receipt cannot claim native validation'
     Add-Content -LiteralPath (Join-Path $fixture 'assets/payloads/runtime-7120P.tar') 'corrupt'

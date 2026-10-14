@@ -10,6 +10,7 @@ $script:root=$PSScriptRoot
 . (Join-Path $PSScriptRoot 'lib\GccRuntime.ps1')
 . (Join-Path $PSScriptRoot 'lib\ModernRuntime.ps1')
 . (Join-Path $PSScriptRoot 'lib\JobProtocol.ps1')
+. (Join-Path $PSScriptRoot 'lib\PrimeClient.ps1')
 $script:job=(Resolve-Path -LiteralPath $JobDir).Path
 $script:request=$null; $script:health=$null; $script:healthIndex=0; $script:processIndex=0; $script:cleanupMode=$false
 $script:cardLockToken=''; $script:cardLockOwned=$false
@@ -32,9 +33,17 @@ try {
         $script:cfg.heartbeat_timeout_seconds -lt 30 -or $script:cfg.heartbeat_timeout_seconds -gt 60 -or
         $script:cfg.generation_timeout_seconds -lt 60 -or $script:cfg.generation_timeout_seconds -gt 86400 -or
         $script:cfg.max_output_tokens -lt 0) { throw 'Unsafe application settings.' }
-    if ($script:request.action -notin @('Probe','Health','Load','Chat','InstallKernel','RollbackKernel','InstallModern','RollbackModern') -or
+    if ($script:request.action -notin @('Probe','Health','Load','Chat','Prime','InstallKernel','RollbackKernel','InstallModern','RollbackModern') -or
         $script:request.batch -lt 0) { throw 'Invalid operation or batch size.' }
-    if ($script:request.action -in @('Load','Chat')) { Assert-ModelRuntime (Get-ModelProfile $script:root $script:request.model) }
+    if ($script:request.action -in @('Load','Chat','Prime')) { Assert-ModelRuntime (Get-ModelProfile $script:root $script:request.model) }
+    # The resident broker already owns the verified runtime and monitors health.
+    # Sending only queues this request; it never launches a second model loader.
+    if ($script:request.action -ceq 'Chat' -and $script:request.ready -and $script:request.ready.PSObject.Properties['resident']) {
+        exit (Invoke-PrimedChat)
+    }
+    if ($script:request.action -in @('Load','InstallKernel','RollbackKernel','InstallModern','RollbackModern')) {
+        Stop-OwnResident $script:data $script:request.owner_pid
+    }
     if ($script:connection.card_address -notmatch '^[A-Za-z0-9][A-Za-z0-9.-]*$') { throw 'Invalid card address.' }
     if (!(Test-Path -LiteralPath $script:connection.key_path)) { throw 'Configured SSH key is missing.' }
     $script:profiles=@(Get-ChildItem -LiteralPath (Join-Path $script:root 'config\hardware') -Filter '*.yaml' | ForEach-Object { Read-JsonFile $_.FullName })
@@ -115,7 +124,7 @@ try {
     Assert-ModelBudget $model $script:health.profile
     if (!$script:request.PSObject.Properties['connected_serial'] -or $script:request.connected_serial -cne $script:health.serial) { throw 'The connected card changed. Click Connect again before loading a model.' }
     if ($script:request.action -eq 'Load') {
-        # This operation prepares files only; it never sends or generates a prompt.
+        # Stage files, then start a resident worker where the pinned runtime supports it.
         $localProjector=''
         if (Test-ImageModel $model) { $localProjector=Get-LocalModel (Get-ProjectorProfile $model) }
         $localModel=Get-LocalModel $model
@@ -140,6 +149,11 @@ try {
             $ready | Add-Member resources $resources
             Write-JsonFile (Join-Path $script:job 'ready.json') $ready
         } finally { Release-CardWorkloadLock }
+        . (Join-Path $script:root 'lib/Priming.ps1')
+        if ((!$script:request.PSObject.Properties['prime_model'] -or $script:request.prime_model) -and (Get-PrimingPayload $model $state)) {
+            $ready=Start-ResidentSession $ready
+            Write-JsonFile (Join-Path $script:job 'ready.json') $ready
+        }
         $progress=New-TransferProgress 'Ready on Xeon Phi' $model.file_size_bytes $model.file_size_bytes 0 -Complete
         Set-JobStatus ('Ready on Xeon Phi: '+$model.label+'. Send starts inference. '+$script:cacheSummary) 'done' $ready $progress
         exit 0
@@ -147,6 +161,11 @@ try {
     $ready=$null
     if ($script:request.PSObject.Properties['ready']) { $ready=$script:request.ready }
     Assert-ModelReady $ready $model $state $script:health
+    if ($script:request.action -ceq 'Prime') {
+        . (Join-Path $script:root 'lib/Priming.ps1')
+        Invoke-ResidentWorker $model $state $ready
+        exit 0
+    }
     $threads=Get-ThreadChoice $script:health.profile $model $state
     $automatic=($script:request.PSObject.Properties['automatic_resources'] -and $script:request.automatic_resources)
     # Old explicit requests remain valid for deterministic acceptance tooling.
