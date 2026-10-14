@@ -53,11 +53,14 @@ try {
     if ($OriginalUserSid -and [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -cne $OriginalUserSid) { throw 'Use the same Windows account for UAC elevation so generated SSH keys remain owned by the app user.' }
     # A completed installation already has its host identity. App updates and
     # same-version retries finish locally, before UAC or any hardware calls.
-    if ($Mode -ceq 'Install' -and (Invoke-PhiApplicationUpdate $PSScriptRoot $Destination $AssetsDirectory $ModelPackDirectory)) { exit 0 }
+    if ($Mode -ceq 'Install' -and (Invoke-PhiApplicationUpdate $PSScriptRoot $Destination $AssetsDirectory $ModelPackDirectory)) {
+        if (!$NoLaunch) { Start-PhiInstalledApplication $Destination }
+        exit 0
+    }
     if (!(Test-PhiAdministrator)) {
         Write-Host 'Windows will request permission to configure the Phi virtual adapter and MPSS boot files.'
         Invoke-PhiElevation
-        if ($Mode -ceq 'Install' -and !$NoLaunch) { & (Join-Path $Destination 'Start.ps1') }
+        if ($Mode -ceq 'Install' -and !$NoLaunch) { Start-PhiInstalledApplication $Destination }
         exit 0
     }
     if ($Mode -in @('RollbackHost','Boot')) {

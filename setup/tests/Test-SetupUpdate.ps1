@@ -31,6 +31,7 @@ function Initialize-PhiHost { throw 'Unexpected host provisioning during an app 
 function Invoke-PhiSetupJob { throw 'Unexpected card job during an app update' }
 function Start-PhiServices { throw 'Unexpected service operation during an app update' }
 function New-PhiShortcut { param($Destination); Write-Utf8 (Join-Path $Destination 'shortcut-fixture.txt') 'created' }
+function Start-PhiInstalledApplication { param($Destination); Add-Content -LiteralPath (Join-Path $Destination 'launch-fixture.txt') -Value 'requested' }
 '@
     $local=Join-Path $scratch 'local user'
     $old=Join-Path $local 'Programs/PhiChat/1.6.5'
@@ -47,10 +48,12 @@ function New-PhiShortcut { param($Destination); Write-Utf8 (Join-Path $Destinati
     Save-Json (Join-Path $old 'data/host/data/settings.yaml') ([pscustomobject]@{mpss_dir='fixture MPSS, never accessed'})
     Write-Utf8 (Join-Path $old 'app/data/modern-runtime/active-FIXTURE.json') '{"validation":"original acceptance fixture"}'
     Write-Utf8 (Join-Path $old 'keep.txt') 'user file'
-    function Run-Setup([int]$ExpectedExit=0) {
+    function Run-Setup([int]$ExpectedExit=0,[switch]$Launch) {
         $info=New-Object Diagnostics.ProcessStartInfo
         $info.FileName=Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
-        $info.Arguments=Join-NativeArguments @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',(Join-Path $fixture 'Setup.ps1'),'-NoLaunch')
+        $arguments=@('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',(Join-Path $fixture 'Setup.ps1'))
+        if (!$Launch) { $arguments+='-NoLaunch' }
+        $info.Arguments=Join-NativeArguments $arguments
         $info.UseShellExecute=$false; $info.CreateNoWindow=$true
         $info.RedirectStandardOutput=$true; $info.RedirectStandardError=$true
         $info.EnvironmentVariables['LOCALAPPDATA']=$local
@@ -72,15 +75,21 @@ function New-PhiShortcut { param($Destination); Write-Utf8 (Join-Path $Destinati
     }
     Check ((Read-SmallText (Join-Path $old 'keep.txt')) -ceq 'user file') 'previous installation and unknown files preserved'
     Check (!(Test-Path -LiteralPath (Join-Path $target 'data/host/verified.json'))) 'update does not fabricate a boot validation receipt'
+    $launchMarker=Join-Path $target 'launch-fixture.txt'
+    Check (!(Test-Path -LiteralPath $launchMarker)) 'NoLaunch installs without opening the app'
     $legacy=Join-Path $target 'app/Test-ModernRuntime.ps1'; Write-Utf8 $legacy '# legacy developer file'
     $installed.source_files+=@([pscustomobject]@{path='app/Test-ModernRuntime.ps1';sha256=(Get-FileHash -LiteralPath $legacy).Hash.ToLowerInvariant()})
     Save-Json (Join-Path $target 'installation.json') $installed
-    $null=Run-Setup
+    $null=Run-Setup -Launch
     Check ((Read-Json (Join-Path $target 'installation.json')).installed_utc -ceq $installed.installed_utc) 'same-version retry with legacy developer entry completes without provisioning or revalidation'
+    Check (@(Get-Content -LiteralPath $launchMarker).Count -eq 1) 'normal already-installed setup opens the app once'
+    $null=Run-Setup
+    Check (@(Get-Content -LiteralPath $launchMarker).Count -eq 1) 'NoLaunch also suppresses opening on an already-installed retry'
     # A dependency failure after source copy must resume as an update.
     $installed.status='copied'; Save-Json (Join-Path $target 'installation.json') $installed
-    $null=Run-Setup
+    $null=Run-Setup -Launch
     Check ((Read-Json (Join-Path $target 'installation.json')).status -ceq 'installed') 'interrupted update resumes using its recorded source'
+    Check (@(Get-Content -LiteralPath $launchMarker).Count -eq 2) 'normal update completion opens the app once'
     Add-Content -LiteralPath (Join-Path $target 'Start.ps1') '# user change'
     $failure=Run-Setup 1
     Check ($failure.Contains('Installed or source code changed')) 'retry preserves edited production code'

@@ -1,5 +1,13 @@
 # Validation
 
+## 1.6.7: visible setup completion and app launch (2026-10-14)
+
+The reported disappearing setup window was the completed-installation route, not a new installation failure: the 1.6.6 receipt was installed and the latest setup diagnostic folders contained no errors. That route returned successfully without opening the app, and Setup.cmd closed immediately afterward.
+
+Setup.cmd now prints its startup banner immediately and keeps a double-clicked success/failure result visible until a key is pressed. It retains the original exit code. Scripted invocations with arguments do not pause. Successful updates and already-installed retries launch the installed app, matching first-time setup; `-NoLaunch` suppresses launch in every path.
+
+The Windows PowerShell 5.1 host suite passed (74 scripts parsed). The entry fixture executes the actual batch wrapper with paths containing spaces, success/failure exits, and both double-click-style and scripted arguments. The update fixture covers default launch on update/retry and NoLaunch suppression; app launch is mocked so it cannot touch hardware. Runtime, model and image-processing code are unchanged. No card connection, restart or inference was performed for this repair.
+
 ## 1.6.6: installer retry and local updates (2026-10-14)
 
 The reported 1.6.5 setup exception was reproduced: an installation copied from the source repository recorded `app/Test-ModernRuntime.ps1`, but the Windows installer deliberately excluded developer tests. The receipt loop tried to hash the absent incoming file. Source copying and Windows packaging now share the production file enumeration; old developer-only receipt entries are ignored without deleting their files. Missing and modified production files remain errors.

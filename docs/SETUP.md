@@ -11,9 +11,11 @@ The console explains and requests permission for the initial card restart, which
 
 ## Updating or rerunning setup
 
+When double-clicked, `Setup.cmd` prints a startup banner and keeps its success or failure result visible until a key is pressed. Command-line invocations with arguments do not pause. This fixes the 1.6.6 already-installed route closing too quickly to read and skipping application launch.
+
 Version 1.6.6 fixes the missing `app/Test-ModernRuntime.ps1` error: source installations and the Windows ZIP now use one production file list. Retries tolerate old developer-test entries without requiring or changing those files. Missing or modified production files still produce a clear error.
 
-When a completed installation exists in the normal per-user location or beside the destination, setup installs the new version alongside it and reuses its portable connection, protected SSH identity, host settings and original runtime selection. This application update needs no UAC, host reconfiguration, card restart, connection test or inference. Open the desktop shortcut when ready; the app checks the actual card and runtime normally. Existing models are reused on Load. Completed same-version setup retries only validate the app files and recreate the shortcut.
+When a completed installation exists in the normal per-user location or beside the destination, setup installs the new version alongside it and reuses its portable connection, protected SSH identity, host settings and original runtime selection. Copying this application update needs no UAC, host reconfiguration, card restart, connection test or inference. Version 1.6.7 opens the installed app afterward; the app checks the actual card and runtime normally. Pass `-NoLaunch` for a local installation without starting the app. Existing models are reused on Load. Completed same-version setup retries validate the app files, recreate the shortcut and open the app unless `-NoLaunch` is specified.
 
 Previous installations remain intact. Any copied boot recovery records continue to reference their original plans/backups, so keep the previous installation for rollback. Updates do not manufacture a new boot or native-runtime validation result. An interrupted app update resumes from its recorded source; an interrupted first-time setup follows its existing provisioning journal.
 

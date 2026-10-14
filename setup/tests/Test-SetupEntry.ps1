@@ -73,6 +73,36 @@ function Start-Process {
     Run-Entry 'read-only plan' '1' 'Plan'
     $failed=$false; try { New-PhiSetupDiagnostics '../escape' | Out-Null } catch { $failed=$true }
     Check $failed 'diagnostic ID cannot supply a path'
+    # Exercise the double-click batch wrapper too: the 1.6.6 PowerShell-only
+    # fixture missed its disappearing success message. No real setup runs here.
+    $wrapper=Join-Path $scratch 'wrapper with spaces'; New-Directory $wrapper
+    Copy-Item -LiteralPath (Join-Path $root 'Setup.cmd') -Destination (Join-Path $wrapper 'Setup.cmd')
+    Write-Utf8 (Join-Path $wrapper 'Setup.ps1') 'param([switch]$NoLaunch); Write-Host "Fixture setup result"; exit ([int]$env:PHI_WRAPPER_EXIT)'
+    foreach ($code in @(0,23)) {
+        foreach ($interactive in @($true,$false)) {
+            $info=New-Object Diagnostics.ProcessStartInfo
+            $info.FileName=$env:ComSpec
+            $suffix=if ($interactive) {''} else {' -NoLaunch'}
+            $info.Arguments='/d /c ""'+(Join-Path $wrapper 'Setup.cmd')+'"'+$suffix+'"'
+            $info.UseShellExecute=$false; $info.CreateNoWindow=$true
+            $info.RedirectStandardOutput=$true; $info.RedirectStandardError=$true; $info.RedirectStandardInput=$true
+            $info.EnvironmentVariables['PHI_WRAPPER_EXIT']=[string]$code
+            $process=New-Object Diagnostics.Process; $process.StartInfo=$info
+            try {
+                $null=$process.Start()
+                $stdout=$process.StandardOutput.ReadToEndAsync(); $stderr=$process.StandardError.ReadToEndAsync()
+                $process.StandardInput.WriteLine(''); $process.StandardInput.Close()
+                if (!$process.WaitForExit(15000)) { $process.Kill(); throw 'Batch wrapper fixture timed out' }
+                $output=$stdout.Result+$stderr.Result
+                Check ($process.ExitCode -eq $code -and $output.Contains('Phi Chat setup') -and $output.Contains('Fixture setup result')) 'batch wrapper shows startup/result and preserves the setup exit code'
+                Check ($output.Contains('Press any key to close setup.') -eq $interactive) 'double-click wrapper pauses; scripted invocation does not'
+                if ($interactive) {
+                    $expected=if ($code -eq 0) {'Setup completed.'} else {'Setup stopped.'}
+                    Check ($output.Contains($expected)) 'double-click completion distinguishes success from failure'
+                }
+            } finally { $process.Dispose() }
+        }
+    }
     Write-Output ('PASS: '+$checks+' installer entry checks; UAC simulated, no card or host configuration touched.')
 } finally {
     $resolved=[IO.Path]::GetFullPath($scratch)

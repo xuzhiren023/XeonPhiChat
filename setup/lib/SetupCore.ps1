@@ -260,6 +260,11 @@ function Import-PhiOptimizedModels([string]$Root,[string]$Destination,[string]$P
     return [pscustomobject]@{count=$selected.Count;model_ids=@($selected | ForEach-Object id);runtime_acceptance_changed=$false;
         blocked_model_ids=@($selected | Where-Object { $_.PSObject.Properties['runtime_status'] -and $_.runtime_status -ceq 'blocked_lfm2moe' } | ForEach-Object id)}
 }
+function Start-PhiInstalledApplication([string]$Destination) {
+    Write-Host ('Opening Phi Chat '+(Get-PhiVersion $Destination)+'...')
+    $engine=Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
+    Start-Process -FilePath $engine -WindowStyle Hidden -ArgumentList (Join-NativeArguments @('-NoProfile','-ExecutionPolicy','Bypass','-STA','-WindowStyle','Hidden','-File',(Join-Path $Destination 'Start.ps1')))
+}
 function New-PhiShortcut([string]$Destination) {
     $path=Join-Path ([Environment]::GetFolderPath('Desktop')) ('Phi Chat '+(Get-PhiVersion $Destination)+'.lnk')
     $shell=New-Object -ComObject WScript.Shell
