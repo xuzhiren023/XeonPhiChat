@@ -35,7 +35,7 @@ phi_select_engine() {
     esac
 }
 phi_configure_engine() {
-    unset BP_KNC_CPUS BP_Q5_SPECIALIZE GGML_KNC_MQ GGML_KNC_MQ_ROWS
+    unset BP_KNC_CPUS BP_Q5_SPECIALIZE GGML_KNC_MQ GGML_KNC_MQ_ROWS GGML_KNC_MQ_COLS GGML_KNC_OP_PROFILE
     if [[ $engine == "$runtime/shared/bin/phi-modern" ]]; then
         source "$runtime/shared/configure.sh"
     elif [[ $engine == "$runtime/optimized/bin/phi-modern" ]]; then

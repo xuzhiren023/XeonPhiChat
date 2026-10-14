@@ -1,4 +1,5 @@
 . (Join-Path $PSScriptRoot 'PrimeClient.ps1')
+. (Join-Path $PSScriptRoot 'Performance.ps1')
 if (!('PhiChat.PrimeFrames' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'PrimeFrames.cs') }
 
 function Get-PrimingPayload($Model,$State) {
@@ -15,7 +16,7 @@ function Get-PrimingPayload($Model,$State) {
 function Set-ResidentState([string]$State,[string]$Message='') {
     Write-JsonFile (Join-Path $script:job 'resident.json') ([pscustomobject]@{
         state=$State;message=$Message;token=$script:request.prime_token;owner_pid=$script:request.owner_pid
-        model_id=$script:request.model;resources=$script:primeResources;boot_id=$script:sessionMetadata.boot
+        model_id=$script:request.model;resources=$script:primeResources;runtime_id=$script:primeRuntimeId;boot_id=$script:sessionMetadata.boot
         worker_pid=$PID;worker_start_ticks=(Get-Process -Id $PID).StartTime.ToUniversalTime().Ticks;updated_utc=[DateTime]::UtcNow.ToString('o')
     })
 }
@@ -28,11 +29,12 @@ function Get-PrimingResourceModel($Model) {
 function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
     $remoteModel=Prepare-ChatSession $Ready $BaseModel $State
     if (Test-ImageModel $BaseModel) { $script:remoteProjector=Assert-PreparedProjector $Ready $BaseModel $State }
-    $envelope=Get-PrimingResourceModel $BaseModel
+    $script:primeThreads=Get-PerformanceThreads $BaseModel $script:health.profile $Pin (Get-ThreadChoice $script:health.profile $BaseModel $State)
+    $script:performance=Get-PerformanceOptions $BaseModel $script:health.profile $Pin $script:primeThreads.prompt
+    $envelope=Add-PerformanceReserve (Get-PrimingResourceModel $BaseModel) $script:performance
     $script:primeResources=Get-AutoResourcePlan $envelope $script:health.profile $Ready.resource_metadata (Read-MemorySnapshot $script:preparedMemory) $State
     $script:primeModel=Get-ContextModel $envelope $script:health.profile $script:primeResources.context_tokens $Ready.resource_metadata $script:primeResources.batch_tokens
     $script:request.batch=$script:primeResources.batch_tokens
-    $script:primeThreads=Get-ThreadChoice $script:health.profile $BaseModel $State
     Set-ResidentState 'priming' 'Priming model...'
     Require-CardMemory $script:primeModel -Snapshot $script:preparedMemory
     $script:preparedMemory=''
@@ -40,14 +42,14 @@ function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
     $script:primeRemote=$remote
     $archive=Join-Path $script:data ('priming-runtime/payload-'+$Pin.sha256+'/'+$Pin.file)
     if ($Pin.file -cne 'prime-7120P.tar' -or $Pin.sha256 -cnotmatch '^[a-f0-9]{64}$' -or
-        !(Test-Path -LiteralPath $archive) -or (Get-Item -LiteralPath $archive).Length -ne $Pin.bytes -or
-        (Get-PhiFileHash -LiteralPath $archive).Hash.ToLowerInvariant() -cne $Pin.sha256) {throw 'The pinned priming runtime is missing or changed. Install this version from its complete Windows ZIP.'}
+        !(Test-Path -LiteralPath $archive -PathType Leaf) -or (Get-Item -LiteralPath $archive).Length -ne $Pin.bytes) {throw 'The pinned priming runtime is missing or changed. Install this version from its complete Windows ZIP.'}
+    # Setup verified the pinned asset. Load and re-prime reuse its identity and size.
     $settings=Join-Path $script:job 'prime-settings.sh'
     $values=[ordered]@{
         LOCK_TOKEN=$script:cardLockToken; SOURCE_COMMIT=$script:cfg.source_commit
         RUNTIME_FAMILY='modern-knc'; MODERN_RUNTIME_ID=$State.modern_runtime_id; MODERN_SOURCE_COMMIT=$State.modern_source_commit; MODERN_ENGINE_VARIANT='shared';MODERN_TEST_MODE='none'
         MODEL_PATH=$remoteModel;MODEL_BYTES=$BaseModel.file_size_bytes;THREADS=$script:primeThreads.generation;PROMPT_THREADS=$script:primeThreads.prompt;CORES=$script:health.cores
-        PREDICT=0;BATCH=$script:primeResources.batch_tokens;CONTEXT=$script:primeResources.context_tokens;SEED=$script:cfg.seed;RUN_MODE='generate';MQ_ROWS=4
+        PREDICT=0;BATCH=$script:primeResources.batch_tokens;CONTEXT=$script:primeResources.context_tokens;SEED=$script:cfg.seed;RUN_MODE='generate';MQ_ROWS=$script:performance.mq_rows;MQ_COLS=$script:performance.mq_cols;IMAGE_CACHE_MIB=$script:performance.cache_mib;IMAGE_MAX_TOKENS=$script:performance.image_max_tokens;VISION_THREADS=$script:performance.vision_threads;PERFORMANCE_CAPABLE=$(if ($Pin.PSObject.Properties['performance_capability']) {1} else {0})
         RUNTIME_ADMIT_MIB=$script:primeModel.estimated_peak_runtime_mib;RUNTIME_LIMIT_MIB=([int]$script:health.profile.safe_memory_budget_mib-[int][math]::Ceiling($BaseModel.file_size_bytes/1MB)-$(if ($script:primeModel.PSObject.Properties['extra_resident_mib']) {$script:primeModel.extra_resident_mib} else {0}))
         MEMORY_STOP_MIB=$script:health.profile.available_reserve_mib
         PROJECTOR_PATH=$(if (Test-ImageModel $BaseModel) {$script:remoteProjector} else {'none'})
@@ -61,8 +63,8 @@ function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
     $stops=if ($BaseModel.PSObject.Properties['stop_token_ids']) {$BaseModel.stop_token_ids -join ','} else {''}
     if ($stops -cnotmatch '^([0-9]{1,6}(,[0-9]{1,6}){0,15})?$') {throw 'Invalid stop tokens.'}
     Write-Utf8 $settings (($lines -join "`n")+"`nSTOP_TOKEN_IDS='$stops'`n")
-    Send-CardFiles @($archive,$settings,(Join-Path $script:root 'scripts/prime-worker.sh'),(Join-Path $script:root 'scripts/engine-llama-cli-v1.sh'),(Join-Path $script:root 'scripts/elf-check.sh'),(Join-Path $script:root 'scripts/memory-info.awk'),(Join-Path $script:root 'scripts/model-map.awk')) ($remote+'/')
-    # The pinned archive is verified on Windows; SCP supplies transport integrity.
+    Send-CardFiles @($archive,$settings,(Join-Path $script:root 'scripts/prime-worker.sh'),(Join-Path $script:root 'scripts/prime-performance.sh'),(Join-Path $script:root 'scripts/engine-llama-cli-v1.sh'),(Join-Path $script:root 'scripts/elf-check.sh'),(Join-Path $script:root 'scripts/memory-info.awk'),(Join-Path $script:root 'scripts/model-map.awk')) ($remote+'/')
+    # Setup verified the archive; SCP supplies transport integrity without repeat scans.
     # MPSS BusyBox does not consistently include a SHA-256 utility.
     $null=Invoke-Card "set -eu; cd '$remote'; mv prime-settings.sh settings.sh; mkdir prime inputs; test `"`$(LC_ALL=C ls -ln '$($Pin.file)' | awk '{print `$5}')`" = '$($Pin.bytes)'; tar -xf '$($Pin.file)' -C prime; rm '$($Pin.file)'"
     $p=New-Object Diagnostics.Process
@@ -189,6 +191,8 @@ function Read-PrimeFrame($Frame,$Native,$Active) {
             $m=$Frame.Text | ConvertFrom-Json
             if ($m.generated_tokens -ne $Active.generated -or $m.decode_evals -lt 0 -or $m.decode_evals -gt $m.generated_tokens -or $m.prepare_ms -lt 0 -or $m.prefill_ms -lt 0 -or $m.decode_ms -lt 0 -or $m.reset_ms -lt 0) {throw 'Invalid native completion metrics.'}
             $metrics=[pscustomobject]@{model_id=$script:primeModel.id;model_sha256=$script:primeModel.sha256;context=$script:primeResources.context_tokens;batch=$script:primeResources.batch_tokens;generation_threads=$script:primeThreads.generation;prompt_threads=$script:primeThreads.prompt;generation_tokens=$m.generated_tokens;generation_tps=$(if ($m.decode_evals -gt 0 -and $m.decode_ms -gt 0) {1000*$m.decode_evals/$m.decode_ms} else {$null});prompt_tps=$(if ($m.prefill_ms -gt 0) {1000*$Active.accepted.prompt_tokens/$m.prefill_ms} else {$null});load_ms=0;preparation_seconds=$Active.ack;native_prepare_seconds=($m.prepare_ms/1000);reset_seconds=($m.reset_ms/1000);first_byte_seconds=$Active.first;inference_wall_seconds=$Active.watch.Elapsed.TotalSeconds;peak_temperature_c=$Active.peakTemperature;peak_additional_rss_mib=($Active.peakAdditional/1024);min_free_mib=($Active.minAvailable/1024);runtime_source_commit=$script:primeState.modern_source_commit;memory_mode='resident_shared_mmap';primed=$true}
+            $metrics | Add-Member runtime_id $script:primeRuntimeId
+            Add-PerformanceMetrics $metrics $m
             Write-JsonFile (Join-Path $Active.job 'resident-metrics.json') $metrics
             Complete-PrimeRequest $Active 'done' '' $metrics
             return 'done'
@@ -199,10 +203,11 @@ function Read-PrimeFrame($Frame,$Native,$Active) {
 }
 function Invoke-ResidentWorker($Model,$State,$Ready) {
     if ($script:request.prime_token -cnotmatch '^[a-f0-9]{32}$') {throw 'Invalid primed worker identity.'}
-    $script:primeResources=$null;$script:primeState=$State;$script:primeRemote=''
+    $script:primeRuntimeId='';$script:primeResources=$null;$script:primeState=$State;$script:primeRemote=''
     $native=$null;$active=$null;$nextUpdate=0.0
     $pin=Get-PrimingPayload $Model $State
     if (!$pin) {throw 'Priming is not packaged for this card.'}
+    $script:primeRuntimeId=$pin.runtime_id
     $null=New-Item -ItemType Directory -Path (Join-Path $script:job 'inbox')
     try {
         $native=Start-PrimeNative $Model $State $Ready $pin

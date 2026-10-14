@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "qualification": "7120P native runtime and LFM2.5 text/vision application checks passed; see docs/VALIDATION.md for exact scope",
+  "profiles": [
+    {
+      "profile": "xeon-phi-7120p",
+      "cache_mib": 64,
+      "vision_smt": 0,
+      "mq_rows": 8,
+      "mq_cols": 4,
+      "image_max_tokens": 0
+    }
+  ]
+}

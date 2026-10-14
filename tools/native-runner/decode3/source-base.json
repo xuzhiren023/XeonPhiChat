@@ -1,0 +1,7 @@
+{
+  "base_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
+  "runtime_patch": "runtime.patch",
+  "adapter_base": "PhiChat 1.6.3",
+  "exact_binary_package_manifest": "artifacts/manifest.json",
+  "production_source_equals_tested_source": true
+}

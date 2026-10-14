@@ -1,8 +1,10 @@
-# Resident priming in 1.6.3
+# Resident priming
+
+Version 1.6.4 uses the optimized decode3 worker on 7120P; see [its policy and validation](DECODE3.md). The lifecycle below also applies to that worker.
 
 Load now initializes the selected 7120P model, its matching projector when present, and the automatically sized context/batch. A small decoder warm-up runs before the UI says **Primed**. All nine 7120P catalog models use this path, including Gaston (text only), LFM2.5-VL and Step3-VL. The 3120A keeps its existing runtime and loading behavior.
 
-After priming, Send submits the prompt and retained images to that running model. Token counting and generation share the same process and prepared input; the previous count-process/load-process pair is removed. On the tested 7120P, short LFM2.5-VL text requests reached input processing in 2.6–3.3 seconds from Send, including after Stop/re-prime. A 120×80 image began vision processing in 2.6 seconds. These measurements describe preparation latency, not time to finish an answer. Picture encoding and long prompt ingestion still require compute time; priming does not make Step3's vision encoder run instantly.
+After priming, Send submits the prompt and retained images to that running model. Token counting and generation share the same process and prepared input; the previous count-process/load-process pair is removed. On the tested 7120P, short LFM2.5-VL text requests reached input processing in 2.6â€“3.3 seconds from Send, including after Stop/re-prime. A 120Ã—80 image began vision processing in 2.6 seconds. These measurements describe preparation latency, not time to finish an answer. Picture encoding and long prompt ingestion still require compute time; priming does not make Step3's vision encoder run instantly.
 
 Stop interrupts the native response, confirms cleanup and starts priming again in the background. The conversation and editable composer remain available; Send returns when the model is ready. Switching or reloading models shuts down the previous resident worker first. Closing the app or losing its connection stops the owned workload through the existing heartbeat guard. Other applications' card workloads are never taken over.
 

@@ -11,3 +11,4 @@
 tools/native-runner/* text eol=lf
 tools/native-runner/priming/** text eol=lf
 
+tools/native-runner/decode3/** text eol=lf

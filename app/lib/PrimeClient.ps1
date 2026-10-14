@@ -66,6 +66,7 @@ function Start-ResidentSession($Ready) {
                 $Ready | Add-Member resident $reference -Force
                 $Ready.resources=$state.resources
                 $Ready | Add-Member boot_id $state.boot_id -Force
+                if ($state.PSObject.Properties['runtime_id']) {$Ready | Add-Member priming_runtime_id $state.runtime_id -Force}
                 return $Ready
             }
             if ($watch.Elapsed.TotalMinutes -gt 15) {throw 'Model priming did not finish. Review the runtime evidence.'}

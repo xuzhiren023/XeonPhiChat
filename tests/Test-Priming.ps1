@@ -9,6 +9,7 @@ function Check([bool]$Value,[string]$Message) {if (!$Value) {throw "FAIL: $Messa
 function Reject([scriptblock]$Code,[string]$Message) {$bad=$false;try {& $Code} catch {$bad=$true};Check $bad $Message}
 $null=New-Item -ItemType Directory -Path $Scratch -Force
 $script:root=$AppRoot
+$script:primeRuntimeId='knc-decode3-fixture'
 $script:health=[pscustomobject]@{profile=[pscustomobject]@{profile_id='xeon-phi-7120p'}}
 $runtime=[pscustomobject]@{modern_source_commit='61e97998bf49c2d425563920b7e83e52b5ae57a6';modern_runtime_id='phichat142-modern-910493bed33a64fd'}
 foreach ($file in Get-ChildItem (Join-Path $AppRoot 'config/models') -Filter '*.yaml') {
@@ -114,7 +115,7 @@ Check (!(Read-JsonFile (Join-Path $script:job 'status.json')).preserve_ready) 'l
         Write-JsonFile (Join-Path $Path 'prime-input.json') $r
         Write-JsonFile (Join-Path $script:job 'inbox/queue.json') ([pscustomobject]@{token=$script:request.prime_token;id=('e'*32);job=(Split-Path $Path -Leaf)})
     }
-    function Get-PrimingPayload {return [pscustomobject]@{fixture=$true}}
+    function Get-PrimingPayload {return [pscustomobject]@{fixture=$true;runtime_id='knc-decode3-fixture'}}
     function Start-PrimeNative {
         $script:starts++;$script:primeModel=$model;$script:primeModel.context_tokens=1024
         $script:primeResources=[pscustomobject]@{context_tokens=1024;batch_tokens=64}

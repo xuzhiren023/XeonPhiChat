@@ -89,6 +89,7 @@ if [[ ${RUNTIME_FAMILY:-historical-knc} == modern-knc ]]; then
     export OMP_DYNAMIC=FALSE OMP_NESTED=FALSE OMP_MAX_ACTIVE_LEVELS=1
 fi
 phi_configure_engine
+if [[ ${PERFORMANCE_CAPABLE:-0} == 1 ]]; then source "$job/prime-performance.sh"; fi
 # Native guard retains wall time/thermal protection; no CPU-time quota.
 ulimit -c 0
 ulimit -a > "$job/report/process-limits.txt"
@@ -119,6 +120,10 @@ check_elf "$job/prime/lib/libgomp.so.1"
 engine="$job/prime/bin/phi-prime"
 check_elf "$engine"
 args=(-m "$MODEL_PATH" -c "$CONTEXT" -b "$BATCH" -t "$THREADS" -tb "$PROMPT_THREADS" -n 0 --serve "$job")
+if [[ ${PERFORMANCE_CAPABLE:-0} == 1 ]]; then
+    args+=(--image-cache-mib "$IMAGE_CACHE_MIB" --vision-threads "$VISION_THREADS")
+    if ((IMAGE_MAX_TOKENS > 0)); then args+=(--image-max-tokens "$IMAGE_MAX_TOKENS"); fi
+fi
 if [[ $PROJECTOR_PATH != none ]]; then
     [[ $PROJECTOR_PATH == "${MODEL_PATH%.gguf}-projector.gguf" && $PROJECTOR_SHA256 =~ ^[a-f0-9]{64}$ ]] || fail 'Invalid primed projector pairing'
     [[ $(cat "$PROJECTOR_PATH.identity") == "$PROJECTOR_SHA256" && $(LC_ALL=C ls -ln "$PROJECTOR_PATH" | awk '{print $5}') == "$PROJECTOR_BYTES" ]] || fail 'Primed projector is absent or changed'
