@@ -57,6 +57,23 @@ try {
     Check ($receipt.status -ceq 'copied' -and !(Test-Path -LiteralPath (Join-Path $install 'app/config/connection.yaml'))) 'fresh app has no copied machine configuration'
     Check (!(Test-Path -LiteralPath (Join-Path $install 'app/data')) -and !(Test-Path -LiteralPath (Join-Path $install 'app/private'))) 'fresh copy has no history or identity'
     Check ((Copy-PhiApplication $root $install).source_files.Count -eq $receipt.source_files.Count) 'same-version copy resumes'
+    Check (!(Test-Path -LiteralPath (Join-Path $install 'app/Test-ModernRuntime.ps1'))) 'source installs omit developer files just like the Windows ZIP'
+    # Reproduce the 1.6.5 source-install receipt, then retry using ZIP contents.
+    $download=Join-Path $scratch 'extracted installer'; $null=Copy-PhiApplication $root $download
+    Remove-Item -LiteralPath (Join-Path $download 'installation.json')
+    $developerFile=Join-Path $install 'app/Test-ModernRuntime.ps1'; Write-Utf8 $developerFile '# old developer script'
+    $receipt.source_files+=@([pscustomobject]@{path='app/Test-ModernRuntime.ps1';sha256=(Get-FileHash -LiteralPath $developerFile).Hash.ToLowerInvariant()})
+    Save-Json (Join-Path $install 'installation.json') $receipt
+    Add-Content -LiteralPath $developerFile '# user edit'
+    $null=Copy-PhiApplication $download $install
+    Check ((Read-SmallText $developerFile).Contains('# user edit')) 'ZIP retry ignores obsolete developer receipt entries and preserves edits'
+    $production=Join-Path $download 'app/lib/ChatCore.ps1'; $original=[IO.File]::ReadAllBytes($production)
+    Remove-Item -LiteralPath $production
+    Reject { Copy-PhiApplication $download $install } 'missing production file still rejects an incomplete installer'
+    [IO.File]::WriteAllBytes($production,$original)
+    Add-Content -LiteralPath $production '# modified download'
+    Reject { Copy-PhiApplication $download $install } 'changed production file still rejects a mismatched installer'
+    [IO.File]::WriteAllBytes($production,$original)
     $foreign=Join-Path $scratch 'foreign'; New-Directory $foreign; Write-Utf8 (Join-Path $foreign 'keep.txt') 'keep'
     Reject { Copy-PhiApplication $root $foreign } 'unrelated destination preserved'
     Reject { Copy-PhiApplication $root (Join-Path $root 'nested') } 'nested installation rejected'

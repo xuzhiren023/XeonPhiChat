@@ -64,30 +64,54 @@ function Get-PhiAssets([string]$Root,[string]$AssetsDirectory) {
     foreach ($asset in $manifest.assets) { Assert-PhiAsset (Join-Safe $AssetsDirectory $asset.file) $asset }
     return $manifest
 }
+function Test-PhiDevelopmentFile([string]$Relative) {
+    return $Relative -match '(^|/)(tests|tools|\.github|__pycache__)(/|$)|^app/Test-[^/]+\.ps1$|^(AGENTS\.md|MIGRATION\.json|\.gitignore|\.gitattributes)$'
+}
+function Get-PhiApplicationFiles([string]$Root) {
+    # Source installs and Windows ZIPs must contain exactly the same app files.
+    foreach ($name in @('app','setup','docs','licenses')) {
+        foreach ($file in @(Get-TreeFiles (Join-Path $Root $name) @('tests','__pycache__','*/__pycache__','*.pyc'))) {
+            $relative=Get-Relative $file.FullName $Root
+            if (Test-PhiDevelopmentFile $relative) { continue }
+            if ($relative -match '(^|/)(data|private|jobs|dependencies)(/|$)|/config/connection.yaml$|\.(gguf|exe|dll|tar|zip|pem|key)$') { throw ('Machine state must not appear in app source: '+$relative) }
+            $file
+        }
+    }
+    foreach ($name in @('VERSION','Start.cmd','Start.ps1','Setup.cmd','Setup.ps1','Add-Models.cmd','README.md','LICENSES.md')) {
+        Get-Item -LiteralPath (Join-Path $Root $name) -ErrorAction Stop
+    }
+    Get-TreeFiles (Join-Path $Root 'assets') @('payloads') | Where-Object Extension -CEQ '.json'
+}
 function Copy-PhiApplication([string]$Root,[string]$Destination) {
     $Root=Resolve-Absolute $Root; $Destination=Resolve-Absolute $Destination
     if ($Root -ceq $Destination -or (Test-Within $Destination $Root) -or (Test-Within $Root $Destination)) { throw 'Choose an installation folder separate from the download/source folder.' }
     Assert-RegularPath $Destination
+    $sources=@(Get-PhiApplicationFiles $Root)
     if (Test-Path -LiteralPath $Destination) {
         if (@(Get-ChildItem -LiteralPath $Destination -Force).Count) {
             $receiptPath=Join-Path $Destination 'installation.json'
             if (!(Test-Path -LiteralPath $receiptPath)) { throw 'The destination contains unrelated files. Choose an empty folder.' }
             $receipt=Read-Json $receiptPath
             if ($receipt.version -cne (Get-PhiVersion $Root) -or $receipt.product -cne 'PhiChat') { throw 'Use a new folder for this app version. Existing installation preserved.' }
+            $recorded=@{}
             foreach ($file in $receipt.source_files) {
+                # Older source installs recorded developer-only files absent
+                # from the Windows ZIP. Leave those files alone, even if edited.
+                if (Test-PhiDevelopmentFile $file.path) { continue }
                 $installed=Join-Safe $Destination $file.path
                 $incoming=Join-Safe $Root $file.path
-                if (!(Test-Path -LiteralPath $installed) -or (Get-FileHash -LiteralPath $installed).Hash.ToLowerInvariant() -cne $file.sha256 -or (Get-FileHash -LiteralPath $incoming).Hash.ToLowerInvariant() -cne $file.sha256) { throw 'Installed or source code changed since setup. Preserve it and choose a new folder.' }
+                if (!(Test-Path -LiteralPath $incoming -PathType Leaf)) { throw ('Installer file is missing: '+$file.path+'. Extract the complete Windows ZIP into a new folder and run Setup.cmd again.') }
+                if (!(Test-Path -LiteralPath $installed -PathType Leaf) -or (Get-FileHash -LiteralPath $installed).Hash.ToLowerInvariant() -cne $file.sha256 -or (Get-FileHash -LiteralPath $incoming).Hash.ToLowerInvariant() -cne $file.sha256) { throw ('Installed or source code changed since setup: '+$file.path+'. Preserve it and choose a new folder.') }
+                $recorded[$file.path]=$true
+            }
+            foreach ($source in $sources) {
+                if (!$recorded.ContainsKey((Get-Relative $source.FullName $Root))) { throw 'Installer file list changed since setup. Preserve it and choose a new folder.' }
             }
             return $receipt
         }
     }
     New-Directory $Destination
     $files=New-Object Collections.ArrayList
-    $roots=@('app','setup','docs','licenses')
-    $sources=@(foreach ($name in $roots) { Get-TreeFiles (Join-Path $Root $name) @('tests/*','__pycache__/*') })
-    $sources+=@(Get-Item -LiteralPath (Join-Path $Root 'VERSION'),(Join-Path $Root 'Start.cmd'),(Join-Path $Root 'Start.ps1'),(Join-Path $Root 'Setup.cmd'),(Join-Path $Root 'Setup.ps1'),(Join-Path $Root 'Add-Models.cmd'),(Join-Path $Root 'README.md'),(Join-Path $Root 'LICENSES.md'))
-    $sources+=@(Get-TreeFiles (Join-Path $Root 'assets') @('payloads') | Where-Object Extension -CEQ '.json')
     foreach ($source in $sources) {
         $relative=Get-Relative $source.FullName $Root
         if ($relative -match '/(data|private|jobs)/|/config/connection.yaml$') { throw 'Machine state must not appear in app source.' }

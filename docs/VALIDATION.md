@@ -1,5 +1,15 @@
 # Validation
 
+## 1.6.6: installer retry and local updates (2026-10-14)
+
+The reported 1.6.5 setup exception was reproduced: an installation copied from the source repository recorded `app/Test-ModernRuntime.ps1`, but the Windows installer deliberately excluded developer tests. The receipt loop tried to hash the absent incoming file. Source copying and Windows packaging now share the production file enumeration; old developer-only receipt entries are ignored without deleting their files. Missing and modified production files remain errors.
+
+The Windows PowerShell 5.1 host suite passed (74 parsed scripts). Targeted checks cover source-installed receipts retried with Windows contents, preservation of edited developer and production files, the real Setup.ps1 update entry, saved identity/runtime byte preservation, completed retries and interrupted updates. UAC and all hardware calls are forbidden in the update fixture; first-run MPSS/network/SSH checks remain mocked. The update fixture can also be run against an extracted release using `-InstallerRoot`.
+
+Setup now reuses the latest completed portable installation for a side-by-side app update, before elevation or any hardware operation. Existing setup plans and native acceptance records retain their original provenance; no fresh hardware validation is claimed. Completed setup retries no longer enter host provisioning when an earlier application-only update has no boot journal. Boot uses the saved MPSS settings, so those earlier updates do not require a nonexistent provisioning journal merely to start a ready card.
+
+This is an installer-only change. The decode3 runtime, model pins, image handling, resident priming and hardware qualification from 1.6.5 are unchanged. No card connection, reset, inference or native benchmark was performed for this repair.
+
 ## 1.6.5: automatic Step3 loading (2026-10-14)
 
 Load model now reuses pinned decoder/projector files from earlier Phi Chat installations, including `models/uniform-q5-k`. Valid admission receipts avoid repeat model hashing. Same-volume reuse uses hard links; ordinary copies support other volumes and cancellation. The Windows installer includes the exact Step3 Q6_K projector, its Apache 2.0 license and conversion provenance. Missing Step3 decoder weights still download from the existing immutable Hugging Face revision. No separate Step3-Vision pack or import is needed. Model weights remain outside Git and the source ZIP.

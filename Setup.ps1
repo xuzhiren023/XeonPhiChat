@@ -33,6 +33,7 @@ function Invoke-PhiElevation {
 }
 try {
     . (Join-Path $PSScriptRoot 'setup/lib/HostSetup.ps1')
+    . (Join-Path $PSScriptRoot 'setup/lib/AppUpdate.ps1')
     Assert-Windows
     if ($Mode -cne 'Plan') { $diagnostics=New-PhiSetupDiagnostics $DiagnosticId }
     if ($ModelIds.Count -and $Mode -cne 'AddModels') { throw '-ModelIds is supported only with -Mode AddModels.' }
@@ -49,19 +50,22 @@ try {
         exit 0
     }
     if ($Mode -ceq 'Plan') { Get-PhiHostPlan $MpssDirectory $InterfaceIndex | ConvertTo-Json -Depth 8; exit 0 }
+    if ($OriginalUserSid -and [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -cne $OriginalUserSid) { throw 'Use the same Windows account for UAC elevation so generated SSH keys remain owned by the app user.' }
+    # A completed installation already has its host identity. App updates and
+    # same-version retries finish locally, before UAC or any hardware calls.
+    if ($Mode -ceq 'Install' -and (Invoke-PhiApplicationUpdate $PSScriptRoot $Destination $AssetsDirectory $ModelPackDirectory)) { exit 0 }
     if (!(Test-PhiAdministrator)) {
         Write-Host 'Windows will request permission to configure the Phi virtual adapter and MPSS boot files.'
         Invoke-PhiElevation
         if ($Mode -ceq 'Install' -and !$NoLaunch) { & (Join-Path $Destination 'Start.ps1') }
         exit 0
     }
-    if ($OriginalUserSid -and [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -cne $OriginalUserSid) { throw 'Use the same Windows account for UAC elevation so generated SSH keys remain owned by the app user.' }
     if ($Mode -in @('RollbackHost','Boot')) {
         $state=Join-Path $Destination 'data/host'
-        $saved=Read-Json (Join-Path $state 'pending.json')
-        $plan=Read-SshPersistencePlan $saved.plan_directory
         $run=Get-PhiSetupRun $Destination
         if ($Mode -ceq 'RollbackHost') {
+            $saved=Read-Json (Join-Path $state 'pending.json')
+            $plan=Read-SshPersistencePlan $saved.plan_directory
             Confirm-PhiAction 'Restore the saved MPSS boot files and Phi adapter settings from before this installation? The card is not reset automatically; restored files take effect on its next boot.'
             $journal=Read-Json (Join-Path $saved.plan_directory 'journal.json')
             Assert-IdentityInputs $journal.after
@@ -70,8 +74,11 @@ try {
             foreach ($name in @('verified.json','pending.json')) { $p=Join-Path $state $name; if (Test-Path -LiteralPath $p) { Move-Item -LiteralPath $p -Destination ($p+'.rolled-back-'+[Guid]::NewGuid().ToString('N')) } }
             Write-Host 'Previous boot files and adapter settings restored. Reboot the card when its current work is saved.'
         } else {
-            Start-PhiServices $plan.mpss $run
-            $micctrl=Join-Path $plan.mpss 'bin/micctrl.exe'
+            # Boot needs the installed MPSS location, not an old provisioning
+            # journal. Early application-only updates have no such journal.
+            $settings=Read-Json (Join-Path $state 'data/settings.yaml')
+            Start-PhiServices $settings.mpss_dir $run
+            $micctrl=Join-Path $settings.mpss_dir 'bin/micctrl.exe'
             Ensure-Online { Invoke-SetupProcess $micctrl @('-s','mic0') $run } { $null=Invoke-SetupProcess $micctrl @('-b','mic0') $run } { Start-Sleep -Seconds 2 }
         }
         exit 0

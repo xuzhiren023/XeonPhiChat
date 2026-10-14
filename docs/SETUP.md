@@ -8,6 +8,15 @@ Setup creates separate login and server ED25519 keys inside the installed `app/p
 
 The console explains and requests permission for the initial card restart, which discards processes/files held only in card RAM. Setup backs up MPSS files and generated images before modifying them. It does not alter clocks, firmware, fan policy or thermal limits. Runtime installation still requires the existing card workload lease, watchdog, native tests, SHA-256 verification and hardware profile match.
 
+
+## Updating or rerunning setup
+
+Version 1.6.6 fixes the missing `app/Test-ModernRuntime.ps1` error: source installations and the Windows ZIP now use one production file list. Retries tolerate old developer-test entries without requiring or changing those files. Missing or modified production files still produce a clear error.
+
+When a completed installation exists in the normal per-user location or beside the destination, setup installs the new version alongside it and reuses its portable connection, protected SSH identity, host settings and original runtime selection. This application update needs no UAC, host reconfiguration, card restart, connection test or inference. Open the desktop shortcut when ready; the app checks the actual card and runtime normally. Existing models are reused on Load. Completed same-version setup retries only validate the app files and recreate the shortcut.
+
+Previous installations remain intact. Any copied boot recovery records continue to reference their original plans/backups, so keep the previous installation for rollback. Updates do not manufacture a new boot or native-runtime validation result. An interrupted app update resumes from its recorded source; an interrupted first-time setup follows its existing provisioning journal.
+
 ## Custom folders
 
 ```powershell
