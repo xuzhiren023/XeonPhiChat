@@ -32,7 +32,7 @@ try {
     }
     $action=if ($Rollback) { 'RollbackModern' } else { 'InstallModern' }
     Write-JsonFile (Join-Path $job 'request.json') ([pscustomobject]@{action=$action;batch=128;owner_pid=$PID;runtime_package_dir=$RuntimePackageDir})
-    Write-Host 'Installing prebuilt KNC binaries; no compilation. Native tests and benchmarks may take several minutes.'
+    Write-Host 'Preparing runtime. Progress will appear below.'
     $arguments=Join-NativeArguments @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Invoke-PhiJob.ps1'),'-JobDir',$job)
     # Own the process handle through completion; do not depend on the process
     # object returned by Start-Process to retain an exit code on Windows.

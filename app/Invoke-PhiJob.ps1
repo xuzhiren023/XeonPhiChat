@@ -93,11 +93,11 @@ try {
             $package=if ($script:request.PSObject.Properties['runtime_package_dir']) { [string]$script:request.runtime_package_dir } else { '' }
             $selection=Install-ModernCardRuntime $state $package
             Write-JsonFile (Join-Path $script:job 'modern-selection.json') $selection
-            Set-JobStatus 'Modern runtime installed; native kernel and dispatch tests passed. LFM2.5 generation and performance require the model acceptance run.' 'done'
+            Set-JobStatus 'Runtime ready. Load a model to chat.' 'done'
         }
         exit 0
     }
-    $modern=Resolve-ModernRuntime $state -RestoreMissing:($script:request.action -eq 'Health')
+    $modern=Resolve-ModernRuntime $state -RestoreMissing:($script:request.action -in @('Health','Load'))
     if ($modern.PSObject.Properties['modern_runtime_id']) { $state=$modern }
     else { $state=Resolve-GccRuntime $state -RestoreMissing:($script:request.action -eq 'Health') }
     if ($script:request.action -ne 'Chat') {

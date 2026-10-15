@@ -55,9 +55,13 @@ function Assert-JobActive {
     if ($script:request.PSObject.Properties['owner_start_ticks'] -and (Get-Process -Id $script:request.owner_pid).StartTime.ToUniversalTime().Ticks -ne [long]$script:request.owner_start_ticks) {throw 'Chat window was replaced; stopping its primed worker.'}
 }
 function Get-ChatCancellationStatus {
-    if ($script:request -and $script:request.PSObject.Properties['action'] -and $script:request.action -ceq 'Chat' -and $script:operatorCancelled -and
+    if ($script:request -and $script:request.PSObject.Properties['action'] -and $script:operatorCancelled -and
         !$script:cardLockOwned -and $script:cleanupConfirmed) {
-        return [pscustomobject]@{state='cancelled';message='Response stopped';preserve_ready=$true;progress=$null}
+        $action=$script:request.action
+        if ($action -cin @('Chat','Health','InstallModern','Load')) {
+            $message=switch ($action) { 'Chat' {'Response stopped'} 'Health' {'Connection cancelled'} 'InstallModern' {'Runtime restoration cancelled'} 'Load' {'Model loading cancelled'} }
+            return [pscustomobject]@{state='cancelled';message=$message;preserve_ready=($action -ceq 'Chat');progress=$null}
+        }
     }
     return $null
 }

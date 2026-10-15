@@ -61,6 +61,12 @@ function Invoke-Card([string]$Command) { if ($Command.StartsWith('if test ! -d')
 Release-CardWorkloadLock
 $cancelled=Get-ChatCancellationStatus
 Check ($cancelled.state -ceq 'cancelled' -and $cancelled.preserve_ready) 'confirmed native cleanup publishes a resumable cancellation'
+foreach ($action in @('Health','InstallModern','Load')) {
+    $script:request.action=$action
+    $cancelled=Get-ChatCancellationStatus
+    Check ($cancelled.state -ceq 'cancelled' -and !$cancelled.preserve_ready -and $cancelled.message.EndsWith('cancelled')) ($action+' Stop reports cancellation after cleanup, without model readiness')
+}
+$script:request.action='Chat'
 $script:cardLockOwned=$true; $script:cleanupConfirmed=$false
 function Invoke-Card([string]$Command) { return '' }
 $failed=$false; try { Release-CardWorkloadLock } catch { $failed=$true }

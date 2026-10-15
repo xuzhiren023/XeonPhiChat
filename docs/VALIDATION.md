@@ -1,5 +1,17 @@
 # Validation
 
+## 1.6.8: reconnect and runtime restoration (2026-10-14)
+
+The 1.6.7 logs show successful SSH probes followed by runtime installation after a card reboot. Installation repeated the full numerical qualification suite, including slow quantizer initialization, while the UI kept displaying Connecting. The user cancelled that job after roughly 112 seconds. The later telemetry-connection-closed message followed guard cancellation; it was not evidence of an initial SSH failure or temperature cutoff.
+
+Restoration now reuses saved acceptance only for the exact card serial/profile, runtime version/ID, archive SHA-256, baseline source and kernel version. It retains archive integrity, ELF/source identity, CLI startup/capability checks, workload ownership, heartbeat, Stop and thermal monitoring. Its native startup phase has a 120-second deadline, with a 150-second host bound; these are deadlines, not measured restore timings. A new runtime or card still runs full qualification. Original acceptance evidence/time remain unchanged, with the short restoration recorded separately. A failed restore never replaces the active selection.
+
+Connect and Restore runtime display backend progress. Confirmed cancellation is shown as cancellation rather than a telemetry failure or successful connection. Load model also restores an absent selected runtime after reboot. Runtime binaries, model pins, priming and image transfer behavior are unchanged.
+
+The Windows PowerShell 5.1 host suite passed (74 scripts parsed), including exact acceptance reuse, new-card/runtime qualification, mismatch rejection, repeated connection, failed startup/cleanup preserving the selection, UI progress/cancellation, setup and priming regressions. Nine local Bash fixture cases passed against the real installer shell for both d57e0e6 and 61e9799, covering restore versus default qualification and identity/source/capability/startup failures. The shell fixtures use fake binaries and hardware identities; they do not execute native KNC code. Run them with `python -m pytest app/tests/test_runtime_restore.py` on a development machine with Bash.
+
+No SSH, MPSS, boot, reset, native inference or hardware performance test was performed for this update. Hardware reconnect/restore validation remains pending. The new Windows and source ZIPs are built using the release tool's per-member verification; previous releases are preserved.
+
 ## 1.6.7: visible setup completion and app launch (2026-10-14)
 
 The reported disappearing setup window was the completed-installation route, not a new installation failure: the 1.6.6 receipt was installed and the latest setup diagnostic folders contained no errors. That route returned successfully without opening the app, and Setup.cmd closed immediately afterward.

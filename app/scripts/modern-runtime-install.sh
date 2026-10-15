@@ -4,6 +4,10 @@ set -euo pipefail
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 runtime=${1:?}; baseline=${2:?}; token=${3:?}; archive=${4:?}; identity=${5:?}; source=${6:?}
 modern_source=${7:-6783b11fb0889d68d0046176b4cc92ceee1961b0}
+# Only the host can choose restore, after matching saved native acceptance to
+# this card, source, runtime ID and the verified archive. Default is full tests.
+mode=${8:-qualify}
+case $mode in qualify|restore) ;; *) fail 'Unsupported installation mode';; esac
 case $modern_source in 6783b11fb0889d68d0046176b4cc92ceee1961b0|d57e0e6e4882445bc625aaee47f91db469f9fc22|61e97998bf49c2d425563920b7e83e52b5ae57a6) ;; *) fail 'Unsupported modern source revision';; esac
 [[ $runtime =~ ^/root/knc-phase3-run-modern14[012]-[a-f0-9]{32}$ ]] || fail path
 [[ $baseline =~ ^/root/knc-phase3-run-[A-Za-z0-9-]+$ ]] || fail baseline
@@ -62,11 +66,13 @@ if [[ -f $runtime/shared-runtime-id.txt ]]; then
     if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 || $modern_source == 61e97998bf49c2d425563920b7e83e52b5ae57a6 ]]; then
         modern_test="$runtime/shared/bin/test-knc-dot"
     fi
-    step shared-multi-quant-graph
-    # Exercise each row tile with mixed K-quants, strides and fallbacks.
-    for rows in 1 2 4 8; do
-        GGML_KNC_MQ=1 GGML_KNC_MQ_ROWS=$rows "$runtime/shared/bin/test-knc-mq"
-    done
+    if [[ $mode == qualify ]]; then
+        step shared-multi-quant-graph
+        # Exercise each row tile with mixed K-quants, strides and fallbacks.
+        for rows in 1 2 4 8; do
+            GGML_KNC_MQ=1 GGML_KNC_MQ_ROWS=$rows "$runtime/shared/bin/test-knc-mq"
+        done
+    fi
     export GGML_KNC_MQ=1 GGML_KNC_MQ_ROWS=4
 elif [[ -f $runtime/optimized-runtime-id.txt ]]; then
     [[ $archive == runtime-7120P.tar && $(cat "$runtime/optimized-runtime-id.txt") == "$identity" ]] || fail 'Optimized payload identity/profile'
@@ -74,18 +80,22 @@ elif [[ -f $runtime/optimized-runtime-id.txt ]]; then
     for binary in "$runtime/optimized/bin/"* "$runtime/optimized/lib/libgomp.so.1"; do check_elf "$binary"; done
     modern_engine="$runtime/optimized/bin/phi-modern"
     modern_test="$runtime/optimized/bin/test-modern-ops"
-    step optimized-graph-numerics
-    BP_Q5_SPECIALIZE=1 "$runtime/optimized/bin/test-q5-candidate"
-    BP_Q5_SPECIALIZE=0 "$runtime/optimized/bin/test-q5-candidate"
-    step optimized-pinning
-    "$runtime/optimized/bin/test-q5-pinning" self
+    if [[ $mode == qualify ]]; then
+        step optimized-graph-numerics
+        BP_Q5_SPECIALIZE=1 "$runtime/optimized/bin/test-q5-candidate"
+        BP_Q5_SPECIALIZE=0 "$runtime/optimized/bin/test-q5-candidate"
+        step optimized-pinning
+        "$runtime/optimized/bin/test-q5-pinning" self
+    fi
 fi
 printf 'Runtime: %s\nMachine: %s\n' "$identity" "$(uname -a)"
 # Only the supplied standalone test lacks an ORIGIN runpath. Its library path
 # is scoped to that command; inference uses the new main's private runpath.
 check_memory
-step vendor-correctness
-LD_LIBRARY_PATH="$runtime/lib" "$runtime/tests/test-knc"
+if [[ $mode == qualify ]]; then
+    step vendor-correctness
+    LD_LIBRARY_PATH="$runtime/lib" "$runtime/tests/test-knc"
+fi
 check_memory
 # Select exactly the same historical dispatch as chat-worker.sh. The default
 # inside the supplied ELF is legacy; merely copying it would not enable repair.
@@ -96,24 +106,30 @@ if [[ -f $runtime/q5-repair.json ]]; then
         phichat142-modern-3554c44c1f51ed57|phichat142-modern-40dbb7531d2e5096|phichat142-modern-346789f47a328478|phichat142-modern-3673c2e612bc757d|phichat142-modern-9610d4c7df2513c6) ;;
         *) fail 'Unrecognized Q5 repair runtime';;
     esac
-    step q5-repair-correctness
     check_elf "$runtime/tests/test-q5-repair"
-    "$runtime/tests/test-q5-repair"
+    if [[ $mode == qualify ]]; then
+        step q5-repair-correctness
+        "$runtime/tests/test-q5-repair"
+    fi
     export PHI_KNC_Q5_MODE=repair PHI_KNC_F32_MODE=vendor PHI_KNC_EXTENDED=0
     printf 'Q5 mode: repair; F32: vendor; other K-quants: historical; tracing: off\n'
 fi
-step legacy-numerics
-"$runtime/llama/test-phase3-numerics" --trace
-check_memory
-step quantization-correctness
-"$runtime/llama/test-quantize-fns"
+if [[ $mode == qualify ]]; then
+    step legacy-numerics
+    "$runtime/llama/test-phase3-numerics" --trace
+    check_memory
+    step quantization-correctness
+    "$runtime/llama/test-quantize-fns"
+fi
 step legacy-cli-startup
 "$runtime/llama/main" --help > "$runtime/main-help.txt" 2>&1
 [[ -s $runtime/main-help.txt ]] || fail 'CLI startup produced no help'
 unset PHI_KNC_Q5_MODE PHI_KNC_F32_MODE PHI_KNC_EXTENDED PHI_KNC_TRACE
-step modern-operators
-"$modern_test"
-if [[ $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 ]]; then
+if [[ $mode == qualify ]]; then
+    step modern-operators
+    "$modern_test"
+fi
+if [[ $mode == qualify && $modern_source == d57e0e6e4882445bc625aaee47f91db469f9fc22 ]]; then
     step rebased-backend-operators
     "$runtime/shared/bin/test-backend-ops" -b CPU -o MUL_MAT -p 'type_a=q[3456]_K,type_b=f32,m=(1|7|8|17|33|65),n=(1|3),k=512,'
     step rebased-quantization-and-sampling
@@ -123,8 +139,10 @@ fi
 # Throughput benchmarking belongs in developer qualification, not installation.
 if [[ $modern_source == 61e97998bf49c2d425563920b7e83e52b5ae57a6 ]]; then
     [[ $archive == runtime-7120P.tar ]] || fail 'Numerics candidate is qualified on 7120P only'
-    step image-metadata-regression
-    "$runtime/shared/bin/test-knc-mtmd" "$runtime/shared/tests/step3vl-mmproj.gguf"
+    if [[ $mode == qualify ]]; then
+        step image-metadata-regression
+        "$runtime/shared/bin/test-knc-mtmd" "$runtime/shared/tests/step3vl-mmproj.gguf"
+    fi
 fi
 step modern-cli-startup
 "$modern_engine" --describe > "$runtime/modern-identity.json"
@@ -136,4 +154,8 @@ fi
 printf '%s\n' "$source" > "$runtime/build-passed.txt"
 printf '%s\n' "$identity" > "$runtime/modern-runtime-passed.txt"
 rm -f "$runtime/$archive"
-printf 'PASS: native kernel suites, GGML numerical tests and CLI startup. Modern model inference and throughput require the separate hardware acceptance run.\n'
+if [[ $mode == restore ]]; then
+    printf 'PASS: accepted runtime restored; CLI startup checked. Prior native acceptance reused; numerical tests were not rerun.\n'
+else
+    printf 'PASS: native kernel suites, GGML numerical tests and CLI startup. Modern model inference and throughput require the separate hardware acceptance run.\n'
+fi

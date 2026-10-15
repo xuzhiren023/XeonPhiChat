@@ -205,7 +205,7 @@ function Start-JobAction([string]$Action) {
 $controls.Connect.Add_Click({ Start-JobAction 'Health' })
 $controls.Load.Add_Click({ Start-JobAction 'Load' })
 $controls.Send.Add_Click({ Start-JobAction 'Chat' })
-$controls.Stop.Add_Click({ if ($script:active) { Stop-PhiBackendJob $script:active.dir; $script:active.stopRequested=$true; $controls.Status.Text='Stopping response...'; Update-ActionControls } })
+$controls.Stop.Add_Click({ if ($script:active) { Stop-PhiBackendJob $script:active.dir; $script:active.stopRequested=$true; $controls.Status.Text=if ($script:active.action -ceq 'Chat') {'Stopping response...'} else {'Cancelling...'}; Update-ActionControls } })
 $controls.Restore.Add_Click({ $script:loadedModel=$null; $script:loadedSelection=''; Start-JobAction 'InstallModern' })
 $controls.New.Add_Click({ Reset-ChatConversation })
 $controls.Recent.Add_SelectionChanged({ if (!$script:updatingRecent -and $controls.Recent.SelectedItem) { Select-Conversation $controls.Recent.SelectedItem } })
@@ -273,8 +273,11 @@ function Update-ChatJobs {
         if ($status) {
             if ($status.PSObject.Properties['temperature_c']) { $controls.ThermalStatus.Text=('{0} C | stop at {1} C' -f $status.temperature_c,$status.thermal_stop_c) }
             if ($status.PSObject.Properties['memory'] -and $status.memory) { $script:lastMemorySnapshot=$status.memory.snapshot; $controls.MemoryStatus.Text=('{0:N0} MiB available' -f ($status.memory.snapshot.available_kib/1024)) }
+            if ($a.action -cin @('Load','Health','InstallModern')) {
+                if (!$a.stopRequested) { $controls.Status.Text=$status.message }
+            }
             if ($a.action -eq 'Load') {
-                $controls.LoadStatus.Text=$status.message; $controls.Status.Text=$status.message
+                $controls.LoadStatus.Text=$status.message
                 $controls.LoadProgress.IsIndeterminate=($null -eq $status.progress -and !$complete)
                 if ($status.progress) { $controls.LoadProgress.Value=$status.progress.percent }
             }
@@ -309,10 +312,14 @@ function Update-ChatJobs {
             }
             if ($script:conversation.id -ceq $a.conversation.id) { Show-ChatBubbles; $controls.Transcript.Text=$a.conversation.transcript }
             Update-RecentChats; Save-Sessions
+        } elseif ($status -and $status.state -ceq 'cancelled') {
+            $controls.Status.Text=$status.message
+            $script:loadedModel=$null; $script:loadedSelection=''
+            $controls.LoadProgress.Visibility='Collapsed'
         } elseif ($a.process.ExitCode -ne 0) {
             $controls.Status.Text=if ($status) {$status.message} else {'Connection failed'}
             $script:loadedModel=$null; $script:loadedSelection=''
-        } else { $controls.Status.Text='Connected'; $script:nextProbe=[DateTime]::MinValue }
+        } else { $controls.Status.Text=if ($a.action -ceq 'InstallModern' -and $status) {$status.message} else {'Connected'}; $script:nextProbe=[DateTime]::MinValue }
         Remove-Item -LiteralPath (Join-Path $a.dir 'response.txt') -Force -ErrorAction SilentlyContinue
         $a.process.Dispose(); $script:active=$null; Set-Busy $false; Show-SelectedModelState; Update-ForecastPreview; Update-ChatInsights
         Remove-UnreferencedImages $connection.data_dir @($script:sessions.Values)

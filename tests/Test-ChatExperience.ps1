@@ -70,6 +70,21 @@ $controls.Input.Text='Continue'; Update-ActionControls
 Check $controls.Send.IsEnabled 'a follow-up can be sent in the stopped conversation'
 Check ($script:sessions.Values.Where({$_.draft -ceq 'Unsent second chat'}).Count -eq 1) 'navigation keeps the other chat draft'
 
+foreach ($action in @('Health','InstallModern')) {
+    Start-JobAction $action
+    $job=$script:active
+    Write-JsonFile (Join-Path $job.dir 'status.json') ([pscustomobject]@{state='running';message='Restoring the accepted runtime: checking startup.';progress=$null})
+    Update-ChatJobs
+    Check ($controls.Status.Text -ceq 'Restoring the accepted runtime: checking startup.') ($action+' displays runtime restoration progress')
+    $controls.Stop.RaiseEvent((New-Object Windows.RoutedEventArgs([Windows.Controls.Button]::ClickEvent)))
+    Update-ChatJobs
+    Check ($controls.Status.Text -ceq 'Cancelling...' -and (Test-Path (Join-Path $job.dir 'cancel'))) ($action+' keeps cancellation visible while cleanup finishes')
+    Write-JsonFile (Join-Path $job.dir 'status.json') ([pscustomobject]@{state='cancelled';message='Runtime restoration cancelled';preserve_ready=$false;progress=$null})
+    $job.process.HasExited=$true
+    Update-ChatJobs
+    Check ($null -eq $script:active -and $controls.Status.Text -ceq 'Runtime restoration cancelled' -and $controls.Connect.IsEnabled) ($action+' cancellation permits reconnect and is not labelled Connected')
+}
+
 $window.Width=1180; $window.Height=820
 $window.Content.Measure((New-Object Windows.Size(1180,820)))
 $window.Content.Arrange((New-Object Windows.Rect(0,0,1180,820)))

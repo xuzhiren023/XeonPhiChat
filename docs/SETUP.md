@@ -54,5 +54,7 @@ Rollback refuses changed/damaged backup targets. It does not reset an active car
 
 Normal `Start.cmd` boots a ready card and starts MPSS services if needed, requesting UAC for that helper. It never resets an online card. The app's Connect/Restore runtime path restores the exact saved runtime after a card reboot. Chat history belongs to the current card boot and expires when the card goes offline, as in 1.5.0.
 
+From 1.6.8, restoring the same accepted archive on the same card reuses the original native acceptance and checks CLI startup. It does not rerun the lengthy numerical suite on every reboot. Load model can also trigger this restoration. New runtime identities or cards still require qualification. Connect and Restore runtime show the current stage, and Stop cancels the operation after workload cleanup. A failed restore leaves the saved selection intact for retry. This change is offline-tested; its first reconnect check on hardware is pending.
+
 Windows feature and network commands follow Microsoft's [OpenSSH client installation documentation](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse) and [New-NetIPAddress documentation](https://learn.microsoft.com/en-us/powershell/module/nettcpip/new-netipaddress). No SSH server feature is installed on Windows.
 

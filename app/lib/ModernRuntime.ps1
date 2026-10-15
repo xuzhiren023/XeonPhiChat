@@ -51,6 +51,19 @@ function Assert-ModernPayload([string]$Path,$Payload) {
 }
 function Install-ModernCardRuntime($Baseline,[string]$PackageDir='',[string]$Version='1.4.2',[string]$RuntimeId='') {
     $payload=Get-ModernPayload $script:health $Version $RuntimeId
+    if ($Baseline.source_commit -cne $script:cfg.source_commit) { throw 'Baseline source differs from modern runtime.' }
+    $path=Get-ModernSelectionPath $script:data $script:health
+    $accepted=$null
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        $previous=Read-JsonFile $path
+        if ($previous.runtime_id -ceq $payload.runtime_id) {
+            Assert-ModernSelection $previous $payload
+            if ($previous.version -cne $Version -or !$previous.evidence -or !$previous.created_utc) { throw 'Saved native acceptance is incomplete or belongs to another runtime version.' }
+            $accepted=$previous
+        }
+    }
+    # Reboot removes card RAM, not the exact card/build's saved acceptance.
+    $validationMode=if ($accepted) { 'restore' } else { 'qualify' }
     $store=Join-Path $script:data ('modern-runtime/payload-'+$payload.sha256)
     $local=Join-Path $store $payload.file
     if ($PackageDir) {
@@ -82,23 +95,28 @@ function Install-ModernCardRuntime($Baseline,[string]$PackageDir='',[string]$Ver
         $null=Invoke-JobProcess $script:scp ($script:scpMode+$script:sshOptions+@(($script:target+':'+$remote+'/'+$payload.file),$returned)) 180
         Assert-ModernPayload $returned $payload
         Remove-Item -LiteralPath $returned
-        $script:activity='Validating GNU IMCI runtime on the Xeon Phi; temperature and Stop protection remain active.'
+        $script:activity=if ($accepted) { 'Restoring the accepted runtime: checking startup.' } else { 'Validating this runtime on the Xeon Phi for the first time.' }
         Set-JobStatus $script:activity
-        $command="exec '$remote/guard' 900 $($script:cfg.heartbeat_timeout_seconds) bash '$remote/modern-runtime-install.sh' '$remote' '$remote' '$($script:cardLockToken)' '$($payload.file)' '$($payload.runtime_id)' '$($script:cfg.source_commit)' '$($payload.modern_source_commit)'"
-        $null=Invoke-JobProcess $script:ssh ($script:sshOptions+@('-T',$script:target,$command)) 930 (Join-Path $script:job 'native-validation.txt') -Guarded
+        $nativeTimeout=if ($accepted) { 120 } else { 900 }
+        $command="exec '$remote/guard' $nativeTimeout $($script:cfg.heartbeat_timeout_seconds) bash '$remote/modern-runtime-install.sh' '$remote' '$remote' '$($script:cardLockToken)' '$($payload.file)' '$($payload.runtime_id)' '$($script:cfg.source_commit)' '$($payload.modern_source_commit)' '$validationMode'"
+        $null=Invoke-JobProcess $script:ssh ($script:sshOptions+@('-T',$script:target,$command)) ($nativeTimeout+30) (Join-Path $script:job 'native-validation.txt') -Guarded
         $receipt=(Invoke-Card "cat '$remote/modern-runtime-passed.txt'").Trim()
         if ($receipt -cne $payload.runtime_id) { throw 'Native runtime validation receipt is missing or mismatched.' }
         $null=Read-CardHealth
         $selection=[pscustomobject]@{schema_version=1;enabled=$true;version=$Version;kernel_version='0.2.1';source_commit=$script:cfg.source_commit;serial=$script:health.serial;profile=$script:health.profile.profile_id;remote_base=$remote;runtime_id=$payload.runtime_id;archive_sha256=$payload.sha256;evidence=$script:job;validation='native-kernels-dispatch-and-cli-startup';created_utc=(Get-Date).ToUniversalTime().ToString('o')}
-        $path=Get-ModernSelectionPath $script:data $script:health
+        if ($accepted) {
+            $selection.evidence=$accepted.evidence
+            $selection.created_utc=$accepted.created_utc
+            $selection | Add-Member restoration ([pscustomobject]@{evidence=$script:job;validation='accepted-archive-and-cli-startup';created_utc=(Get-Date).ToUniversalTime().ToString('o')})
+        }
         if (Test-Path -LiteralPath $path) { Copy-Item -LiteralPath $path -Destination (Join-Path $script:job 'previous-modern-selection.json') }
         if (Test-Path -LiteralPath $path) {
             $previous=Read-JsonFile $path
             if ($previous.runtime_id -cne $selection.runtime_id) { Copy-Item -LiteralPath $path -Destination ($path+'.previous.json') -Force }
         }
-        Write-JsonFile $path $selection
-        return $selection
     } finally { Release-CardWorkloadLock }
+    Write-JsonFile $path $selection
+    return $selection
 }
 function Resolve-ModernRuntime($Baseline,[switch]$RestoreMissing) {
     $path=Get-ModernSelectionPath $script:data $script:health
