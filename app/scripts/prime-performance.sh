@@ -1,4 +1,13 @@
-# Loaded only for the explicitly pinned decode3 resident runner.
+# Loaded only for an explicitly pinned, model-paired resident runner.
+for switch in "$Q6_PANEL8" "$F16_CONV" "$F32_ATTN"; do
+    [[ $switch == 0 || $switch == 1 ]] || fail 'Invalid matrix switch'
+done
+if [[ $PRIME_RUNNER == phi-prime-context-matrix-r2 ]]; then
+    export GGML_KNC_Q6_PANEL8=$Q6_PANEL8 GGML_KNC_F16_CONV=$F16_CONV GGML_KNC_F32_ATTN=$F32_ATTN
+else
+    [[ $Q6_PANEL8$F16_CONV$F32_ATTN == 000 ]] || fail 'Matrix settings require the paired runtime'
+fi
+printf 'runner=%s\nq6_panel8=%s\nf16_conv=%s\nf32_attn=%s\n' "$PRIME_RUNNER" "$Q6_PANEL8" "$F16_CONV" "$F32_ATTN" > "$job/report/context-matrix.txt"
 [[ $CORES == 61 && $PERFORMANCE_CAPABLE == 1 ]] || fail 'Unqualified performance profile'
 [[ $IMAGE_CACHE_MIB =~ ^[0-9]+$ && $IMAGE_MAX_TOKENS =~ ^[0-9]+$ && $VISION_THREADS =~ ^[0-9]+$ ]] || fail 'Invalid performance settings'
 ((IMAGE_CACHE_MIB <= 512 && IMAGE_MAX_TOKENS <= 65536 && VISION_THREADS >= 60 && VISION_THREADS <= PROMPT_THREADS && VISION_THREADS % 60 == 0)) || fail 'Invalid performance bounds'

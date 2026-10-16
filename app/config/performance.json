@@ -8,7 +8,15 @@
       "vision_smt": 0,
       "mq_rows": 8,
       "mq_cols": 4,
-      "image_max_tokens": 0
+      "image_max_tokens": 0,
+      "context_matrix_models": [
+        {
+          "model_id": "huihui-step3-vl-10b-abliterated-q5_k_m",
+          "q6_panel8": 1,
+          "f16_conv": 1,
+          "f32_attn": 1
+        }
+      ]
     }
   ]
 }

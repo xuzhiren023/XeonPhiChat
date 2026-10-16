@@ -56,6 +56,11 @@ function Sample([double]$Seconds,[int]$Consumed,[string]$Stage='generating') {
     Write-JsonFile (Join-Path $job.dir 'live-progress.json') ([pscustomobject]@{stage=$Stage;native=[pscustomobject]@{Stage='prefill';Consumed=$Consumed;SampleSeconds=$Seconds}})
     Update-JobInsights $job $null $false; Update-ChatInsights
 }
+Sample 1 0 'prefill'
+Sample 2 180 'prefill'
+Check ($null -eq $first.metrics.prompt_tps) 'cached prefix jump establishes a baseline without inflating live input speed'
+Sample 4 200 'prefill'
+Check ($first.metrics.prompt_tps -eq 10) 'live prompt speed counts only newly advanced positions'
 Sample 10 210
 Sample 12 216
 Check ($first.metrics.output_tokens -eq 16 -and !$first.metrics.output_estimated -and $first.metrics.generation_tps -eq 3) 'live rate uses native token deltas and excludes prompt tokens'
@@ -73,9 +78,10 @@ Check ($controls.StatsOutput.Text -ceq '--' -and $controls.ContextLabel.Text -ce
 Select-Conversation $first
 Check ($controls.ThinkingDepth.SelectedValue -ceq 'light') 'chat navigation restores its thinking preference'
 Check ($controls.StatsOutput.Text -ceq '22') 'returning to a chat restores its own statistics'
-$status=[pscustomobject]@{state='done';result=[pscustomobject]@{generation_tokens=30;generation_tps=3.25;prompt_tps=15.5;context=1000}}
+$status=[pscustomobject]@{state='done';result=[pscustomobject]@{generation_tokens=30;generation_tps=3.25;prompt_tps=15.5;context=1000;prompt_reused_tokens=180;prompt_evaluated_tokens=20}}
 Update-JobInsights $job $status $true; Update-ChatInsights
 Check ($first.metrics.output_tokens -eq 30 -and $controls.Speed.Text -ceq '3.3 tokens/s' -and $controls.StatsNote.Text.Contains('measured')) 'final native timing replaces live sampled metrics'
+Check ($controls.StatsReused.Text -ceq '180' -and $controls.StatsEvaluated.Text -ceq '20' -and $controls.StatsPrompt.Text -ceq '200') 'statistics separates reused context and new input while retaining total context usage'
 Save-Sessions
 $saved=Read-ChatSessions $script:sessionFile $script:sessionEpoch @($first.model)
 Check ($saved.sessions[$first.id].custom_title -and $saved.sessions[$first.id].metrics.output_tokens -eq 30) 'rename and per-chat statistics survive same-boot reopen'

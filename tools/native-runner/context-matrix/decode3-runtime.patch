@@ -1,0 +1,1262 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7a2d340..8f59bff 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -252,7 +252,7 @@ endif()
+ if (GGML_KNC AND NOT LLAMA_BUILD_COMMON)
+     if (LLAMA_BUILD_TESTS)
+         include(CTest)
+-        foreach(knc_test test-knc-mq test-knc-dot test-quantize-fns test-backend-ops test-sampling)
++        foreach(knc_test test-knc-mq test-knc-dot test-knc-scheduling test-quantize-fns test-backend-ops test-sampling)
+             add_executable(${knc_test} tests/${knc_test}.cpp)
+             target_compile_features(${knc_test} PRIVATE cxx_std_14)
+             target_include_directories(${knc_test} PRIVATE ggml/src ggml/src/ggml-cpu/arch/knc)
+diff --git a/docs/backend/KNC-VALIDATION.md b/docs/backend/KNC-VALIDATION.md
+index f2038a3..4ada2d6 100644
+--- a/docs/backend/KNC-VALIDATION.md
++++ b/docs/backend/KNC-VALIDATION.md
+@@ -43,8 +43,162 @@ The local preservation audit compares 839 release files and 336 installed-runtim
+ 
+ ## Native qualification gate
+ 
+-The connected card's SSH identity differs from saved trust. Native correctness, actual worker affinity and small trained-model throughput remain pending verification through a trusted console or recovery connection. No trust records or installed runtime are changed to bypass this gate. There are no new KNC tokens/sec results for this rebase, and previous-base measurements do not qualify it.
++Guarded native testing resumed on a 7120P on 2026-10-13 using the installed PhiChat 1.5.7 SSH trust and workload guard. The isolated image-fix runner has SHA-256 `e3366b50052818a7cc223f57b7b69f55316e5cd93e3ca9b67b413a849b235d54`. The installed binary and its runtime selection remain unchanged.
+ 
+-After identity verification, run the operator and graph checks before short, alternating baseline/control/staging model runs. Use the same model hash, prompt, context, batch, worker layout and matching OpenMP library; capture full-vocabulary logits, state reset, prompt/decode timings, worker affinities and thermal guard evidence. Record source and binary hashes. Repeat on each of 3120A, 5110P and 7120P before claiming per-card native qualification.
++The image corruption came from MPSS GCC 5 emitting an inlined float metadata store through an uninitialized address register. The store wrote the projector epsilon into caller memory. A KNC-only `noinline` on the metadata getter fixes the destination without changing compute kernels. The new projector metadata regression fails before the fix and passes after it over three load/free cycles. Long absolute image-logit output paths now work.
+ 
+-The supported compiler target is the core library, simple example and focused tests. Common/server and multimodal frontends, reasoning templates and long-context quality remain outside this qualification. Human review and maintenance ownership are required before an upstream submission, especially for the broad GCC 5 compatibility prerequisite.
++| Native check | Result |
++|---|---|
++| Integrated dispatch and packed-boundary checks | 110,796 pass |
++| Graph/oracle tests, staging rows 1/2/4/8 | Pass |
++| Tiny Llama/LFM2/LFM2MoE/Qwen3, Q3/Q4/Q5_K_M; Step3 image graph; input rejections | 44 functional cases pass |
++| Staging enabled vs disabled, same KNC dot kernels | 108/108 logit files bitwise equal |
++| Installed runtime vs candidate, supported tiny Llama/LFM2 fixtures | 24/24 logit files bitwise equal; installed runner rejects the other two architectures |
++| TinyDolphin 1.1B Q5_K_M, installed runtime vs candidate | 512,032 logits bitwise equal; generated text equal |
++| Existing x86-host numerical gate | 66/108 files pass; full qualification remains blocked |
++
++The x86 comparison still uses NRMSE <= 0.002 and absolute error <= 0.03 + 0.005 * abs(reference). No tolerance was relaxed. The installed runtime reproduces the Llama Q3 and LFM2 Q4 failures. Tensor traces show small floating-point differences crossing FP16/Q8 rounding boundaries; this is separate from activation staging, which is bitwise equal to its matching KNC control. These observations do not qualify every remaining cross-host difference as harmless. Broad float-rounding experiments were rejected: they did not clear the gate and regressed trained-model throughput and logits against the installed runtime.
++
++For TinyDolphin, three alternating warmed trials used a four-token prompt, 16 output tokens, context 512, batch 16 and 180 pinned workers. Median decode throughput was 3.895 tokens/s for the candidate and 3.813 for the installed runtime; median prompt throughput was 6.374 and 6.140 tokens/s respectively. The roughly 2% decode difference is too small and the runs too short to establish a general speedup. Final-run temperatures were 52-60 C. Model worker affinity was checked at 60 or 180 threads with the whole OS core excluded.
++
++### Matched-input numerical investigation
++
++A subsequent guarded 7120P run examined the four text fixtures with cross-host differences and all six image/quantization combinations. A diagnostic-only callback captured each computing node's exact inputs, strides and outputs. It synchronized dependencies and skipped nodes without `GGML_TENSOR_FLAG_COMPUTE`; buffers from such nodes are not computed results. The x86 reference replay used those same inputs, with fusion disabled. Diagnostics are absent from the production runner.
++
++All 1,758 captured operations were accounted for. At the upstream operator screen of NMSE <= 1e-7, one matrix operation differed. Exactly one Q8 activation differed by one integer; its scaled value was only 8.0626e-8 from a half-integer. Independent dequantization and double-precision multiplication reproduced both platforms' respective results. Across 428 packed matrix cases, maximum native NMSE against that oracle was 1.133e-15; maximum host NMSE was 2.114e-13. Q8 block sums and rounding bounds were also checked. There were no unexplained operator failures.
++
++This resolves the observed fixture differences as FP16/Q8 rounding amplification, rather than a new quantized dot-product error. The earlier cross-host end-to-end screen remains 66/108; its thresholds were not widened or its evidence replaced. Future unexplained differences must still fail qualification. The production arithmetic, compiler flags and activation staging are unchanged; the real projector metadata corruption retains its narrow KNC-only fix.
++
++The fresh clean-runner pass repeated all 44 functional cases and 110,796 kernel checks. All 108 fixture logit files were bitwise equal to the previous clean run, and 512,032 TinyDolphin logits were bitwise equal to the installed runtime. Three alternating warmed trials at the same four-token prompt, 16 output tokens and 180 workers measured median decode 3.8919 versus 3.7909 tokens/s and prompt processing 6.4651 versus 6.0718 tokens/s. This short test found no regression; it does not establish a general speedup. Temperatures were 52-61 C and worker affinity was verified.
++
++The evidence qualifies this exact binary for the tested 7120P numerical and throughput scope. Native 3120A/5110P validation, trained image understanding, full-size model memory limits, reasoning templates and long-context quality remain pending. Synthetic image fixtures demonstrate graph execution and image-dependent logits, not semantic vision quality or application attachment support. Human review and maintenance ownership are required before an upstream submission, especially for the broad GCC 5 compatibility prerequisite.
++
++## Performance candidate, 2026-10-14
++
++The isolated four-column panel and resident image-cache candidate was tested on
++the matching 7120P with the existing exclusive lease, heartbeat, thermal and
++memory guards. Baseline was a preserved copy of PhiChat 1.6.3's runner
++`f570f45b4964b27320ca30d69c12ea33b0496ae9c5f36ad4ed0af66e5fc36426`; candidate was
++`95b3673d1814c8bad684461bd43055a88a14998519f29891f1130fa278cdc6b2`.
++The working installation, runtime selection and SSH trust were not changed.
++Local-to-card transfers reused recorded identities and checked SSH completion
++and byte counts; there were no repeated model or binary transfer hash scans.
++
++Native checks passed: 110,796 integrated dispatch/packed-boundary cases, the
++extended graph/oracle tests at row tiles 1/2/4/8 and four-column tails, Step3
++crop/metadata/canary tests, and tiny Llama/LFM2/LFM2MoE/Qwen3 fixtures in
++Q3_K_M/Q4_K_M/Q5_K_M. Red/blue image fixtures matched the baseline with the cache
++enabled and disabled, including fresh/reset state. Trained 2.6B and 8B logit
++comparisons also passed; the final trained check used at least eight prompt
++tokens to exercise full four-column panels. Across the collected baseline and
++cache comparisons, 164 files were bitwise equal;
++baseline/candidate float files contained 10,588,964 compared values.
++Generated output was equal in every matched speed pair.
++
++Median text throughput in tokens/s, excluding model loading:
++
++| Model | Baseline prefill | Candidate prefill | Baseline decode | Candidate decode |
++|---|---:|---:|---:|---:|
++| LFM2.5-2.6B Q5_K_M | 7.375 | 11.064 | 3.063 | 3.064 |
++| Llama 3.3 8B Abliterated Q5_K_M | 2.884 | 4.421 | 1.189 | 1.183 |
++
++Each row uses five alternating matched pairs after a warmup pair, a 91-token
++plain completion prompt, 17 generated tokens (16 timed decode evaluations),
++context 512, batch 128, 120 generation workers and 240 prompt workers. Both
++binaries use row tile 8; the candidate uses four-column panels. Actual worker
++masks were checked against topology-derived unique CPU assignments with the
++whole OS core excluded. These are short-context measurements, not chat-template
++or long-context performance guarantees. Neither model meets its generation
++target yet; the combined prefill/decode target remains unmet.
++
++Peak recorded temperature was 67 C and sampled clock was 1,238,095 kHz.
++A read-only SMC snapshot during the 8B tests showed 181 W, a 315 W low power
++limit, inactive power/thermal throttling with zero events, and turbo disabled.
++This rules out a 200 W cap in that snapshot; it does not measure vector
++utilization or sustained memory bandwidth. No power settings were changed.
++
++A separate FP16 attention scheduling experiment passed 453,120 bitwise checks
++but changed one short decode comparison by less than 1%. It was not promoted.
++Synchronized operator profiling suggested FP16 attention and scalar work as
++leads, but its substantial overhead makes it unsuitable for attributing normal
++end-to-end time. The next pass follows the empirical measurement plan in the
++[KNC runner guide](../../examples/knc/README.md#bandwidth-goals-for-the-next-pass).
++
++All three SKU binaries cross-built, but 3120A/5110P native acceptance remains
++pending. The next-version PhiChat adapter is source-only and unselected;
++complete 5110P application integration, trained Q3/Q4 speed, trained image
++understanding, image-cache performance and long-context memory/quality remain
++separate release gates. Build manifests remain build-time records; the private
++`phichat-performance-candidate/qualification.json` and `native-7120P` receipts
++record this later hardware evidence.
++
++## Decode scheduling and scalar metadata candidate, 2026-10-14
++
++The exact 7120P candidate is `knc-decode3-ecf5e24ef6c0a4f3`, runner
++`ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318`.
++It preserves the installed PhiChat 1.6.3 baseline and its working runtime.
++Transfers reused recorded identities, SSH completion and byte counts without
++repeated SHA-256 scans. All native work used the existing exclusive lease,
++thermal, memory, heartbeat, Stop and topology-derived affinity guards.
++
++The diagnostic profiler now measures around existing CPU graph barriers and
++retains fusion. On an eight-step 2.6B decode, the original candidate spent 29.2%
++of measured operator time in SwiGLU and 14.2% in softmax. Both scheduled only
++token rows: a single-token graph left one worker processing an entire SwiGLU
++row or all attention heads. The new KNC paths divide independent SwiGLU
++elements and schedule softmax heads/batches across workers. Floating-point
++expressions and row reductions retain their original order.
++
++Disassembly also showed repeated half-scale helper calls, scalar reduction
++loops and spills in every quant block. The candidate inlines the exact half
++conversion, removes the scale-layout branch from Q4/Q5 metadata extraction,
++unrolls the integer lane sum, and builds only `knc-mq.c` with `-O3`,
++`-funroll-loops`, `-mstringop-strategy=unrolled_loop` and
++`-fexcess-precision=standard`. Fast-math and compiler vectorization remain
++disabled for that file. The existing IMCI dot arithmetic remains unchanged.
++
++Median tokens/s from five alternating pairs after one warmup pair:
++
++| Model | Baseline prefill | Candidate prefill | Baseline decode | Candidate decode |
++|---|---:|---:|---:|---:|
++| LFM2.5-2.6B Q5_K_M | 7.335 | 15.208 | 3.046 | 6.156 |
++| Llama 3.3 8B Abliterated Q5_K_M | 2.888 | 6.361 | 1.184 | 2.677 |
++
++These use 91 prompt tokens, 17 generated tokens (16 timed decode evaluations),
++context 512, batch 128, row tile 8 and 240 prompt workers. Baseline uses its
++previously measured 120 decode workers; candidate uses 120 for 2.6B and 240
++for 8B. Thus the 8B result compares tuned runtime configurations, not identical
++thread counts. Short tests also compared intermediate candidates at identical
++settings. Model load time and profiling are excluded. Every output pair matched.
++The 10 tokens/s 2.6B and 4 tokens/s 8B generation goals remain unmet.
++
++Native scheduling tests checked 35,276,400 bitwise values and boundary canaries,
++including padded rows, packed/swapped gates, masks, ALiBi and attention sinks.
++Q3/Q4/Q5/Q6 graph oracles and full trained-model vocabulary logits passed.
++Twelve tiny text/MoE fixtures and twelve image/cache fixture cases matched the
++saved baseline. Aggregate final-candidate comparisons covered
++154 files and 8,542,408 float values.
++Host ASAN/UBSAN additionally passed 27,648 row checks and 1,165,824 bounded
++prefetch checks. Host semantics are separate from native acceptance.
++
++Peak native temperature was 69 C. No clock, turbo, power,
++trust or installed runtime settings were changed. 3120A and 5110P binaries
++cross-built with their own tuning constants; matching native acceptance remains
++pending. Image fixtures verify graph execution and state handling, not trained
++image-understanding quality. Long-context behavior and trained Q3/Q4 speed
++remain separate validation work.
++
++After the scheduling fixes, the intermediate candidate's Q5/Q6 matrix products
++accounted for 80-82% of measured operator time. This profile preceded the final
++scalar-unrolling change; it is a bottleneck guide, not a final timing breakdown.
++The next priority is reducing per-block packed-data movement and scalar metadata
++work in those kernels, with exact numerical oracles, followed by FP16 attention
++and normalization. Intel's [KNC programming overview](https://download.intel.com/newsroom/kits/xeon/phi/pdfs/overview-programming-intel-xeon-intel-xeon-phi-coprocessors.pdf)
++motivates exposing thread/vector parallelism, cache locality and measured thread
++counts before relying on peak bandwidth. Low board power alone is not a measure
++of remaining attainable token throughput.
++
++The source patch and exact packages were handed to the PhiChat integration task.
++Application-level qualification is recorded separately there. Private build and
++native evidence are in `phichat-decode-candidate/qualification.json`; the report
++references the saved raw archive and records the artifact identities once.
+diff --git a/examples/knc/README.md b/examples/knc/README.md
+index 66a1a9b..ef3188a 100644
+--- a/examples/knc/README.md
++++ b/examples/knc/README.md
+@@ -62,7 +62,7 @@ Install NumPy and PyYAML in the isolated host environment, then:
+ ```sh
+ python3 examples/knc/make-fixtures.py --quantizer /build/host/bin/knc-fixture-quantize --output /fixtures/knc-models
+ python3 examples/knc/test-runner.py --runner /build/host/bin/llama-knc-runner --fixtures /fixtures/knc-models --output /results/knc-models
+-/build/host/bin/test-knc-mtmd
++/build/host/bin/test-knc-mtmd /fixtures/knc-models/step3vl-mmproj.gguf
+ /build/host/bin/test-knc-mtmd-upstream
+ ```
+ 
+@@ -70,8 +70,117 @@ Fixtures contain random weights with a small synthetic tokenizer. They exercise
+ 
+ For kernel isolation, `--baseline-kernels` disables activation staging and the extended Q2/Q3/Q4/Q6 dot kernels; it retains the original accelerated Q5 path. `--scalar-kernels` disables optimized dot kernels and staging. These controls compare kernel behavior within this candidate; neither is a substitute for timing the preserved installed runtime with identical weights, prompt, context, threads and cache state.
+ 
++To isolate activation staging alone, compare `GGML_KNC_MQ=1` with `GGML_KNC_MQ=0` using the same binary and inputs. Do not also pass `--baseline-kernels`: that changes the dot implementations and their floating-point reduction order. Keep this comparison separate from the cross-host reference check; passing one does not imply passing the other.
++
++The optional projector argument to `test-knc-mtmd` checks float metadata and caller memory over three load/free cycles. It covers an MPSS GCC 5 miscompilation of the inlined float metadata loader: the generated store used an uninitialized address register. The KNC-only `noinline` workaround applies to metadata loading, not compute kernels. Run this check under the same native guard as inference. Keep the long absolute paths used by the test runner; shortening them can hide corruption.
++
+ ## Remaining optimization work
+ 
+ Activation staging still accelerates eligible dense Q3/Q4/Q5/Q6 matrix multiplications. Routed MoE `MUL_MAT_ID` uses the existing generic dispatch and KNC dot routines; expert-specific staging needs profiling before another optimization. Vision introduces substantial floating-point/convolution work that K-quant text kernels do not accelerate. After native correctness, measure text prefill, expert routing, image encoding and token decoding separately on each SKU, then select per-card settings from matched measurements.
+ 
+-Keep the compatibility changes, runner and backend optimization patches reviewable separately. This is a private candidate, not a claim of upstream acceptance or native qualification.
++Keep the compatibility changes, runner and backend optimization patches reviewable separately. The image metadata fix and matched-input numerical investigation have scoped 7120P evidence in [KNC validation](../../docs/backend/KNC-VALIDATION.md). This is not a claim of upstream acceptance, qualification on other cards, or trained vision quality.
++## Offline performance candidate
++
++The next candidate distributes Q8 activation packing across all input columns
++and adds a four-column IMCI panel for Q3_K/Q4_K/Q5_K/Q6_K. Each weight block is
++unpacked once for four prompt tokens. `GGML_KNC_MQ_COLS=1` selects the previous
++row kernel for a same-binary comparison; `4` enables the candidate panel.
++Single-token decode and one-to-three-column tails retain the previous kernel.
++Reference mode, unsupported types, strided tensors and batched outer dimensions
++retain their existing dispatch. No model datatype metadata is rewritten.
++
++`test-panel.py` uses the pinned BluePower instruction translators with ASan/UBSan
++to check the actual assembly equations, alignment, tails, prefetch bounds and
++scaled rounding against independent packed arithmetic and the previous kernel.
++It is a host source-semantics check, not native qualification. The extended
++`test-knc-mq` covers four-column boundaries through the actual graph dispatcher
++and must still run on each matching card before promotion.
++
++`performance-plan.py --plan 7120P --output NEW.json` generates a staged test plan
++without executing it. Plans are available for 3120A, 5110P and 7120P. Run them
++through the existing exclusive workload, thermal, memory and heartbeat guards.
++Screen small models first, then confirm held-out settings on the real target
++model with at least five paired repetitions. `--score RECEIPT.json` rejects host
++timings, unmatched workloads and missing correctness/affinity/guard gates.
++Targets are >=2 decode / >=4 prefill tokens/s for 8B-10B and >=5 / >=8 for 2.6B
++(stretch 6 / 10). These are acceptance targets, not measured results.
++
++The separate PhiChat resident adapter adds a byte-bounded image-embedding LRU,
++content-hash and crop-ordinal keys, independently selected vision threads,
++image-token budgets and separate preparation/encoding/ingestion/text/decode
++timings. It clears decoder and recurrent state between requests. It does not
++reuse conversation KV state, change model quantization or skip reasoning tokens.
++Step3's existing `image_max_tokens` option now selects a complete crop grid when
++it fits, or the existing overview-only path. A budget below the fixed overview
++is rejected. Full detail remains the default; overview mode requires a separate
++visual-quality check for small text and fine detail.
++
++The design follows publicly documented serving techniques, adapted to KNC:
++[TensorRT-LLM's bounded encoder cache](https://nvidia.github.io/TensorRT-LLM/llm-api/reference/MultimodalConfig.html)
++and [multimodal pipeline stages and raw-image hashing](https://nvidia.github.io/TensorRT-LLM/latest/features/multi-modality.html).
++GPU-specific concurrent batching, speculative decoding and approximate visual
++token pruning are not enabled by this change. Operator profiling is opt-in;
++its synchronized timings must not be submitted as throughput evidence.
++
++## Bandwidth goals for the next pass
++
++The requested long-term targets use the 7120P's advertised 352 GB/s divided by
++estimated compressed model size. Treat these as aspirational weight-streaming
++ceilings, not measured performance or an acceptance promise. Intel specifies
++[maximum memory bandwidth](https://www.intel.com/content/www/us/en/products/sku/75799/intel-xeon-phi-coprocessor-7120p-16gb-1-238-ghz-61-core/specifications.html);
++an [empirical roofline](https://amcr.lbl.gov/departments/computer-science-department/ppan/roofline-performance-model/empirical-roofline-tool-ert/)
++also needs attainable bandwidth and compute throughput. KNC quant unpacking,
++scalar scale/reduction instructions, attention and synchronization can limit
++decoding before memory bandwidth is saturated.
++
++The actual 256-weight blocks in `ggml-common.h` use the following storage:
++
++| Tensor type | Bytes/block | Bits/weight including scales |
++|---|---:|---:|
++| Q3_K | 110 | 3.4375 |
++| Q4_K | 144 | 4.5 |
++| Q5_K | 176 | 5.5 |
++| Q6_K | 210 | 6.5625 |
++
++`Q3_K_M`, `Q4_K_M` and `Q5_K_M` are mixed tensor recipes, not fixed bit rates.
++Use each GGUF's tensor inventory and the actual active matrices. For example,
++eight billion weights stored uniformly as Q5_K occupy 5.5 decimal GB, giving
++352/5.5 = 64 tokens/s in the idealized weight-only calculation, not 70.4.
++Neither result accounts for the rest of the graph. Whole-file size is especially
++misleading for MoE, which only visits selected experts at each step.
++
++Memory headroom and multimodal decoding require their own measurements. A
++conventional 32-layer decoder with eight KV heads, head dimension 128, FP16 K/V
++and 131,072 cached positions needs 16 GiB for KV alone. That example leaves no
++room for model weights on this card. Image tokens can remain in attention's
++context, and some architectures use cross-attention during generation. Equal
++parameter counts therefore do not imply equal text and image decoding speeds.
++
++After the current paired tests, pursue this sequence without changing the
++working installation:
++
++1. Measure sustained read bandwidth with an IMCI streaming checksum and a working
++   set well above aggregate L2, using each card's admitted worker cores and
++   2/3/4-way SMT. Validate the checksum and retain clock, ECC, affinity and
++   temperature records. Include power and thermal throttle status, turbo state
++   and power samples aligned to each phase. Do not import KNL or GPU bandwidth
++   measurements. Power below the 300 W TDP is a utilization clue, not proof of
++   proportional speed headroom; judge changes by tokens/s and joules/token.
++2. Measure representative Q3/Q4/Q5/Q6 single-token matrix shapes with exact packed
++   data, then compare effective weight traffic with the streaming result. Add
++   separate FP16 attention, reduction and barrier microbenchmarks. A synchronized
++   whole-graph profiler may identify candidates but cannot establish their
++   uninstrumented cost.
++3. Optimize the measured limit: weight loading/unpacking if quantized matrix
++   throughput is low, FP16 vector conversion/dot work if attention dominates,
++   or threadpool work allocation if small operations pay excessive overhead.
++   Preserve packed rounding and evaluate any changed reduction against a
++   matched-input oracle before measuring real-model throughput.
++4. Confirm one change at a time against the preserved runtime with held-out
++   prompts and five alternating pairs. Report prefill and decode separately,
++   then expand context and image-token counts. Keep the immediate >=2/4 and
++   >=5/8 decode/prefill milestones above; revise achievable long-term targets
++   using measured bytes per token and instruction throughput.
++
++Every SKU needs its own native settings and evidence. A 7120P winner is a
++starting configuration for 3120A/5110P, not their qualification.
+diff --git a/examples/knc/test-image.cpp b/examples/knc/test-image.cpp
+index 4fccfc9..217ea2d 100644
+--- a/examples/knc/test-image.cpp
++++ b/examples/knc/test-image.cpp
+@@ -1,7 +1,11 @@
+ #include "mtmd-image.h"
++#include "gguf.h"
+ 
+ #include <cstdio>
++#include <memory>
+ #include <stdexcept>
++#include <string>
++#include <vector>
+ 
+ static void check(bool value, const char * name) {
+     if (!value) {
+@@ -9,7 +13,33 @@ static void check(bool value, const char * name) {
+     }
+ }
+ 
+-int main() {
++static void check_metadata(const char * path) {
++    std::unique_ptr<gguf_context, decltype(&gguf_free)> meta(
++        gguf_init_from_file(path, { true, nullptr }), gguf_free);
++    check(bool(meta), "projector metadata load");
++    const int key = gguf_find_key(meta.get(), "clip.vision.attention.layer_norm_epsilon");
++    check(key >= 0 && gguf_get_kv_type(meta.get(), key) == GGUF_TYPE_FLOAT32, "projector epsilon metadata");
++    const float expected = gguf_get_val_f32(meta.get(), key);
++    for (int cycle = 0; cycle < 3; ++cycle) {
++        std::vector<std::string> canaries;
++        for (int i = 0; i < 32; ++i) {
++            canaries.emplace_back(64 + i, char('A' + i % 26));
++        }
++        clip_context_params params{};
++        params.flash_attn_type = CLIP_FLASH_ATTN_TYPE_DISABLED;
++        auto loaded = clip_init(path, params);
++        std::unique_ptr<clip_ctx, decltype(&clip_free)> vision(loaded.ctx_v, clip_free);
++        std::unique_ptr<clip_ctx, decltype(&clip_free)> audio(loaded.ctx_a, clip_free);
++        std::unique_ptr<clip_ctx, decltype(&clip_free)> generated(loaded.ctx_gen_a, clip_free);
++        check(bool(vision), "vision projector load");
++        check(clip_get_hparams(vision.get())->eps == expected, "projector epsilon store");
++        for (int i = 0; i < 32; ++i) {
++            check(canaries[i] == std::string(64 + i, char('A' + i % 26)), "projector load overwrote caller memory");
++        }
++    }
++}
++
++int main(int argc, char ** argv) {
+     try {
+         using processor = mtmd_image_preprocessor_step3vl;
+         clip_hparams hp;
+@@ -27,7 +57,20 @@ int main() {
+         check(below.slices.size() == 2 && above.slices.size() == 4, "crop rounding threshold");
+         const auto wide = processor::build_slice_instructions(hp, { 2400, 300 });
+         check(wide.slices.size() == 8 && wide.grid_size.height == 1, "wide image window grid");
++        const auto hd = processor::build_slice_instructions(hp, {1280, 720});
++        check(hd.slices.size() == 6, "720p full detail has six crops plus overview");
++        hp.custom_image_max_tokens = 169;
++        check(processor::build_slice_instructions(hp, {1280, 720}).slices.empty(), "overview budget removes complete grid");
++        hp.custom_image_max_tokens = 654;
++        check(processor::build_slice_instructions(hp, {1280, 720}).slices.empty(), "partial grid not permitted");
++        hp.custom_image_max_tokens = 655;
++        check(processor::build_slice_instructions(hp, {1280, 720}).slices.size() == 6, "exact budget keeps full grid");
+         std::puts("PASS: Step3-VL crop geometry");
++        check(argc <= 2, "usage: test-knc-mtmd [projector.gguf]");
++        if (argc == 2) {
++            check_metadata(argv[1]);
++            std::puts("PASS: projector metadata and caller memory");
++        }
+         return 0;
+     } catch (const std::exception & e) {
+         std::fprintf(stderr, "FAIL: %s\n", e.what());
+diff --git a/ggml/src/ggml-cpu/arch/knc/knc-mq.c b/ggml/src/ggml-cpu/arch/knc/knc-mq.c
+index 5acc1a0..fc3b2b7 100644
+--- a/ggml/src/ggml-cpu/arch/knc/knc-mq.c
++++ b/ggml/src/ggml-cpu/arch/knc/knc-mq.c
+@@ -26,7 +26,7 @@ struct ggml_knc_mq_scratch {
+     float   yd;
+ };
+ 
+-static float load_half(const uint8_t * p) {
++static inline __attribute__((always_inline)) float load_half(const uint8_t * p) {
+     const uint32_t h    = p[0] | ((uint32_t) p[1] << 8);
+     const uint32_t sign = (h & 0x8000u) << 16;
+     uint32_t       exp = (h >> 10) & 31u, mant = h & 1023u, bits;
+@@ -70,11 +70,7 @@ static void stage_activation(struct ggml_knc_mq_scratch * s, const uint8_t * y)
+ }
+ 
+ static int32_t reduce(const struct ggml_knc_mq_scratch * s) {
+-    int32_t dot = 0;
+-    for (int j = 0; j < 16; ++j) {
+-        dot += s->lanes[j];
+-    }
+-    return dot;
++    return s->lanes[0] + s->lanes[1] + s->lanes[2] + s->lanes[3] + s->lanes[4] + s->lanes[5] + s->lanes[6] + s->lanes[7] + s->lanes[8] + s->lanes[9] + s->lanes[10] + s->lanes[11] + s->lanes[12] + s->lanes[13] + s->lanes[14] + s->lanes[15];
+ }
+ 
+ /* KNC scalar metadata uses x87. Preserve its extended block expression until
+@@ -98,11 +94,15 @@ static inline long double block_q4(struct ggml_knc_mq_scratch * s,
+                                    size_t                       remaining) {
+     int32_t correction = 0;
+     memcpy(s->low, x + 16, 128);
+-    for (int j = 0; j < 8; ++j) {
+-        const int sc     = j < 4 ? x[4 + j] & 63 : (x[8 + j] & 15) | ((x[j] >> 6) << 4);
+-        const int mn     = j < 4 ? x[8 + j] & 63 : (x[8 + j] >> 4) | ((x[4 + j] >> 6) << 4);
+-        s->scales[2 * j] = s->scales[2 * j + 1] = sc;
+-        correction += mn * (s->bsums[2 * j] + s->bsums[2 * j + 1]);
++    for (int j = 0; j < 4; ++j) {
++        const int s0 = x[4 + j] & 63;
++        const int m0 = x[8 + j] & 63;
++        const int s1 = (x[12 + j] & 15) | ((x[4 + j] >> 6) << 4);
++        const int m1 = (x[12 + j] >> 4) | ((x[8 + j] >> 6) << 4);
++        s->scales[2*j] = s->scales[2*j+1] = s0;
++        s->scales[2*j+8] = s->scales[2*j+9] = s1;
++        correction += m0 * (s->bsums[2*j] + s->bsums[2*j+1]);
++        correction += m1 * (s->bsums[2*j+8] + s->bsums[2*j+9]);
+     }
+     ggml_knc_q4_block_native(s->low, s->high, s->y, s->scales, x, y, remaining, s->lanes);
+     return ((long double) load_half(x) * s->yd) * reduce(s) - ((long double) load_half(x + 2) * s->yd) * correction;
+@@ -115,11 +115,15 @@ static inline long double block_q5(struct ggml_knc_mq_scratch * s,
+     int32_t correction = 0;
+     memcpy(s->low, x + 48, 128);
+     memcpy(s->high, x + 16, 32);
+-    for (int j = 0; j < 8; ++j) {
+-        const int sc = j < 4 ? x[4 + j] & 63 : (x[8 + j] & 15) | ((x[j] >> 6) << 4);
+-        const int mn = j < 4 ? x[8 + j] & 63 : (x[8 + j] >> 4) | ((x[4 + j] >> 6) << 4);
+-        s->scales[j] = sc;
+-        correction += mn * (s->bsums[2 * j] + s->bsums[2 * j + 1]);
++    for (int j = 0; j < 4; ++j) {
++        const int s0 = x[4 + j] & 63;
++        const int m0 = x[8 + j] & 63;
++        const int s1 = (x[12 + j] & 15) | ((x[4 + j] >> 6) << 4);
++        const int m1 = (x[12 + j] >> 4) | ((x[8 + j] >> 6) << 4);
++        s->scales[j] = s0;
++        s->scales[j+4] = s1;
++        correction += m0 * (s->bsums[2*j] + s->bsums[2*j+1]);
++        correction += m1 * (s->bsums[2*j+8] + s->bsums[2*j+9]);
+     }
+     ggml_knc_q5_block_native(s->low, s->high, s->y, s->scales, x, y, remaining, s->lanes);
+     /* The established Q5 glue uses x87 extended products and rounds only
+@@ -177,3 +181,84 @@ ggml_knc_mq_tile_fn ggml_knc_mq_kernel(int bits) {
+             return NULL;
+     }
+ }
++
++typedef void (*panel_block_fn)(const uint8_t *, const uint8_t *, const int8_t *, const int32_t *,
++                                int32_t *, const uint8_t *, size_t);
++#define DECLARE_PANEL(q) \
++    extern void ggml_knc_q##q##_panel_native(const uint8_t *, const uint8_t *, const int8_t *, const int32_t *, \
++                                            int32_t *, const uint8_t *, size_t)
++DECLARE_PANEL(3);
++DECLARE_PANEL(4);
++DECLARE_PANEL(5);
++DECLARE_PANEL(6);
++
++void ggml_knc_mq_panel(int bits, size_t blocks, size_t rows, const uint8_t * weights, size_t row_stride,
++                       const uint8_t * activations, size_t col_stride, float * out, size_t out_stride) {
++    struct ggml_knc_mq_scratch scratch;
++    int8_t y[4][256] __attribute__((aligned(64)));
++    int32_t lanes[4][16] __attribute__((aligned(64)));
++    int32_t bsums[4][16];
++    float yd[4], sums[4][GGML_KNC_MQ_MAX_ROWS] = {{0}};
++    panel_block_fn fn = bits == 3 ? ggml_knc_q3_panel_native : bits == 4 ? ggml_knc_q4_panel_native :
++                        bits == 5 ? ggml_knc_q5_panel_native : ggml_knc_q6_panel_native;
++    const size_t stride = bits == 3 ? 110 : bits == 4 ? 144 : bits == 5 ? 176 : 210;
++    for (size_t b = 0; b < blocks; ++b) {
++        for (int c = 0; c < 4; ++c) {
++            stage_activation(&scratch, activations + c * col_stride + b * 292);
++            memcpy(y[c], scratch.y, sizeof(y[c]));
++            memcpy(bsums[c], scratch.bsums, sizeof(bsums[c]));
++            yd[c] = scratch.yd;
++        }
++        for (size_t r = 0; r < rows; ++r) {
++            const uint8_t * x = weights + r * row_stride + b * stride;
++            int32_t mins[8] = {0};
++            float d, dmin = 0;
++            if (bits == 3) {
++                memcpy(scratch.low, x + 32, 64);
++                memcpy(scratch.high, x, 32);
++                for (int j = 0; j < 16; ++j) {
++                    scratch.scales[j] = (((x[96 + j%8] >> (j/8*4)) & 15) |
++                                         (((x[104 + j%4] >> (j/4*2)) & 3) << 4)) - 32;
++                }
++                d = load_half(x + 108);
++            } else if (bits == 6) {
++                memcpy(scratch.low, x, 128);
++                memcpy(scratch.high, x + 128, 64);
++                for (int j = 0; j < 16; ++j) {
++                    scratch.scales[j] = x[192+j] < 128 ? x[192+j] : (int)x[192+j] - 256;
++                }
++                d = load_half(x + 208);
++            } else {
++                memcpy(scratch.low, x + (bits == 4 ? 16 : 48), 128);
++                if (bits == 5) { memcpy(scratch.high, x + 16, 32); }
++                for (int j = 0; j < 8; ++j) {
++                    const int sc = j < 4 ? x[4+j] & 63 : (x[8+j] & 15) | ((x[j] >> 6) << 4);
++                    mins[j] = j < 4 ? x[8+j] & 63 : (x[8+j] >> 4) | ((x[4+j] >> 6) << 4);
++                    if (bits == 5) { scratch.scales[j] = sc; }
++                    else { scratch.scales[2*j] = scratch.scales[2*j+1] = sc; }
++                }
++                d = load_half(x);
++                dmin = load_half(x + 2);
++            }
++            fn(scratch.low, scratch.high, &y[0][0], scratch.scales, &lanes[0][0], x, blocks - b);
++            for (int c = 0; c < 4; ++c) {
++                int32_t dot = 0, correction = 0;
++                for (int j = 0; j < 16; ++j) { dot += lanes[c][j]; }
++                if (bits == 4 || bits == 5) {
++                    for (int j = 0; j < 8; ++j) { correction += mins[j] * (bsums[c][2*j] + bsums[c][2*j+1]); }
++                }
++                /* Preserve the established per-block x87 expression and float store. */
++                if (bits == 5) {
++                    sums[c][r] += ((long double) dot * yd[c]) * d - ((long double) correction * yd[c]) * dmin;
++                } else if (bits == 4) {
++                    sums[c][r] += ((long double) d * yd[c]) * dot - ((long double) dmin * yd[c]) * correction;
++                } else {
++                    sums[c][r] += ((long double) d * yd[c]) * dot;
++                }
++            }
++        }
++    }
++    for (int c = 0; c < 4; ++c) {
++        for (size_t r = 0; r < rows; ++r) { out[c * out_stride + r] = sums[c][r]; }
++    }
++}
+diff --git a/ggml/src/ggml-cpu/arch/knc/knc-mq.h b/ggml/src/ggml-cpu/arch/knc/knc-mq.h
+index bb8f057..384ee61 100644
+--- a/ggml/src/ggml-cpu/arch/knc/knc-mq.h
++++ b/ggml/src/ggml-cpu/arch/knc/knc-mq.h
+@@ -25,6 +25,10 @@ ggml_knc_mq_tile_fn ggml_knc_mq_kernel(int bits);
+ void ggml_knc_mq_init(void);
+ int  ggml_knc_mq_enabled(void);
+ int  ggml_knc_mq_rows(void);
++int  ggml_knc_mq_cols(void);
++/* Four complete activation columns; output stride is in floats. */
++void ggml_knc_mq_panel(int bits, size_t blocks, size_t rows, const uint8_t * weights, size_t row_stride,
++                       const uint8_t * activations, size_t col_stride, float * out, size_t out_stride);
+ void ggml_knc_mq_optimized(int enabled);
+ void ggml_knc_mq_trace(int enabled);
+ void ggml_knc_mq_count(int bits, uint64_t rows, uint64_t staged_blocks, int node);
+diff --git a/ggml/src/ggml-cpu/arch/knc/knc.cmake b/ggml/src/ggml-cpu/arch/knc/knc.cmake
+index 3683468..91765e1 100644
+--- a/ggml/src/ggml-cpu/arch/knc/knc.cmake
++++ b/ggml/src/ggml-cpu/arch/knc/knc.cmake
+@@ -38,16 +38,24 @@ else()
+     set(knc_q8 0)
+ endif()
+ configure_file(${knc}/candidate-config.h.in ${knc_generated}/candidate-config.h @ONLY)
++execute_process(COMMAND ${Python3_EXECUTABLE} ${knc}/panel.py ${knc}/quant-native.S ${knc_generated}/panel-native.S
++    RESULT_VARIABLE panel_result)
++if (NOT panel_result EQUAL 0)
++    message(FATAL_ERROR "KNC panel generation failed")
++endif()
++set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${knc}/panel.py)
+ list(APPEND ARCH_DEFINITIONS GGML_CPU_GENERIC GGML_USE_KNC)
+ list(APPEND GGML_CPU_SOURCES
+     ${knc}/adapter.c ${knc}/knc-mq.c ${knc}/policy.c ${knc}/quant.c
+     ${knc}/ggml-knc.c ${knc}/ggml-knc-imci.c
+-    ${knc_generated}/ggml-knc-native.S ${knc_generated}/quant-native.S)
++    ${knc_generated}/ggml-knc-native.S ${knc_generated}/quant-native.S ${knc_generated}/panel-native.S)
+ target_include_directories(${GGML_CPU_NAME} PRIVATE ${knc} ${knc_generated})
+ set_source_files_properties(${knc}/ggml-knc-imci.c ${knc}/quant.c
+     ${knc_generated}/ggml-knc-native.S ${knc_generated}/quant-native.S PROPERTIES
+     COMPILE_DEFINITIONS TARGET_KNC_${GGML_KNC_PROFILE})
+ set_source_files_properties(${knc}/knc-mq.c ${knc}/policy.c ${knc}/quant.c PROPERTIES
+     COMPILE_OPTIONS "-O2;-fno-fast-math;-fno-tree-vectorize;-fno-tree-slp-vectorize")
++set_property(SOURCE ${knc}/knc-mq.c APPEND PROPERTY COMPILE_OPTIONS
++    -O3 -funroll-loops -fexcess-precision=standard -mstringop-strategy=unrolled_loop)
+ set_source_files_properties(${knc}/ggml-knc.c ${knc}/ggml-knc-imci.c PROPERTIES
+     COMPILE_OPTIONS "-O3;-ffast-math;-funroll-loops;-ftree-vectorize;-ftree-slp-vectorize")
+diff --git a/ggml/src/ggml-cpu/arch/knc/matmul.inc b/ggml/src/ggml-cpu/arch/knc/matmul.inc
+index 23d520a..64e9b14 100644
+--- a/ggml/src/ggml-cpu/arch/knc/matmul.inc
++++ b/ggml/src/ggml-cpu/arch/knc/matmul.inc
+@@ -39,11 +39,17 @@ static bool ggml_knc_mq_mul_mat(const struct ggml_compute_params * params, struc
+     const int ith = params->ith, nth = params->nth;
+     GGML_ASSERT(nth > 0 && ith >= 0 && ith < nth);
+     char *       packed = (char *) params->wdata;
+-    const size_t b0     = blocks * (size_t) ith / (size_t) nth;
+-    const size_t b1     = blocks * (size_t) (ith + 1) / (size_t) nth;
+-    for (int64_t col = 0; col < cols && b1 > b0; ++col) {
++    /* Independent Q8 blocks across all columns, not just the short K axis.
++     * Split at column boundaries to retain the quantizer's contiguous loop. */
++    const size_t jobs = blocks * (size_t) cols;
++    size_t job = jobs / nth * ith + jobs % nth * ith / nth;
++    const size_t end = jobs / nth * (ith + 1) + jobs % nth * (ith + 1) / nth;
++    while (job < end) {
++        const size_t col = job / blocks, b0 = job % blocks;
++        const size_t count = MIN(end - job, blocks - b0);
+         quantize_row_q8_K((const float *) ((const char *) x->data + col * x->nb[1]) + b0 * QK_K,
+-                          packed + (size_t) col * packed_stride + b0 * sizeof(block_q8_K), (b1 - b0) * QK_K);
++                          packed + col * packed_stride + b0 * sizeof(block_q8_K), count * QK_K);
++        job += count;
+     }
+     ggml_barrier(params->threadpool);
+ 
+@@ -53,7 +59,20 @@ static bool ggml_knc_mq_mul_mat(const struct ggml_compute_params * params, struc
+     const int                 tile_rows     = ggml_knc_mq_rows();
+     const ggml_knc_mq_tile_fn kernel        = ggml_knc_mq_kernel(bits);
+     uint64_t                  staged_blocks = 0;
+-    for (int64_t col = 0; col < cols; ++col) {
++    int64_t col = 0;
++    if (ggml_knc_mq_cols() == 4) {
++        for (; col + 4 <= cols; col += 4) {
++            for (int64_t row = first; row < last; row += tile_rows) {
++                const size_t nr = (size_t) MIN((int64_t) tile_rows, last - row);
++                ggml_knc_mq_panel(bits, blocks, nr, (const uint8_t *) w->data + row * w->nb[1], w->nb[1],
++                                  (const uint8_t *) packed + (size_t) col * packed_stride, packed_stride,
++                                  (float *) ((char *) dst->data + col * dst->nb[1]) + row,
++                                  dst->nb[1] / sizeof(float));
++                staged_blocks += 4 * blocks;
++            }
++        }
++    }
++    for (; col < cols; ++col) {
+         float * out = (float *) ((char *) dst->data + col * dst->nb[1]);
+         for (int64_t row = first; row < last; row += tile_rows) {
+             const size_t nr = (size_t) MIN((int64_t) tile_rows, last - row);
+diff --git a/ggml/src/ggml-cpu/arch/knc/policy.c b/ggml/src/ggml-cpu/arch/knc/policy.c
+index ef1f9b1..7664f7e 100644
+--- a/ggml/src/ggml-cpu/arch/knc/policy.c
++++ b/ggml/src/ggml-cpu/arch/knc/policy.c
+@@ -7,7 +7,7 @@
+ #include <string.h>
+ 
+ static pthread_once_t once    = PTHREAD_ONCE_INIT;
+-static int            enabled = 1, tile_rows = 4, optimized = 1, tracing;
++static int            enabled = 1, tile_rows = 4, tile_cols = 4, optimized = 1, tracing;
+ static uint64_t       rows[7], nodes[7], staged[7];
+ 
+ static void initialize(void) {
+@@ -28,6 +28,14 @@ static void initialize(void) {
+         }
+         tile_rows = option[0] - '0';
+     }
++    option = getenv("GGML_KNC_MQ_COLS");
++    if (option) {
++        if (strcmp(option, "1") && strcmp(option, "4")) {
++            fputs("GGML_KNC_MQ_COLS must be 1 or 4\n", stderr);
++            abort();
++        }
++        tile_cols = option[0] - '0';
++    }
+ }
+ 
+ void ggml_knc_mq_init(void) {
+@@ -44,6 +52,10 @@ int ggml_knc_mq_rows(void) {
+     return tile_rows;
+ }
+ 
++int ggml_knc_mq_cols(void) {
++    return tile_cols;
++}
++
+ void ggml_knc_mq_optimized(int value) {
+     optimized = !!value;
+ }
+@@ -67,8 +79,8 @@ void ggml_knc_mq_report(void) {
+     ggml_knc_mq_init();
+     fprintf(stderr,
+             "KNC_MQ {\"candidate_id\":\"%s\",\"profile\":\"%s\",\"enabled\":%d,\"rows\":%d,"
+-            "\"l1_iters\":%d,\"l2_iters\":%d,\"prefetch_step\":%d,\"prefetch_q8\":%d,\"native_qualified\":false}\n",
+-            GGML_KNC_MQ_ID, GGML_KNC_MQ_PROFILE, ggml_knc_mq_enabled(), tile_rows, GGML_KNC_MQ_L1, GGML_KNC_MQ_L2,
++            "\"cols\":%d,\"l1_iters\":%d,\"l2_iters\":%d,\"prefetch_step\":%d,\"prefetch_q8\":%d,\"native_qualified\":false}\n",
++            GGML_KNC_MQ_ID, GGML_KNC_MQ_PROFILE, ggml_knc_mq_enabled(), tile_rows, tile_cols, GGML_KNC_MQ_L1, GGML_KNC_MQ_L2,
+             GGML_KNC_MQ_STEP, GGML_KNC_MQ_Q8);
+     if (tracing) {
+         for (int q = 3; q <= 6; ++q) {
+diff --git a/ggml/src/ggml-cpu/ops.cpp b/ggml/src/ggml-cpu/ops.cpp
+index 20fd9fb..5f66676 100644
+--- a/ggml/src/ggml-cpu/ops.cpp
++++ b/ggml/src/ggml-cpu/ops.cpp
+@@ -3372,8 +3372,21 @@ static void ggml_compute_forward_swiglu_f32(
+     const int dr = (nr + nth - 1)/nth;
+ 
+     // row range for this thread
+-    const int ir0 = dr*ith;
+-    const int ir1 = MIN(ir0 + dr, nr);
++    int ir0 = dr*ith;
++    int ir1 = MIN(ir0 + dr, nr);
++    int ic0 = 0, ic1 = nc;
++#if defined(GGML_USE_KNC)
++    // Decode has few rows. Split independent elements without changing arithmetic.
++    if (!params->use_ref && nr > 0 && nr < nth) {
++        ir0 = ith % nr;
++        ir1 = ir0 + 1;
++        const int group = ith / nr;
++        const int workers = (nth - 1 - ir0) / nr + 1;
++        const int64_t tiles = ((int64_t) nc + 15) / 16;
++        ic0 = (int) MIN((int64_t) nc, tiles * group / workers * 16);
++        ic1 = (int) MIN((int64_t) nc, tiles * (group + 1) / workers * 16);
++    }
++#endif
+ 
+     for (int i1 = ir0; i1 < ir1; i1++) {
+         float * src0_p = (float *) (src0_d + i1*src0_o);
+@@ -3384,10 +3397,10 @@ static void ggml_compute_forward_swiglu_f32(
+             src1_p += swapped ? 0 : nc;
+         }
+ 
+-        ggml_vec_swiglu_f32(nc, (float *) ((char *) dst->data + i1*(dst->nb[1])), src0_p, src1_p);
++        ggml_vec_swiglu_f32(ic1 - ic0, (float *) ((char *) dst->data + i1*(dst->nb[1])) + ic0, src0_p + ic0, src1_p + ic0);
+ 
+ #ifndef NDEBUG
+-        for (int k = 0; k < nc; k++) {
++        for (int k = ic0; k < ic1; k++) {
+             const float x = ((float *) ((char *) dst->data + i1*( dst->nb[1])))[k];
+             GGML_UNUSED(x);
+             assert(!isnan(x));
+@@ -5864,9 +5877,17 @@ static void ggml_compute_forward_soft_max_f32(
+     // sinks
+     const float * sk = src2 ? (float *)((char *) src2->data) : nullptr;
+ 
++#if defined(GGML_USE_KNC)
++    // Heads and batches are independent even when decoding one token.
++    for (int64_t ir = ith; ir < ne01 * ne02 * ne03; ir += nth) {
++        const int64_t i01 = ir % ne01;
++        const int64_t i02 = (ir / ne01) % ne02;
++        const int64_t i03 = ir / (ne01 * ne02);
++#else
+     for (int64_t i03 = 0; i03 < ne03; i03++) {
+         for (int64_t i02 = 0; i02 < ne02; i02++) {
+             for (int64_t i01 = ith; i01 < ne01; i01 += nth) {
++#endif
+                 const int64_t i11 = i01;
+                 const int64_t i12 = i02%ne12;
+                 const int64_t i13 = i03%ne13;
+@@ -5927,8 +5948,10 @@ static void ggml_compute_forward_soft_max_f32(
+                     assert(!isinf(dp[i]));
+                 }
+ #endif // NDEBUG
++#if !defined(GGML_USE_KNC)
+             }
+         }
++#endif
+     }
+ }
+ 
+diff --git a/scripts/test-knc-host.sh b/scripts/test-knc-host.sh
+index 92c08bb..90f4dfc 100755
+--- a/scripts/test-knc-host.sh
++++ b/scripts/test-knc-host.sh
+@@ -15,7 +15,7 @@ knc=$root/ggml/src/ggml-cpu/arch/knc
+ python3 "$knc/prefetch.py" --source "$knc" --output "$output" --l1 "$l1" --l2 "$l2" --step 64 --q8 ON
+ python3 "$root/tests/knc/translate_imci.py" --profile "$profile" "$output/quant-native.S" "$output/ext.c"
+ python3 "$root/tests/knc/translate_imci.py" --profile "$profile" "$output/ggml-knc-native.S" "$output/q5.c"
+-${CC:-cc} -std=c11 -O1 -g -fno-fast-math -fsanitize=address,undefined -fno-omit-frame-pointer -no-pie \
++${CC:-cc} -std=c11 -O1 -g -ffunction-sections -Wl,--gc-sections -fno-fast-math -fsanitize=address,undefined -fno-omit-frame-pointer -no-pie \
+     -DGGML_KNC_TEST_EMULATION -DGGML_KNC_TEST_PREFETCH_TRACE -DGGML_KNC_MQ_TEST_STAGING \
+     -I"$knc" -I"$root/tests/knc" "$knc/knc-mq.c" "$root/tests/knc/test-staging.c" \
+     "$output/ext.c" "$output/q5.c" -lm -o "$output/test-staging"
+diff --git a/tests/test-knc-mq.cpp b/tests/test-knc-mq.cpp
+index 0b3a049..e8b80f5 100644
+--- a/tests/test-knc-mq.cpp
++++ b/tests/test-knc-mq.cpp
+@@ -115,6 +115,9 @@ int main() {
+             for (int workers : { 1, 3, 8 }) {
+                 check(type, k, 33, 1, workers, 0, false, 1);
+                 check(type, k, 17, 3, workers, 1, false, 1);
++                for (int cols : { 4, 5, 8, 9, 17 }) {
++                    check(type, k, 17, cols, workers, 15, false, 1);
++                }
+             }
+         }
+         for (int offset : { 0, 1, 15, 16, 31, 48, 63 }) {
+diff --git a/tools/mtmd/clip.cpp b/tools/mtmd/clip.cpp
+index 2b40b5c..6d3c6d4 100644
+--- a/tools/mtmd/clip.cpp
++++ b/tools/mtmd/clip.cpp
+@@ -1797,7 +1797,17 @@ struct clip_model_loader {
+                         if (hparams.image_longest_edge == 0) {
+                             hparams.image_longest_edge = 3024;
+                         }
+-                        // note: the step3vl preprocessor slices based on a fixed window grid, so it does not support custom min/max image tokens
++                        if (hparams.patch_size <= 0 || hparams.n_merge <= 0) {
++                            throw std::runtime_error("Invalid Step3-VL patch or merge size");
++                        }
++                        const int64_t overview_axis = int64_t(hparams.image_size) / hparams.patch_size / hparams.n_merge;
++                        if (hparams.custom_image_max_tokens > 0 &&
++                            hparams.custom_image_max_tokens < overview_axis * overview_axis) {
++                            throw std::runtime_error("Step3-VL image token budget is smaller than the fixed overview");
++                        }
++                        if (hparams.custom_image_min_tokens > 0) {
++                            throw std::runtime_error("Step3-VL does not support a custom minimum image token budget");
++                        }
+                         hparams.warmup_image_size = hparams.image_size;
+                     } break;
+                 case PROJECTOR_TYPE_YOUTUVL:
+@@ -3972,6 +3982,10 @@ struct clip_model_loader {
+         output = (int) val;
+     }
+ 
++#ifdef __k1om__
++    // MPSS GCC 5 can use an uninitialized address register for the inlined float store.
++    __attribute__((noinline))
++#endif
+     void get_f32(const std::string & key, float & output, bool required = true) const {
+         const int i = gguf_find_key(ctx_gguf.get(), key.c_str());
+         if (i < 0) {
+diff --git a/tools/mtmd/mtmd-image.cpp b/tools/mtmd/mtmd-image.cpp
+index a34fd45..ad4a70c 100644
+--- a/tools/mtmd/mtmd-image.cpp
++++ b/tools/mtmd/mtmd-image.cpp
+@@ -1638,6 +1638,18 @@ mtmd_image_preprocessor_step3vl::slice_instructions mtmd_image_preprocessor_step
+ 
+     const auto xs = calc_grid(crop_width,  window_size);
+     const auto ys = calc_grid(crop_height, window_size);
++    // Preserve the complete trained crop grid or use the existing overview path.
++    // Never truncate a grid while retaining its original positional markers.
++    if (params.custom_image_max_tokens > 0) {
++        const int64_t overview_axis = int64_t(params.image_size) / params.patch_size / params.n_merge;
++        const int64_t crop_axis = int64_t(default_image_crop_size) / params.patch_size / params.n_merge;
++        const int64_t tokens = overview_axis * overview_axis + int64_t(xs.size()) * ys.size() * crop_axis * crop_axis;
++        if (tokens > params.custom_image_max_tokens) {
++            instructions.refined_size = clip_image_size{0, 0};
++            instructions.grid_size = clip_image_size{0, 0};
++            return instructions;
++        }
++    }
+     instructions.grid_size = clip_image_size{
+         static_cast<int>(xs.size()),
+         static_cast<int>(ys.size()),
+diff --git a/ggml/src/ggml-cpu/arch/knc/panel.py b/ggml/src/ggml-cpu/arch/knc/panel.py
+new file mode 100644
+--- /dev/null
++++ b/ggml/src/ggml-cpu/arch/knc/panel.py
+@@ -0,0 +1,84 @@
++#!/usr/bin/env python3
++# SPDX-License-Identifier: MIT
++"""Generate four-column IMCI blocks from the established integer equations."""
++import re
++import sys
++from pathlib import Path
++
++
++def body(bits, source):
++    if bits == 5:
++        lines = ["vpbroadcastd .Lmask15(%rip), %zmm7", "vpbroadcastd .Lmask1(%rip), %zmm5"]
++        for j in range(16):
++            lines += [
++                f"vmovdqa32 {32*(j//4)+16*(j%2)}(%rdi){{uint8}}, %zmm9",
++                f"vpsrld ${4*((j%4)//2)}, %zmm9, %zmm9",
++                "vpandd %zmm7, %zmm9, %zmm9",
++                f"vmovdqa32 {16*(j%2)}(%rsi){{uint8}}, %zmm10",
++                f"vpsrld ${j//2}, %zmm10, %zmm10",
++                "vpandd %zmm5, %zmm10, %zmm10",
++                "vpslld $4, %zmm10, %zmm10",
++                "vpord %zmm10, %zmm9, %zmm9",
++                "vcvtfxpntdq2ps $0, %zmm9, %zmm9",
++                f"vcvtfxpntdq2ps $0, {4*(j//2)}(%rcx){{1to16}}, %zmm10",
++                "vmulps %zmm10, %zmm9, %zmm9",
++                f"vmovaps {16*j}(%rdx){{sint8}}, %zmm11",
++                f"vfmadd231ps %zmm11, %zmm9, %zmm{j%4}",
++            ]
++        return lines
++    text = source.split(f"ggml_knc_q{bits}_block_native:\n", 1)[1].split("\n.size", 1)[0]
++    text = re.sub(r"#ifdef TARGET_KNC_.*?#endif\n", "", text, flags=re.S)
++    return [s for s in text.splitlines() if s.startswith("v") and not s.startswith(("vpxord", "vaddps", "vcvtfxpntps2dq", "vmovdqa32 %"))]
++
++
++def generate(source):
++    out = ["/* SPDX-License-Identifier: MIT; generated by panel.py. */",
++           '#include "candidate-config.h"',
++           "#if !defined(__k1om__) || !defined(__KNC__) || defined(__AVX512F__)",
++           '#error "Native Knights Corner IMCI required"', "#endif", ".text"]
++    for q, stride in ((3, 110), (4, 144), (5, 176), (6, 210)):
++        name = f"ggml_knc_q{q}_panel_native"
++        out += [".p2align 4", f".globl {name}", f".type {name}, @function", name + ":"]
++        # rdi/rsi low/high, rdx four aligned Q8 columns, rcx scales, r8 lanes,
++        # r9 packed weight block; stack argument 7 is remaining blocks.
++        for hint, lead in (("vprefetch0", "GGML_KNC_MQ_L1"), ("vprefetch1", "GGML_KNC_MQ_L2")):
++            label = f".Lpanel{q}_{hint}"
++            out += [f"#if {lead} > 0", "movq 8(%rsp), %r10", f"cmpq $(({lead}+15)/16), %r10",
++                    f"jbe {label}", f"{hint} ((({lead}+15)/16)*{stride})(%r9)", label + ":", "#endif"]
++        for c in range(4):
++            for a in range(4):
++                r = a if c == 0 else 8 + c*4 + a
++                out.append(f"vpxord %zmm{r}, %zmm{r}, %zmm{r}")
++        offset, count = None, 0
++        for line in body(q, source):
++            load = re.fullmatch(r"vmovaps (\d+)\(%rdx\)\{sint8\}, %zmm11", line)
++            if load:
++                offset = int(load[1])
++            elif line.startswith("vfmadd231ps"):
++                assert offset == count*16
++                for c in range(4):
++                    r = count % 4 if c == 0 else 8 + c*4 + count%4
++                    out += [f"vmovaps {offset+c*256}(%rdx){{sint8}}, %zmm11",
++                            f"vfmadd231ps %zmm11, %zmm9, %zmm{r}"]
++                count += 1
++            else:
++                assert not re.search(r"%zmm(?:1[2-9]|2[0-9]|3[01])\b", line), line
++                out.append(line)
++        assert count == 16
++        for c in range(4):
++            a = 0 if c == 0 else 8+c*4
++            out += [f"vaddps %zmm{a+1}, %zmm{a}, %zmm{a}",
++                    f"vaddps %zmm{a+3}, %zmm{a+2}, %zmm{a+2}",
++                    f"vaddps %zmm{a+2}, %zmm{a}, %zmm{a}",
++                    f"vcvtfxpntps2dq $0, %zmm{a}, %zmm{a}",
++                    f"vmovdqa32 %zmm{a}, {c*64}(%r8)"]
++        out += ["ret", f".size {name}, .-{name}"]
++    out += [".section .rodata", ".p2align 2"]
++    for mask in (1, 3, 4, 15, 32):
++        out += [f".Lmask{mask}:", f".long {mask}"]
++    out += ['.section .note.GNU-stack,"",@progbits']
++    return "\n".join(out) + "\n"
++
++
++if __name__ == "__main__":
++    Path(sys.argv[2]).write_text(generate(Path(sys.argv[1]).read_text()))
+diff --git a/examples/knc/test-panel.py b/examples/knc/test-panel.py
+new file mode 100644
+--- /dev/null
++++ b/examples/knc/test-panel.py
+@@ -0,0 +1,117 @@
++#!/usr/bin/env python3
++"""Host source-instruction checks; requires the pinned BluePower test translators.
++
++Not a native KNC emulator or timing benchmark. All addresses and integer IMCI
++equations from panel-native.S pass through the existing strict instruction shim.
++"""
++import argparse
++import importlib.util
++from pathlib import Path
++import re
++import subprocess
++
++
++def main():
++    p = argparse.ArgumentParser(description=__doc__)
++    p.add_argument('--bluepower', type=Path, required=True)
++    p.add_argument('--source', type=Path, required=True)
++    p.add_argument('--output', type=Path, required=True)
++    a = p.parse_args()
++    a.output.mkdir()
++    knc = a.source / 'ggml/src/ggml-cpu/arch/knc'
++    ext = a.bluepower / 'native/imci-ext/translate-imci.py'
++    vendor = a.bluepower / 'third-party/knc-gcc-kernels-0.2.1/tests'
++    spec = importlib.util.spec_from_file_location('imci', ext)
++    mod = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(mod)
++    run = lambda cmd: subprocess.run([str(x) for x in cmd], check=True)
++    run(['python3', knc / 'panel.py', knc / 'quant-native.S', a.output / 'panel.S'])
++    (a.output / 'candidate-config.h').write_text('#define GGML_KNC_MQ_L1 8\n#define GGML_KNC_MQ_L2 32\n')
++    asm = subprocess.check_output(['gcc', '-E', '-P', '-x', 'assembler-with-cpp', '-D__k1om__', '-D__KNC__',
++                                   str(a.output / 'panel.S')], text=True)
++    generated = ['#include "imci-test-shim.h"']
++    for mask in (1, 3, 4, 15, 32):
++        generated.append(f'static const uint32_t Lmask{mask} = {mask};')
++    for q in (3, 4, 5, 6):
++        body = asm.split(f'ggml_knc_q{q}_panel_native:\n')[1].split('.size')[0]
++        generated += [f'void ggml_knc_q{q}_panel_native(const uint8_t *lo, const uint8_t *hi, const int8_t *y,',
++                      ' const int32_t *sc, int32_t *out, const uint8_t *x, size_t remaining) {',
++                      'uintptr_t g[16]={0}, model_stack[2]={0, remaining};',
++                      'g[7]=(uintptr_t)lo; g[6]=(uintptr_t)hi; g[2]=(uintptr_t)y; g[1]=(uintptr_t)sc;',
++                      'g[8]=(uintptr_t)out; g[9]=(uintptr_t)x; g[4]=(uintptr_t)model_stack;',
++                      'model_vector z[32]; unsigned lane; uintptr_t left=0, right=0; memset(z,0xa5,sizeof(z));']
++        for line in body.splitlines():
++            line = line.strip()
++            if line:
++                generated.append(line[1:]+';' if line.endswith(':') else mod.instruction(line))
++        generated.append('}')
++    (a.output / 'panel.c').write_text('\n'.join(generated))
++    run(['python3', ext, '--profile', '7120P', knc / 'quant-native.S', a.output / 'ext.c'])
++    run(['python3', vendor / 'translate-imci.py', '--profile', '7120P', knc / 'ggml-knc-native.S', a.output / 'q5.c'])
++    test = (a.bluepower / 'tests/native/multi-quant/test-staging.c').read_text()
++    test = test.replace('activation_bytes = nb*292;', 'activation_bytes = 4*nb*292;')
++    test = test.replace('b < nb; ++b) {\n                uint8_t * c = y+b*292;', 'b < 4*nb; ++b) {\n                uint8_t * c = y+b*292;')
++    start = test.index('            actual[0] = actual[nr+1]')
++    end = test.index('            free(u); free(v);', start)
++    test = test[:start] + '''
++            float panel[4][10];
++            for (int c = 0; c < 4; ++c) for (int r = 0; r < 10; ++r) panel[c][r] = 12345.0f;
++            staged = 0;
++            ggml_knc_mq_panel(q, nb, nr, x, stride, y, nb*292, &panel[0][1], 10);
++            assert(staged == (size_t) 4*nb);
++            for (int c = 0; c < 4; ++c) {
++                assert(panel[c][0] == 12345.0f);
++                for (int r = nr+1; r < 10; ++r) assert(panel[c][r] == 12345.0f);
++                ggml_knc_mq_kernel(q)(nb, nr, x, stride, y+c*nb*292, actual);
++                for (int r = 0; r < nr; ++r) {
++                    float oracle = 0;
++                    for (int b = 0; b < nb; ++b) {
++                        int32_t dot = 0;
++                        for (int i = 0; i < 256; ++i)
++                            dot += value(x+r*stride+b*strides[q], q, i)*signed_byte(y[(c*nb+b)*292+4+i]);
++                        oracle += (float)dot;
++                    }
++                    if (panel[c][r+1] != oracle || memcmp(&panel[c][r+1], &actual[r], 4)) {
++                        fprintf(stderr, "FAIL panel q%d off=%d nb=%d nr=%d col=%d row=%d got=%g oracle=%g old=%g\\n",
++                                q, off, nb, nr, c, r, panel[c][r+1], oracle, actual[r]);
++                        return 1;
++                    }
++                    ++checks;
++                }
++            }
++            // Nontrivial FP16 metadata and FP32 activation factors must preserve
++            // the established complete-block rounding, including subnormals.
++            for (int r = 0; r < nr; ++r) for (int b = 0; b < nb; ++b) {
++                uint8_t *a = x+r*stride+b*strides[q];
++                const uint16_t half[] = {1, 0x2345, 0x9abc, 0x3c01, 0x7bff};
++                int pos = q == 3 ? 108 : q == 6 ? 208 : 0;
++                uint16_t d = half[(b+r)%5];
++                a[pos] = d & 255; a[pos+1] = d >> 8;
++                if (q == 4 || q == 5) { a[2] = 0x23; a[3] = 0x12; }
++            }
++            for (int b = 0; b < 4*nb; ++b) {
++                float scale = 0.00731f * (1+b%7);
++                memcpy(y+b*292, &scale, 4);
++            }
++            ggml_knc_mq_panel(q, nb, nr, x, stride, y, nb*292, &panel[0][1], 10);
++            for (int c = 0; c < 4; ++c) {
++                ggml_knc_mq_kernel(q)(nb, nr, x, stride, y+c*nb*292, actual);
++                for (int r = 0; r < nr; ++r) {
++                    if (memcmp(&panel[c][r+1], &actual[r], 4)) {
++                        fprintf(stderr, "FAIL scaled panel q%d off=%d nb=%d nr=%d c=%d r=%d\\n",q,off,nb,nr,c,r);
++                        return 1;
++                    }
++                    ++checks;
++                }
++            }
++''' + test[end:]
++    (a.output / 'test.c').write_text(test.replace('staging once per block per tile', 'four-column panel'))
++    run(['gcc', '-std=c11', '-O1', '-g', '-fno-fast-math', '-fsanitize=address,undefined',
++         '-fno-omit-frame-pointer', '-no-pie', '-DGGML_KNC_TEST_EMULATION', '-DGGML_KNC_TEST_PREFETCH_TRACE',
++         '-DGGML_KNC_MQ_TEST_STAGING', '-I'+str(knc), '-I'+str(vendor), knc / 'knc-mq.c',
++         a.output / 'test.c', a.output / 'ext.c', a.output / 'q5.c', a.output / 'panel.c', '-lm', '-o', a.output / 'test'])
++    run([a.output / 'test'])
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/examples/knc/performance-plan.py b/examples/knc/performance-plan.py
+new file mode 100644
+--- /dev/null
++++ b/examples/knc/performance-plan.py
+@@ -0,0 +1,75 @@
++#!/usr/bin/env python3
++"""Generate guarded-test cases or score native receipts; never contacts hardware."""
++import argparse
++import json
++from pathlib import Path
++import statistics
++
++WORKERS = {'3120A': 56, '5110P': 59, '7120P': 60}
++TARGETS = {'8b-10b': {'decode_min': 4, 'prefill_min': 4},
++           '2.6b': {'decode_min': 10, 'prefill_min': 8, 'prefill_stretch': 10}}
++
++
++def plan(profile):
++    cores = WORKERS[profile]
++    def case(name, gen=3, prompt=3, rows=4, cols=4, batch=32):
++        return dict(name=name, generation_threads=cores*gen, prompt_threads=cores*prompt,
++                    batch=batch, context=2048, predict=8,
++                    environment={'GGML_KNC_MQ_ROWS':str(rows), 'GGML_KNC_MQ_COLS':str(cols)})
++    screen = [case(f'cols{c}-batch{b}', cols=c, batch=b) for c in (1,4) for b in (32,128)]
++    tune = [case(f'g{g}-p{p}-rows{r}', gen=g, prompt=p, rows=r)
++            for g in (2,3,4) for p in (2,3,4) for r in (2,4,8)]
++    return dict(schema=1, profile=profile, executed=False, targets=TARGETS,
++        requirements=['Matching native KNC, recorded model/runner identities, existing exclusive workload lease',
++                      'Reuse verified identities for local-to-card transfers; successful transport and byte count, no repeated hash scan',
++                      'Existing thermal, memory, heartbeat and Stop guards; verify actual affinity',
++                      'Pass same-input numerical gates before timing; no tracing or operator profiling',
++                      'Count actual input and decode evaluations, not requested output length'],
++        stages=[dict(name='screen', model='small trained fixture', prompt_tokens_about=32, warmups=1, repetitions=2, cases=screen),
++                dict(name='tune', model='small trained fixture', prompt_tokens_about=32, warmups=1, repetitions=2, cases=tune,
++                     note='Use the winning column tile and batch from screen; this stage varies worker counts independently.'),
++                dict(name='confirm', model='each target model and quantization', prompt_tokens_about=128,
++                     predict=32, warmups=1, repetitions=5, order='alternate baseline/candidate',
++                     note='Test the held-out winner; retain raw timings, first-token latency, memory and temperature.'),
++                dict(name='vision', model='small matching decoder/projector', image='same small image plus two distinct crops',
++                     vision_smt=[2,3,4], cache_mib=[0,32,64], image_detail=['full','overview'],
++                     note='Keep vision workers inside the admitted affinity pool. Report cold/hit and detail quality separately.')])
++
++
++def score(data):
++    assert data['kind']=='native_guarded', 'Host/synthetic timings cannot meet native targets'
++    assert data.get('text_only') is True, 'Text targets exclude image preprocessing and image tokens'
++    assert data['profile'] in WORKERS and data['tier'] in TARGETS
++    for field in ('model_sha256','prompt_sha256','baseline_sha256','candidate_sha256'):
++        assert len(data[field])==64 and set(data[field])<=set('0123456789abcdef'), field
++    assert all(data.get(k) is True for k in ('correctness_passed','affinity_verified','guards_passed'))
++    rates={}
++    for mode in ('baseline','candidate'):
++        rows=data[mode]
++        assert len(rows)>=5, 'At least five measured repetitions after warmup'
++        assert all(r['context']==data['context'] and not r.get('profiling',False) for r in rows)
++        assert rows[0]['prompt_tokens']>=64, 'Short screening runs cannot qualify throughput targets'
++        assert all(r['prompt_tokens']==rows[0]['prompt_tokens'] and r['decode_evals']>=16 and
++                   r['prefill_ms']>0 and r['decode_ms']>0 for r in rows)
++        rates[mode]={'prefill':statistics.median(1000*r['prompt_tokens']/r['prefill_ms'] for r in rows),
++                     'decode':statistics.median(1000*r['decode_evals']/r['decode_ms'] for r in rows)}
++    assert data['baseline'][0]['prompt_tokens']==data['candidate'][0]['prompt_tokens']
++    assert [r['decode_evals'] for r in data['baseline']]==[r['decode_evals'] for r in data['candidate']], 'Unequal generation workload'
++    target=TARGETS[data['tier']]
++    return dict(profile=data['profile'],tier=data['tier'],rates_tps=rates,targets=target,
++                target_met=all(rates['candidate'][k]>=target[k+'_min'] for k in ('prefill','decode')),
++                regression=any(rates['candidate'][k]<rates['baseline'][k]*0.97 for k in ('prefill','decode')),
++                change_percent={k:100*(rates['candidate'][k]/rates['baseline'][k]-1) for k in ('prefill','decode')})
++
++
++if __name__=='__main__':
++    if not __debug__:
++        raise RuntimeError('Receipt checks must run without Python -O/PYTHONOPTIMIZE')
++    p=argparse.ArgumentParser(description=__doc__)
++    g=p.add_mutually_exclusive_group(required=True)
++    g.add_argument('--plan',choices=WORKERS)
++    g.add_argument('--score',type=Path)
++    p.add_argument('--output',type=Path,required=True)
++    a=p.parse_args()
++    result=plan(a.plan) if a.plan else score(json.loads(a.score.read_text()))
++    with a.output.open('x') as f: json.dump(result,f,indent=2); f.write('\n')
+diff --git a/tests/test-knc-performance.py b/tests/test-knc-performance.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test-knc-performance.py
+@@ -0,0 +1,51 @@
++import copy
++import importlib.util
++from pathlib import Path
++import unittest
++
++spec = importlib.util.spec_from_file_location('plan', Path(__file__).resolve().parents[1] / 'examples/knc/performance-plan.py')
++plan = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(plan)
++
++
++class PerformanceReports(unittest.TestCase):
++    def receipt(self):
++        r = dict(kind='native_guarded', profile='7120P', tier='2.6b', context=2048, text_only=True,
++                 correctness_passed=True, affinity_verified=True, guards_passed=True)
++        for key in ('model_sha256','prompt_sha256','baseline_sha256','candidate_sha256'): r[key]='a'*64
++        row = dict(context=2048, prompt_tokens=128, prefill_ms=16000, decode_evals=16, decode_ms=3200)
++        r['baseline']=[copy.deepcopy(row) for _ in range(5)]
++        r['candidate']=[copy.deepcopy(row) for _ in range(5)]
++        return r
++    def test_target_uses_evaluations(self):
++        r=self.receipt()
++        for row in r['candidate']: row['generated_tokens']=1000
++        result=plan.score(r)
++        self.assertEqual(result['rates_tps']['candidate']['decode'],5)
++        self.assertFalse(result['target_met'])
++        for row in r['candidate']: row['decode_ms']=1600
++        result=plan.score(r)
++        self.assertEqual(result['rates_tps']['candidate']['decode'],10)
++        self.assertTrue(result['target_met'])
++    def test_regression(self):
++        r=self.receipt()
++        for row in r['candidate']: row['decode_ms']=4000
++        self.assertTrue(plan.score(r)['regression'])
++        self.assertFalse(plan.score(r)['target_met'])
++    def test_rejections(self):
++        for field,value in (('kind','host_reference'),('guards_passed',False),('correctness_passed',False),('text_only',False)):
++            r=self.receipt();r[field]=value
++            with self.assertRaises(AssertionError): plan.score(r)
++        for key,value in (('decode_evals',7),('context',4096),('profiling',True),('prefill_ms',0)):
++            r=self.receipt();r['candidate'][0][key]=value
++            with self.assertRaises(AssertionError): plan.score(r)
++    def test_all_card_plans(self):
++        for profile,cores in plan.WORKERS.items():
++            p=plan.plan(profile)
++            self.assertFalse(p['executed'])
++            for case in p['stages'][1]['cases']:
++                self.assertIn(case['generation_threads'],[cores*n for n in (2,3,4)])
++                self.assertIn(case['prompt_threads'],[cores*n for n in (2,3,4)])
++
++
++if __name__=='__main__': unittest.main()
+diff --git a/tests/test-knc-scheduling.cpp b/tests/test-knc-scheduling.cpp
+new file mode 100644
+--- /dev/null
++++ b/tests/test-knc-scheduling.cpp
+@@ -0,0 +1,73 @@
++/* SPDX-License-Identifier: MIT
++ * Compare decode scheduling with one-worker arithmetic, including strides,
++ * packed gates, mask broadcasts, attention sinks and boundary canaries. */
++#include "ggml.h"
++#include "ggml-cpu.h"
++#include <algorithm>
++#include <cmath>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <vector>
++
++static size_t checked=0;
++static void compute(ggml_cgraph * g, int threads, bool reference) {
++    auto plan=ggml_graph_plan(g,threads,nullptr);
++    plan.use_ref=reference;
++    std::vector<unsigned char> work(plan.work_size+64);
++    plan.work_data=(uint8_t *)(((uintptr_t)work.data()+63)&~(uintptr_t)63);
++    if (ggml_graph_compute(g,&plan)!=GGML_STATUS_SUCCESS) std::abort();
++}
++static void check(ggml_context * ctx, ggml_tensor * out) {
++    auto * graph=ggml_new_graph(ctx);
++    ggml_build_forward_expand(graph,out);
++    const size_t n=ggml_nelements(out);
++    std::vector<float> result(n+32,12345.f);
++    out->data=result.data()+16;
++    compute(graph,1,true);
++    const auto expected=result;
++    for (int threads : {1,3,60,120,180,240}) {
++        std::fill(result.begin(),result.end(),12345.f);
++        compute(graph,threads,false);
++        if (std::memcmp(result.data(),expected.data(),result.size()*sizeof(float))) {
++            std::fprintf(stderr,"FAIL %s ne=%lld,%lld,%lld,%lld workers=%d\n",ggml_op_name(out->op),
++                (long long)out->ne[0],(long long)out->ne[1],(long long)out->ne[2],(long long)out->ne[3],threads);
++            std::exit(1);
++        }
++        checked+=n;
++    }
++}
++int main() {
++    ggml_cpu_init();
++    for (int width : {1,15,16,17,257,2048,10752}) for (int rows : {1,3,17,61}) for (int mode=0;mode<3;++mode) {
++        ggml_init_params ip={4*1024*1024,nullptr,true};
++        auto * ctx=ggml_init(ip);
++        auto * x=ggml_new_tensor_2d(ctx,GGML_TYPE_F32,width*(mode==0?1:2),rows);
++        auto * gate=ggml_new_tensor_2d(ctx,GGML_TYPE_F32,width,rows);
++        // Row padding verifies the fast path honors source strides.
++        x->nb[1]+=64;gate->nb[1]+=64;
++        std::vector<float> a(ggml_nbytes(x)/4+16),b(ggml_nbytes(gate)/4+16);
++        for (size_t i=0;i<a.size();++i)a[i]=std::sin(i*.017f)*12.f;
++        for (size_t i=0;i<b.size();++i)b[i]=std::cos(i*.023f)*4.f;
++        x->data=a.data();gate->data=b.data();
++        auto * out=mode==0?ggml_swiglu_split(ctx,x,gate):mode==1?ggml_swiglu(ctx,x):ggml_swiglu_swapped(ctx,x);
++        check(ctx,out);ggml_free(ctx);
++    }
++    for (int tokens : {1,3,17}) for (int heads : {1,8,32}) for (int kind : {0,1,2}) for (int sinks : {0,1}) {
++        ggml_init_params ip={4*1024*1024,nullptr,true};
++        auto * ctx=ggml_init(ip);
++        auto * x=ggml_new_tensor_4d(ctx,GGML_TYPE_F32,257,tokens,heads,2);
++        auto * mask=ggml_new_tensor_4d(ctx,kind==1?GGML_TYPE_F16:GGML_TYPE_F32,257,tokens,1,2);
++        auto * sink=ggml_new_tensor_1d(ctx,GGML_TYPE_F32,heads);
++        std::vector<float> a(ggml_nelements(x)),b(ggml_nelements(mask)),c(heads);
++        std::vector<ggml_fp16_t> h(b.size());
++        for(size_t i=0;i<a.size();++i)a[i]=std::sin(i*.017f)*7.f;
++        for(size_t i=0;i<b.size();++i){b[i]=i%257>64?-INFINITY:std::cos(i*.031f);h[i]=ggml_fp32_to_fp16(b[i]);}
++        for(int i=0;i<heads;++i)c[i]=i*.01f;
++        x->data=a.data();mask->data=kind==1?(void *)h.data():(void *)b.data();sink->data=c.data();
++        auto * out=ggml_soft_max_ext(ctx,x,kind?mask:nullptr,.125f,kind==2?2.f:0.f);
++        if(sinks)ggml_soft_max_add_sinks(out,sink);
++        check(ctx,out);ggml_free(ctx);
++    }
++    std::printf("PASS %zu bitwise SwiGLU/softmax outputs and canaries\n",checked);
++}

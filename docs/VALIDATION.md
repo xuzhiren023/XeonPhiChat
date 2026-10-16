@@ -1,5 +1,51 @@
 # Validation
 
+## 1.6.10: context reuse and model-specific runtime selection (2026-10-16)
+
+The app bundles context-matrix-r2 (`d1c53f7e174b05496837e6dbe9dfac2e909b55efb821b2386b618fed98f09784`) and retains decode3 (`ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318`). The base runtime, weights, image detail and projector are unchanged. The next-version app was installed separately using the existing connection; no card reset, driver change or network/trust reconfiguration was performed. Hardware was the same 61-core/16 GB 7120P with MPSS 3.7.53857.1 and kernel `2.6.38.8+mpss3.7.1`. Private serial/boot identity and raw evidence remain outside Git.
+
+### LFM selection decision
+
+A fresh application comparison of LFM2.5-2.6B Q5_K_M used automatic 131,072-token context, batch 128 and 120/240 generation/prompt workers. Cold arithmetic and growing-history answers were byte-identical between versions. The candidate also answered changed history correctly and passed Stop/re-prime, follow-up and reload. Peak sampled temperature was 73 C. Its recurrent-state fallback correctly detected the existing template's removal of historical reasoning.
+
+| One controlled application screen | decode3 | context-matrix-r2 candidate |
+| --- | --- | --- |
+| Cold prompt first response byte | 3.806 s | 5.258 s |
+| Cold prompt total request | 13.599 s | 13.925 s |
+| Cold prompt output speed | 6.424 tokens/s | 6.363 tokens/s |
+| Follow-up first response byte | 4.939 s | 6.127 s |
+| Follow-up total request | 12.878 s | 13.000 s |
+
+The candidate moved about 1.3 seconds of memory clearing from the end of a request to its next prefill. Its text decoding time was similar (2.547 versus 2.569 seconds for 40 prompt tokens). This is a screening observation, not a statistically broad regression result; it did not establish a user-visible benefit in the app. Consequently **LFM remains on decode3 in 1.6.10**, as do all other unqualified pairings. The producer's small-context five-pair improvement is not substituted for this application result.
+
+### Thermal observation
+
+The fresh decode3 Step3 baseline reached the unchanged 85 C cutoff during image encoding and stopped with cleanup confirmed. That incomplete run is excluded from performance comparisons. The app now passes the actual thermal/runtime failure message to the active chat instead of replacing it with a generic reload message. The threshold was not raised and protection was not disabled.
+
+### Native Huihui image and context reuse
+
+The installed 1.6.10 app correctly described a 448 x 336 PNG containing a red square and a blue circle, then correctly answered which object was red. Automatic allocation selected 2,080 context tokens and batch 16, with 180 generation and 240 prompt/vision workers. The existing decoder and projector pins were unchanged.
+
+| Application measurement | First image | Growing-history follow-up |
+| --- | --- | --- |
+| First response byte | 170.562 s | 10.512 s |
+| Complete request, backend wall time | 191.788 s | 29.735 s |
+| Image encoding | 130.710 s | 0 s |
+| Image decoding | 26.829 s | 0 s |
+| New text prefill | 7.935 s | 5.105 s |
+| Reused / newly evaluated input tokens | 0 / 215 | 213 / 30 |
+| Generation | 2.509 tokens/s | 2.440 tokens/s |
+
+The follow-up reused one image chunk and did not advertise a vision-processing stage. Oversized input was rejected while retaining the last valid state; retry still reused the image and answered correctly. Changed history returned the correct arithmetic answer. These are limited fixture checks, not a 720p benchmark or a claim that arbitrary pictures are understood correctly.
+
+The user improved airflow during the first image request. Its sampled peak was 83 C, then 69 C for the follow-up; minimum free card memory was 4,422 MiB. Because cooling changed during the cold request, its timing is not a matched speedup comparison against the interrupted old baseline.
+
+Native Stop testing exposed a Windows PowerShell request-file cleanup race between the broker and client. Cleanup now uses idempotent file deletion, preserving the broker's confirmed cancellation. The corrected installed app passed Stop, re-prime in the same session, a correct subsequent answer, reload into a new worker and another correct answer. Both recovery answers reused zero stale tokens and peaked at 66 C. The final LFM fallback smoke selected decode3 and answered correctly. All final cleanup receipts were confirmed; the last read-only check found no app worker or workload lease, the boot identity unchanged and card temperature 57 C.
+
+### Host and installer checks
+
+The required host suite passed under Windows PowerShell 5.1. Focused checks cover model-specific selection and fallback, cached/new token accounting, live-rate sampling without cached-prefix inflation, real WPF statistics controls, thermal-error propagation, Stop/re-prime and request rejection. Updated scripts parse and shell wrappers pass syntax checks. Native binaries in the bundle match their exact pinned K1OM ELF identities. These host fixtures do not contact hardware.
+
 ## 1.6.9: Huihui Step3, SCIF DMA and thinking depth (2026-10-16)
 
 Huihui Step3-VL 10B Abliterated Q5_K_M replaces the official Step3 picker entry. The complete 5,851,113,152-byte language model was downloaded and verified against SHA-256 `a27779bac5bf94bc7b5e61748448bc204043ec5efda91b8b1a8d2abe9dafd7e1`, pinned to `2lains/Huihui-Step3-VL-10B-abliterated-GGUF` revision `0f521a92fbde66298e01a38ceb122f15b933923b`. All 399 tensor shapes/types and tokenizer metadata match the previous decoder; 70 of 254 sampled matrix prefixes differ. The old profile is retained only for cache cleanup with a verified Windows backup.

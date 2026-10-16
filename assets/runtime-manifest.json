@@ -35,13 +35,23 @@
       "file": "prime-7120P.tar",
       "profile": "xeon-phi-7120p",
       "kind": "priming",
-      "bytes": 14592000,
-      "sha256": "86d1888ea67111aa9ae9f0e790abaf44bc864458434961f40c8998c24a991182",
+      "bytes": 29020160,
+      "sha256": "6cb0bdd9a52e841d44a6bba1ed77e4a6465d45c4802e173871fe2a5ecdfeb1ea",
       "runner_sha256": "ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318",
       "library_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
       "base_runtime_id": "phichat142-modern-910493bed33a64fd",
       "runtime_id": "knc-decode3-ecf5e24ef6c0a4f3",
-      "performance_capability": "knc-performance-v1"
+      "performance_capability": "knc-performance-v1",
+      "runner_file": "phi-prime",
+      "model_overrides": [
+        {
+          "model_id": "huihui-step3-vl-10b-abliterated-q5_k_m",
+          "runner_file": "phi-prime-context-matrix-r2",
+          "runner_sha256": "d1c53f7e174b05496837e6dbe9dfac2e909b55efb821b2386b618fed98f09784",
+          "runtime_id": "knc-context-matrix-r2-d1c53f7e174b0549",
+          "conversation_reuse": true
+        }
+      ]
     },
     {
       "file": "mmproj-Step3-VL-10b-61e9799-Q6_K.gguf",
@@ -65,5 +75,5 @@
     }
   ],
   "schema_version": 1,
-  "version": "1.6.9"
+  "version": "1.6.10"
 }

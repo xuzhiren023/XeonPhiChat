@@ -1,0 +1,107 @@
+CONTEXT-MATRIX-R2: PORTABLE SOURCE REBUILD
+
+Purpose
+This package rebuilds the candidate from the retained source archive and source
+overlays. It has no dependency on /home/builder/knc-*, previous command JSON,
+prebuilt static libraries, trained models, an SSH key or the Phi card. It does
+not install anything, replace a payload, or enable the new kernels globally.
+
+Inputs
+- The already verified, retained source archive whose recorded identity is
+  ab529dee669f124b367c7f8770215ace4639045c4e094a995ccdb099d23151e5.
+  The recorded source base is 61e97998bf49c2d425563920b7e83e52b5ae57a6.
+- All files in this portable directory (including decode3-runtime.patch).
+- Linux, Python 3, GNU patch, CMake and the pinned MPSS 3.8.6 GCC 5.1.1 K1OM
+  development toolchain. Intel ICC and modern AVX-512 compilers are not substitutes.
+
+The script trusts the caller's retained archive provenance and does not repeat
+SHA-256 scans. Exact patch application is an additional compatibility check, not
+cryptographic authentication of an arbitrary newly obtained archive. Do not
+substitute a current upstream checkout for this pinned base.
+
+Build (paths may be anywhere; destinations must not exist)
+  python3 portable/rebuild.py /path/to/retained-base.tar /new/work /new/output \
+      --profile 7120P --jobs 2
+  python3 portable/verify-build.py /new/work /new/output
+
+Optional toolchain location overrides
+  --toolchain-root /usr/linux-k1om-4.7
+  --sysroot /opt/mpss/3.8.6/sysroots/k1om-mpss-linux
+
+The toolchain itself still must be correctly installed for its configured
+sysroot. The script verifies target k1om-mpss-linux and compiler version 5.1.1.
+For source inspection without compiling, pass --prepare-only. Native 3120A and
+5110P builds can be requested with --profile; neither becomes hardware-qualified
+just because it cross-compiles. Use separate work/output directories per profile.
+
+Exact overlay and CMake wiring
+1. Extract the pinned base into a new source tree. Apply decode3-runtime.patch
+   with --fuzz=0, retaining decode3 scheduling, quant kernels, metadata fix,
+   existing format dispatch, profile policy, and all dependency sources.
+2. Copy knc.cpp, image-cache.h and prefix-cache.h to examples/knc. The adapter is
+   the delivered R2 source; the old VM-specific preparation scripts are unused.
+3. Replace ggml/src/ggml-cpu/ggml-cpu.c, placing dense.inc and matmul-panel8.inc
+   beside it. Those snippets are includes, not independent compilation units.
+4. Replace arch/knc/knc-mq.c with knc-mq-panel8.c. Do not compile both files: they
+   define overlapping symbols. Keep decode3's per-source flags for knc-mq.c:
+   -O3 -funroll-loops -fexcess-precision=standard
+   -mstringop-strategy=unrolled_loop, with fast-math and compiler vectorization
+   disabled. The other source files retain their original independent flags.
+5. Add dense.S and panel8.S to GGML_CPU_SOURCES inside arch/knc/knc.cmake via
+   backend.cmake. Compile with -mknc and __KNC__. Keep the existing generated
+   four-column panel-native.S: the new panel8 implementation does not replace it.
+6. Build llama-knc-runner normally through the base's examples/knc CMake target.
+   It links llama, mtmd, vendor::stb and OpenMP. tests.cmake additionally builds
+   the dense, prefix, conversation, trained-image and affinity benchmark tools.
+   No card binary is executed by this recipe, including through CTest.
+
+Outputs
+- bin/phi-prime-context-matrix-r2-rebuilt (deliberately a new filename)
+- bin/test-knc-context-dense, test-conversation-native, test-knc-trained-image,
+  bench-knc-context-dense, test-knc-prefix and retained KNC tests
+- lib/libgomp.so.1 from the same pinned compiler
+- Compiler commands, CMake cache, candidate config, ELF ABI inspection logs,
+  patch/configure/build logs and build-receipt.json
+
+verify-build.py checks exact copied source bytes, strict quant flags, unique
+compilation units, live diagnostic assertions, valid IMCI disassembly, K1OM ELF
+headers and absence of historical VM build dependencies. It does not run target
+executables. A small host-only policy check can also run separately:
+  g++ -std=c++14 -O1 -fsanitize=address,undefined -fno-omit-frame-pointer \
+      -no-pie portable/test-prefix.cpp -o /new/host-prefix-test
+  /new/host-prefix-test
+
+Provenance and acceptance
+The delivered R2 binaries and their existing native receipts remain unchanged.
+A clean source rebuild may differ in link layout, build metadata or codegen;
+its receipt explicitly says native_tested=false. Do not transfer the old
+binary's native qualification to it. Run the existing isolated correctness and
+paired-throughput gates in an agreed card slot before promoting a fresh build.
+
+The inherited adapter PHI_UPSTREAM default is a historical string, not an
+authoritative source identity. This recipe preserves delivered source behavior;
+use the explicit base_commit and overlay list in build-receipt.json for source
+provenance. Correct the product's provenance display in a separately reviewed
+change rather than silently labeling this layered source as pristine upstream.
+
+Producer benchmark settings remain model-specific
+- LFM2.5-2.6B Q5_K_M on 7120P: Q6_PANEL8=1, F16_CONV=1, F32_ATTN=0.
+- Step3 on 7120P: the qualified image screen used all three switches at 1.
+- Full variable names start GGML_KNC_. Unset or any value except 1 disables
+  each new matrix path. Preserve decode3 for other application pairings.
+- Conversation reuse is resident, in-process only; application Stop/reload,
+  cached-token accounting, history edits and image progress still need app tests.
+
+Application selection update, 2026-10-16
+PhiChat's actual LFM chat template removes prior reasoning and triggers the
+correct recurrent_history_change fallback at its automatic 131072 context.
+Its first application pair found no total-latency benefit and slower first byte.
+Retain decode3 for that LFM application pairing in 1.6.10; the small-context
+producer settings above are a reproducibility reference, not a release default.
+Step3 passed PhiChat's separate application image and lifecycle acceptance.
+See docs/VALIDATION.md for final application scope and measurements.
+
+This is a portable candidate source overlay, not an upstream-ready patch set or
+a claim that the 25% throughput objective has been reached. The retained base
+contains the licenses and third-party sources; distribute their required notices
+alongside any public source/binary package.

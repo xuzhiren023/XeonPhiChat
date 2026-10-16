@@ -1,20 +1,22 @@
 # Phi Chat
 
-Phi Chat 1.6.9 is a Windows desktop chat app for Intel Xeon Phi **Knights Corner** cards. It runs inference on the card, with recent chats, rename/delete, streaming responses, collapsible model reasoning, live token statistics, context usage, image attachments with drag-and-drop, and a Stop button that leaves the chat usable.
+Phi Chat 1.6.10 is a Windows desktop chat app for Intel Xeon Phi **Knights Corner** cards. It runs inference on the card, with recent chats, rename/delete, streaming responses, collapsible model reasoning, live token statistics, context usage, image attachments with drag-and-drop, and a Stop button that leaves the chat usable.
 
 This is the independent application repository. It has no runtime dependency on Project BluePower, a previous Phi Chat installation, Python, Git, WSL, or a compiler.
 
-Version 1.6.9 replaces official Step3 with **Huihui Step3-VL 10B Abliterated Q5_K_M** and uploads models, projectors, runtime archives and pictures through **SCIF DMA**, with automatic SCP fallback. The same path supports direct motherboard PCIe and Thunderbolt enclosures through the installed MPSS driver. Native 7120P checks passed for exact-byte DMA transfer, fallback, cancellation and Huihui image chat. Thinking models also offer Light, Standard and Extended preferences. Direct motherboard attachment uses the same SCIF path but has not been physically tested in this release. See [transfer details](docs/SCIF-TRANSFER.md) and [validation](docs/VALIDATION.md).
+Version 1.6.10 adds an optimized resident runtime with context reuse for **Huihui Step3-VL Q5_K_M** on 7120P. Follow-up messages reuse unchanged context and images when possible; Statistics separates reused context from newly processed input. Other model/card pairings retain their previous runtime. See [runtime scope](docs/CONTEXT-MATRIX.md).
+
+The app replaces official Step3 with **Huihui Step3-VL 10B Abliterated Q5_K_M** and uploads models, projectors, runtime archives and pictures through **SCIF DMA**, with automatic SCP fallback. The same path supports direct motherboard PCIe and Thunderbolt enclosures through the installed MPSS driver. Native 7120P checks passed for exact-byte DMA transfer, fallback, cancellation and Huihui image chat. Thinking models also offer Light, Standard and Extended preferences. Direct motherboard attachment uses the same SCIF path but has not been physically tested in this release. See [transfer details](docs/SCIF-TRANSFER.md) and [validation](docs/VALIDATION.md).
 
 ## Install
 
 1. Install your KNC card and its **full Intel MPSS Windows driver package**, including the virtual network driver, tools and boot filesystem. Supported profiles are 3120A and 7120P. Knights Landing is not supported. Use Windows 10 1803 or later with Windows PowerShell 5.1 and working MPSS drivers.
-2. Download **`PhiChat-1.6.9-Windows.zip`**, extract it to a folder, and double-click **`Setup.cmd`**. Use the Windows installer ZIP, not the source-only ZIP.
+2. Download **`PhiChat-1.6.10-Windows.zip`**, extract it to a folder, and double-click **`Setup.cmd`**. Use the Windows installer ZIP, not the source-only ZIP.
 3. If a completed Phi Chat installation exists, setup copies its saved connection into the new version without reconfiguring the card, then opens the app. The setup window stays open until you press a key. On a fresh PC, accept the Windows UAC prompt with the same Windows account. Setup displays the dedicated Phi adapter, proposed addresses, and installation folder. Save other work running on the card, then type `YES` to initialize it.
 4. On a fresh PC, setup installs the Windows OpenSSH client if missing, configures the dedicated Phi adapter, creates fresh SSH keys, backs up and rebuilds the MPSS boot image, and boots the card. It verifies the card identity and native runtime, then downloads and checks the first model (LFM2.5 Q5_K_M, about 2 GB).
-5. Open the **Phi Chat 1.6.9** desktop shortcut. Connect, load a model, and start chatting. Model downloads and runtime restoration are handled by the app.
+5. Open the **Phi Chat 1.6.10** desktop shortcut. Connect, load a model, and start chatting. Model downloads and runtime restoration are handled by the app.
 
-Internet access is needed for a missing Windows SSH feature and the initial model download. The Windows ZIP includes the 1.9 GB Step3 vision component. Allow disk space for the ZIP, extracted dependencies, model downloads, and a backup of the MPSS boot image. Install on a local NTFS disk. The default installation is `%LOCALAPPDATA%\Programs\PhiChat\1.6.9`.
+Internet access is needed for a missing Windows SSH feature and the initial model download. The Windows ZIP includes the 1.9 GB Step3 vision component. Allow disk space for the ZIP, extracted dependencies, model downloads, and a backup of the MPSS boot image. Install on a local NTFS disk. The default installation is `%LOCALAPPDATA%\Programs\PhiChat\1.6.10`.
 
 The installer does not ship another person's SSH keys, saved chats, host configuration, model approvals, Intel drivers, or Windows system tools. Your existing Project BluePower/Phi Chat copies remain in place.
 

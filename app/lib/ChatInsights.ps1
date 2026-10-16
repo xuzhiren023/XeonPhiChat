@@ -2,7 +2,7 @@
 function New-ChatMetrics {
     return [pscustomobject]@{phase='Preparing';context_tokens=0;prompt_tokens=$null;output_tokens=0;
         output_estimated=$true;generation_tps=$null;generation_estimated=$true;prompt_tps=$null;
-        elapsed_seconds=0;omitted_pairs=0;complete=$false}
+        prompt_reused_tokens=$null;prompt_evaluated_tokens=$null;elapsed_seconds=0;omitted_pairs=0;complete=$false}
 }
 function Read-InsightFile([string]$Directory,[string]$Name) {
     $path=Join-Path $Directory $Name
@@ -35,7 +35,9 @@ function Update-JobInsights($Job,$Status,[bool]$Complete) {
             $phase=if ($generating) {'generation'} else {'prompt'}
             $samples=$Job.metricSamples
             if ($samples.Count -and ($samples[-1].phase -cne $phase -or $n.SampleSeconds -lt $samples[-1].seconds -or $n.Consumed -lt $samples[-1].tokens)) { $samples.Clear() }
-            if (!$samples.Count -or $n.SampleSeconds -gt $samples[-1].seconds) {
+            # COUNT is an absolute position. The first positive count establishes
+            # the baseline so an initial cached-prefix jump is never throughput.
+            if ($n.Consumed -gt 0 -and (!$samples.Count -or $n.SampleSeconds -gt $samples[-1].seconds)) {
                 $null=$samples.Add([pscustomobject]@{phase=$phase;seconds=[double]$n.SampleSeconds;tokens=[long]$n.Consumed})
                 while ($samples.Count -gt 2 -and $samples[-1].seconds-$samples[1].seconds -ge 10) { $samples.RemoveAt(0) }
             }
@@ -57,6 +59,9 @@ function Update-JobInsights($Job,$Status,[bool]$Complete) {
             $m.output_tokens=[int]$r.generation_tokens; $m.output_estimated=$false
             $m.generation_tps=$r.generation_tps; $m.generation_estimated=$false; $m.prompt_tps=$r.prompt_tps
             $m.context_tokens=[int]$r.context
+            foreach ($field in @('prompt_reused_tokens','prompt_evaluated_tokens')) {
+                if ($r.PSObject.Properties[$field]) {$m | Add-Member -NotePropertyName $field -NotePropertyValue $r.$field -Force}
+            }
         }
     }
 }
@@ -94,6 +99,10 @@ function Update-ChatInsights {
     $controls.PromptSpeed.Text=if ($m) { Format-TokenRate $m.prompt_tps } else {'--'}
     $controls.StatsOutput.Text=if ($m) { '{0}{1:N0}' -f $(if ($m.output_estimated) {'~'} else {''}),$m.output_tokens } else {'--'}
     $controls.StatsPrompt.Text=if ($m -and $null -ne $m.prompt_tokens) { '{0:N0}' -f $m.prompt_tokens } else {'--'}
+    if ($controls.ContainsKey('StatsReused')) {
+        $controls.StatsReused.Text=if ($m -and $m.PSObject.Properties['prompt_reused_tokens'] -and $null -ne $m.prompt_reused_tokens) {'{0:N0}' -f $m.prompt_reused_tokens} else {'--'}
+        $controls.StatsEvaluated.Text=if ($m -and $m.PSObject.Properties['prompt_evaluated_tokens'] -and $null -ne $m.prompt_evaluated_tokens) {'{0:N0}' -f $m.prompt_evaluated_tokens} else {'--'}
+    }
     $controls.StatsElapsed.Text=if ($m) { '{0:N1}s' -f $m.elapsed_seconds } else {'--'}
     $controls.StatsNote.Text=if ($m -and $m.complete -and $m.phase -ceq 'Completed') {'Last response - measured averages'} elseif ($m -and $m.complete) {'Last response - sampled counts; ~ marks an estimate'} else {'Live card samples - ~ marks a text-based estimate'}
 }

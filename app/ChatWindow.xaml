@@ -22,13 +22,15 @@
     <Expander Header="Card details" Foreground="#999999" FontSize="12" Margin="0,0,0,8"><StackPanel Margin="8,8"><TextBlock x:Name="ResourceInfo" TextWrapping="Wrap"/><TextBlock x:Name="ThermalStatus" TextWrapping="Wrap"/><TextBlock x:Name="MemoryStatus" TextWrapping="Wrap"/><TextBlock x:Name="Forecast" Text="Automatic resources" TextWrapping="Wrap"/><TextBlock x:Name="LoadStatus" TextWrapping="Wrap"/><WrapPanel Margin="0,8,0,0"><Button x:Name="Restore" Content="Restore runtime"/><Button x:Name="Evidence" Content="Open evidence" Background="Transparent"/></WrapPanel></StackPanel></Expander>
     <Border x:Name="StatisticsPanel" Visibility="Collapsed" Background="#292929" CornerRadius="14" Padding="18,12" Margin="0,0,0,8" MaxWidth="800">
      <StackPanel><TextBlock x:Name="StatsState" Text="No response yet" Foreground="#B7CBC4" FontSize="12" Margin="0,0,0,12"/>
-      <UniformGrid Columns="3">
+      <UniformGrid Columns="4">
        <StackPanel Margin="0,0,8,12"><TextBlock Text="Generation" Foreground="#999999" FontSize="12"/><TextBlock x:Name="Speed" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
-       <StackPanel Margin="0,0,8,12"><TextBlock Text="Prompt processing" Foreground="#999999" FontSize="12"/><TextBlock x:Name="PromptSpeed" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
+       <StackPanel Margin="0,0,8,12"><TextBlock Text="Input speed" Foreground="#999999" FontSize="12"/><TextBlock x:Name="PromptSpeed" Text="--" FontSize="17" Margin="0,3,0,0" ToolTip="Newly evaluated input tokens per second; reused context is excluded."/></StackPanel>
        <StackPanel Margin="0,0,0,12"><TextBlock Text="Elapsed" Foreground="#999999" FontSize="12"/><TextBlock x:Name="StatsElapsed" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
        <StackPanel><TextBlock Text="Output tokens" Foreground="#999999" FontSize="12"/><TextBlock x:Name="StatsOutput" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
        <StackPanel><TextBlock Text="Prompt tokens" Foreground="#999999" FontSize="12"/><TextBlock x:Name="StatsPrompt" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
        <StackPanel><TextBlock Text="Context used" Foreground="#999999" FontSize="12"/><TextBlock x:Name="StatsContext" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
+       <StackPanel Margin="0,0,8,0"><TextBlock Text="Reused context" Foreground="#999999" FontSize="12"/><TextBlock x:Name="StatsReused" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
+       <StackPanel><TextBlock Text="New input tokens" Foreground="#999999" FontSize="12"/><TextBlock x:Name="StatsEvaluated" Text="--" FontSize="17" Margin="0,3,0,0"/></StackPanel>
       </UniformGrid><TextBlock x:Name="StatsNote" Foreground="#999999" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap"/>
      </StackPanel>
     </Border>

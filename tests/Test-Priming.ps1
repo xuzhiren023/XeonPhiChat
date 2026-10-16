@@ -99,6 +99,11 @@ Check ($active.generated -eq 1 -and $active.consumed -eq 101 -and $active.phase 
 $null=Feed 'DONE' '{"prepare_ms":2,"prefill_ms":100,"decode_ms":0,"decode_evals":0,"generated_tokens":1,"reset_ms":3}'
 $status=Read-JsonFile (Join-Path $script:job 'status.json')
 Check ($status.state -ceq 'done' -and $status.result.primed -and $status.result.load_ms -eq 0 -and $status.result.generation_tokens -eq 1) 'completed requests report warm timings and exact token count'
+Check ($status.result.prompt_tps -eq 1000 -and $status.result.prompt_reused_tokens -eq 0) 'decode3 completion remains compatible without cache metrics'
+$null=Feed 'DONE' '{"prepare_ms":2,"prefill_ms":100,"decode_ms":0,"decode_evals":0,"generated_tokens":1,"reset_ms":3,"prompt_reused_tokens":80,"prompt_evaluated_tokens":20,"image_chunks_reused":1,"prefix_reuse_reason":"prefix"}'
+$status=Read-JsonFile (Join-Path $script:job 'status.json')
+Check ($status.result.prompt_tps -eq 200 -and $status.result.prompt_reused_tokens -eq 80 -and $status.result.prompt_evaluated_tokens -eq 20 -and $status.result.image_chunks_reused -eq 1) 'cached history is separated from actual new-input throughput'
+Reject {Get-PerformancePromptMetrics ([pscustomobject]@{prompt_reused_tokens=80;prompt_evaluated_tokens=21;image_chunks_reused=1;prefix_reuse_reason='prefix'}) 100} 'inconsistent native cache counts cannot inflate statistics'
 Complete-PrimeRequest $active 'cancelled' 'Response stopped'
 Check ((Read-JsonFile (Join-Path $script:job 'status.json')).preserve_ready) 'Stop preserves conversation readiness while the broker re-primes'
 Complete-PrimeRequest $active 'failed' 'Disconnected' -InvalidateReady
@@ -171,5 +176,36 @@ Check (!(Read-JsonFile (Join-Path $script:job 'status.json')).preserve_ready) 'l
     Check ((Read-JsonFile (Join-Path $chat1 'status.json')).state -ceq 'done' -and $script:sent -eq 2) 'two requests use the broker without a second model loader'
     Check ((Read-JsonFile (Join-Path $chat2 'status.json')).state -ceq 'cancelled' -and $script:starts -eq 2 -and $script:observedReprime) 'Stop confirms cleanup, then re-primes the same selected model'
     Check ((Read-JsonFile (Join-Path $script:job 'finished.json')).cleanup_confirmed -and $script:stops -eq 2) 'broker shutdown releases the resident workload'
+    $script:job=Join-Path $Scratch 'jobs/job-20261013-120004-ffffffff';$null=New-Item -ItemType Directory $script:job
+    $chat3=Join-Path $Scratch 'jobs/job-20261013-120005-aaaaaaaa';$null=New-Item -ItemType Directory $chat3
+    $script:tick=0
+    function Assert-JobActive {
+        $script:tick++
+        if ($script:tick -eq 1) {Queue-Request $chat3 'Thermal error fixture'}
+        else {throw 'Die temperature 85 C reached the limit. Wait for the card to cool.'}
+    }
+    try {Invoke-ResidentWorker $model $script:primeState ([pscustomobject]@{})} catch {}
+    $failed=Read-JsonFile (Join-Path $chat3 'status.json')
+    Check ($failed.state -ceq 'failed' -and !$failed.preserve_ready -and $failed.message -clike 'Die temperature 85 C*') 'active chat receives the real thermal failure instead of a generic reload message'
 }
 Write-Output 'PASS: priming protocol and lifecycle fixtures; no hardware commands executed.'
+
+# The broker may finish and remove both queue files before the client wakes.
+& {
+    $script:job=Join-Path $Scratch 'jobs/job-20261013-120006-bbbbbbbb'
+    $broker=Join-Path $Scratch 'jobs/job-20261013-120007-cccccccc'
+    $null=New-Item -ItemType Directory $script:job,(Join-Path $broker 'inbox') -Force
+    $script:request=[pscustomobject]@{owner_pid=$PID;model='fixture';ready=[pscustomobject]@{resident=[pscustomobject]@{directory=$broker;token=('a'*32);owner_pid=$PID}}}
+    $script:clientReads=0
+    function Read-ResidentState {
+        $script:clientReads++
+        if ($script:clientReads -eq 2) {
+            Complete-PrimeRequest ([pscustomobject]@{job=$script:job;stream=$null}) 'cancelled' 'Response stopped'
+            foreach ($file in Get-ChildItem (Join-Path $broker 'inbox') -File) {[IO.File]::Delete($file.FullName)}
+        }
+        return [pscustomobject]@{state='ready';model_id='fixture'}
+    }
+    $exitCode=Invoke-PrimedChat
+    $status=Read-JsonFile (Join-Path $script:job 'status.json')
+    Check ($exitCode -eq 0 -and $status.state -ceq 'cancelled' -and $status.preserve_ready -and !(Test-Path (Join-Path $script:job 'prime-input.json'))) 'client cleanup preserves confirmed Stop when the broker has already removed request files'
+}

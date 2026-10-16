@@ -75,6 +75,7 @@ case "$CORES:$PROMPT_THREADS" in 57:56|57:112|57:168|57:224|61:60|61:120|61:180|
 unset LD_LIBRARY_PATH LD_PRELOAD OMP_THREAD_LIMIT OMP_NUM_THREADS
 # 1.4.3.3: enable the supplied Q5 candidate only in its pinned historical
 # engine. Modern LFM/Llama binaries and their dispatch remain unchanged.
+unset GGML_KNC_Q6_PANEL8 GGML_KNC_F16_CONV GGML_KNC_F32_ATTN GGML_KNC_DENSE_TRACE
 unset PHI_KNC_Q5_MODE PHI_KNC_F32_MODE PHI_KNC_EXTENDED PHI_KNC_TRACE
 if [[ ${RUNTIME_FAMILY:-historical-knc} != modern-knc && -f $runtime/q5-repair.json ]]; then
     case $(cat "$runtime/runtime-id.txt") in
@@ -117,7 +118,8 @@ ln -s /dev/null main.log
 ln -s /dev/null llama.log
 # The host verified the pinned archive before SCP. No card hash utility is required.
 check_elf "$job/prime/lib/libgomp.so.1"
-engine="$job/prime/bin/phi-prime"
+[[ $PRIME_RUNNER == phi-prime || $PRIME_RUNNER == phi-prime-context-matrix-r2 ]] || fail 'Invalid resident runner'
+engine="$job/prime/bin/$PRIME_RUNNER"
 check_elf "$engine"
 args=(-m "$MODEL_PATH" -c "$CONTEXT" -b "$BATCH" -t "$THREADS" -tb "$PROMPT_THREADS" -n 0 --serve "$job")
 if [[ ${PERFORMANCE_CAPABLE:-0} == 1 ]]; then

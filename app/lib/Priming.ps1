@@ -11,7 +11,18 @@ function Get-PrimingPayload($Model,$State) {
     foreach ($field in @('sha256','runner_sha256','library_sha256')) {
         if ($found[0].$field -cnotmatch '^[a-f0-9]{64}$') {throw 'Invalid pinned priming identity.'}
     }
-    return $found[0]
+    $selected=$found[0].PSObject.Copy()
+    if ($selected.PSObject.Properties['model_overrides']) {
+        $matches=@($selected.model_overrides | Where-Object {$_.model_id -ceq $Model.id})
+        if ($matches.Count -gt 1) {throw 'Duplicate model runtime pairing.'}
+        if ($matches.Count) {
+            foreach ($name in @('runner_file','runner_sha256','runtime_id','conversation_reuse')) {
+                $selected | Add-Member -NotePropertyName $name -NotePropertyValue $matches[0].$name -Force
+            }
+        }
+    }
+    if ($selected.runner_file -cnotin @('phi-prime','phi-prime-context-matrix-r2') -or $selected.runner_sha256 -cnotmatch '^[a-f0-9]{64}$') {throw 'Invalid resident runner pairing.'}
+    return $selected
 }
 function Set-ResidentState([string]$State,[string]$Message='') {
     Write-JsonFile (Join-Path $script:job 'resident.json') ([pscustomobject]@{
@@ -49,6 +60,7 @@ function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
         LOCK_TOKEN=$script:cardLockToken; SOURCE_COMMIT=$script:cfg.source_commit
         RUNTIME_FAMILY='modern-knc'; MODERN_RUNTIME_ID=$State.modern_runtime_id; MODERN_SOURCE_COMMIT=$State.modern_source_commit; MODERN_ENGINE_VARIANT='shared';MODERN_TEST_MODE='none'
         MODEL_PATH=$remoteModel;MODEL_BYTES=$BaseModel.file_size_bytes;THREADS=$script:primeThreads.generation;PROMPT_THREADS=$script:primeThreads.prompt;CORES=$script:health.cores
+        PRIME_RUNNER=$Pin.runner_file;Q6_PANEL8=$script:performance.q6_panel8;F16_CONV=$script:performance.f16_conv;F32_ATTN=$script:performance.f32_attn
         PREDICT=0;BATCH=$script:primeResources.batch_tokens;CONTEXT=$script:primeResources.context_tokens;SEED=$script:cfg.seed;RUN_MODE='generate';MQ_ROWS=$script:performance.mq_rows;MQ_COLS=$script:performance.mq_cols;IMAGE_CACHE_MIB=$script:performance.cache_mib;IMAGE_MAX_TOKENS=$script:performance.image_max_tokens;VISION_THREADS=$script:performance.vision_threads;PERFORMANCE_CAPABLE=$(if ($Pin.PSObject.Properties['performance_capability']) {1} else {0})
         RUNTIME_ADMIT_MIB=$script:primeModel.estimated_peak_runtime_mib;RUNTIME_LIMIT_MIB=([int]$script:health.profile.safe_memory_budget_mib-[int][math]::Ceiling($BaseModel.file_size_bytes/1MB)-$(if ($script:primeModel.PSObject.Properties['extra_resident_mib']) {$script:primeModel.extra_resident_mib} else {0}))
         MEMORY_STOP_MIB=$script:health.profile.available_reserve_mib
@@ -104,7 +116,7 @@ function Stop-PrimeNative($Native) {
         }
         # Include startup failures before a process handle was returned.
         if ($remote) {
-            $null=Invoke-Card "for d in '$remote'/inputs/*; do case `"`$d`" in '$remote'/inputs/*) rm -f `"`$d/prompt.txt`" `"`$d/image-0.png`" `"`$d/image-1.png`" `"`$d/image-2.png`" `"`$d/image-3.png`";; esac; done; rm -f '$remote/prime/bin/phi-prime' '$remote/prime/lib/libgomp.so.1' '$remote/prime-7120P.tar'"
+            $null=Invoke-Card "for d in '$remote'/inputs/*; do case `"`$d`" in '$remote'/inputs/*) rm -f `"`$d/prompt.txt`" `"`$d/image-0.png`" `"`$d/image-1.png`" `"`$d/image-2.png`" `"`$d/image-3.png`";; esac; done; rm -f '$remote/prime/bin/phi-prime' '$remote/prime/bin/phi-prime-context-matrix-r2' '$remote/prime/lib/libgomp.so.1' '$remote/prime-7120P.tar'"
             $script:primeRemote=''
         }
     } finally { try {Release-CardWorkloadLock} finally {$script:cleanupMode=$prior} }
@@ -115,7 +127,7 @@ function Complete-PrimeRequest($Active,[string]$State,[string]$Message,$Metrics=
     Write-JsonFile (Join-Path $Active.job 'status.json') $status
     if ($State -ceq 'failed') {Write-JsonFile (Join-Path $Active.job 'failure.json') $status}
     Write-JsonFile (Join-Path $Active.job 'prime-finished.json') ([pscustomobject]@{state=$State})
-    Remove-Item -LiteralPath (Join-Path $Active.job 'prime-input.json') -Force -ErrorAction SilentlyContinue
+    try {[IO.File]::Delete((Join-Path $Active.job 'prime-input.json'))} catch {}
 }
 function Send-PrimeRequest($Active,$Native,[switch]$LatestOnly) {
     $prompt=New-ChatPrompt $script:primeModel @($Active.request.messages) $script:cfg.system_prompt 0 -LatestOnly:$LatestOnly -ThinkingDepth (Get-ThinkingDepth $Active.request)
@@ -200,8 +212,10 @@ function Read-PrimeFrame($Frame,$Native,$Active) {
             if (!$Active.accepted) {throw 'Native completion arrived before admission.'}
             $m=$Frame.Text | ConvertFrom-Json
             if ($m.generated_tokens -ne $Active.generated -or $m.decode_evals -lt 0 -or $m.decode_evals -gt $m.generated_tokens -or $m.prepare_ms -lt 0 -or $m.prefill_ms -lt 0 -or $m.decode_ms -lt 0 -or $m.reset_ms -lt 0) {throw 'Invalid native completion metrics.'}
-            $metrics=[pscustomobject]@{model_id=$script:primeModel.id;model_sha256=$script:primeModel.sha256;context=$script:primeResources.context_tokens;batch=$script:primeResources.batch_tokens;generation_threads=$script:primeThreads.generation;prompt_threads=$script:primeThreads.prompt;generation_tokens=$m.generated_tokens;generation_tps=$(if ($m.decode_evals -gt 0 -and $m.decode_ms -gt 0) {1000*$m.decode_evals/$m.decode_ms} else {$null});prompt_tps=$(if ($m.prefill_ms -gt 0) {1000*$Active.accepted.prompt_tokens/$m.prefill_ms} else {$null});load_ms=0;preparation_seconds=$Active.ack;native_prepare_seconds=($m.prepare_ms/1000);reset_seconds=($m.reset_ms/1000);first_byte_seconds=$Active.first;inference_wall_seconds=$Active.watch.Elapsed.TotalSeconds;peak_temperature_c=$Active.peakTemperature;peak_additional_rss_mib=($Active.peakAdditional/1024);min_free_mib=($Active.minAvailable/1024);runtime_source_commit=$script:primeState.modern_source_commit;memory_mode='resident_shared_mmap';primed=$true}
+            $inputMetrics=Get-PerformancePromptMetrics $m $Active.accepted.prompt_tokens
+            $metrics=[pscustomobject]@{model_id=$script:primeModel.id;model_sha256=$script:primeModel.sha256;context=$script:primeResources.context_tokens;batch=$script:primeResources.batch_tokens;generation_threads=$script:primeThreads.generation;prompt_threads=$script:primeThreads.prompt;generation_tokens=$m.generated_tokens;generation_tps=$(if ($m.decode_evals -gt 0 -and $m.decode_ms -gt 0) {1000*$m.decode_evals/$m.decode_ms} else {$null});prompt_tps=$(if ($m.prefill_ms -gt 0) {1000*$inputMetrics.prompt_evaluated_tokens/$m.prefill_ms} else {$null});load_ms=0;preparation_seconds=$Active.ack;native_prepare_seconds=($m.prepare_ms/1000);reset_seconds=($m.reset_ms/1000);first_byte_seconds=$Active.first;inference_wall_seconds=$Active.watch.Elapsed.TotalSeconds;peak_temperature_c=$Active.peakTemperature;peak_additional_rss_mib=($Active.peakAdditional/1024);min_free_mib=($Active.minAvailable/1024);runtime_source_commit=$script:primeState.modern_source_commit;memory_mode='resident_shared_mmap';primed=$true}
             $metrics | Add-Member runtime_id $script:primeRuntimeId
+            foreach ($property in $inputMetrics.PSObject.Properties) {$metrics | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value}
             Add-PerformanceMetrics $metrics $m
             Write-JsonFile (Join-Path $Active.job 'resident-metrics.json') $metrics
             Complete-PrimeRequest $Active 'done' '' $metrics
@@ -214,7 +228,7 @@ function Read-PrimeFrame($Frame,$Native,$Active) {
 function Invoke-ResidentWorker($Model,$State,$Ready) {
     if ($script:request.prime_token -cnotmatch '^[a-f0-9]{32}$') {throw 'Invalid primed worker identity.'}
     $script:primeRuntimeId='';$script:primeResources=$null;$script:primeState=$State;$script:primeRemote=''
-    $native=$null;$active=$null;$nextUpdate=0.0
+    $native=$null;$active=$null;$nextUpdate=0.0;$failureMessage='Primed worker stopped. Reload the model.'
     $pin=Get-PrimingPayload $Model $State
     if (!$pin) {throw 'Priming is not packaged for this card.'}
     $script:primeRuntimeId=$pin.runtime_id
@@ -272,10 +286,13 @@ function Invoke-ResidentWorker($Model,$State,$Ready) {
             }
             Start-Sleep -Milliseconds 40
         }
+    } catch {
+        $failureMessage=$_.Exception.Message
+        throw
     } finally {
         try {Stop-PrimeNative $native}
         finally {
-            if ($active) {Complete-PrimeRequest $active 'failed' 'Primed worker stopped. Reload the model.' -InvalidateReady}
+            if ($active) {Complete-PrimeRequest $active 'failed' $failureMessage -InvalidateReady}
             if ($script:sessionMetadata) {Set-ResidentState 'closed' 'Model unloaded'}
             Write-JsonFile (Join-Path $script:job 'finished.json') ([pscustomobject]@{cleanup_confirmed=$script:cleanupConfirmed})
         }

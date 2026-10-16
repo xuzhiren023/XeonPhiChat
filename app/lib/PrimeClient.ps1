@@ -105,6 +105,10 @@ function Invoke-PrimedChat {
         if ($status.state -ceq 'failed') {Write-JsonFile (Join-Path $script:job 'failure.json') $status;return 1}
         return 0
     } finally {
-        Remove-Item -LiteralPath $pending,$inputPath -Force -ErrorAction SilentlyContinue
+        # The broker also removes these files. File.Delete treats an already
+        # removed file as success, even when removal overlaps on Windows.
+        foreach ($path in @($pending,$inputPath)) {
+            try {[IO.File]::Delete($path)} catch {}
+        }
     }
 }

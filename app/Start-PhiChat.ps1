@@ -18,7 +18,7 @@ $reader=New-Object Xml.XmlNodeReader($xaml)
 $window=[Windows.Markup.XamlReader]::Load($reader)
 $window.Title='Phi Chat '+([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION')).Trim())
 $controls=@{}
-foreach ($name in @('Model','Connect','Load','Restore','LoadStatus','LoadProgress','ResourceInfo','ThermalStatus','MemoryStatus','Speed','Forecast','ChatScroll','ChatMessages','Transcript','Input','Send','Stop','New','Save','Evidence','Status','Recent','Welcome','ConnectionState','Statistics','StatisticsPanel','StatsState','PromptSpeed','StatsElapsed','StatsOutput','StatsPrompt','StatsContext','StatsNote','ContextUsage','ContextArc','ContextFull','ContextLabel','RuntimeStatus','Attach','Attachments','DropOverlay','ThinkingDepth')) { $controls[$name]=$window.FindName($name) }
+foreach ($name in @('Model','Connect','Load','Restore','LoadStatus','LoadProgress','ResourceInfo','ThermalStatus','MemoryStatus','Speed','Forecast','ChatScroll','ChatMessages','Transcript','Input','Send','Stop','New','Save','Evidence','Status','Recent','Welcome','ConnectionState','Statistics','StatisticsPanel','StatsState','PromptSpeed','StatsElapsed','StatsOutput','StatsPrompt','StatsReused','StatsEvaluated','StatsContext','StatsNote','ContextUsage','ContextArc','ContextFull','ContextLabel','RuntimeStatus','Attach','Attachments','DropOverlay','ThinkingDepth')) { $controls[$name]=$window.FindName($name) }
 $modelChoices=@(Get-ModelChoices $PSScriptRoot)
 $controls.Model.ItemsSource=$modelChoices
 $default=@($modelChoices | Where-Object { $_.name -ceq $cfg.default_model })
@@ -104,6 +104,7 @@ function Update-ModelRuntimeStatus {
         $revision=[string]$script:loadedModel.modern_source_commit
         $label=if ($revision -ceq '61e97998bf49c2d425563920b7e83e52b5ae57a6') {'Multimodal runtime 61e9799'} else {'Runtime '+$revision.Substring(0,7)}
     }
+    if ($using -and $script:loadedModel.PSObject.Properties['priming_runtime_id'] -and $script:loadedModel.priming_runtime_id -clike 'knc-context-matrix-r2-*') {$label='Optimized runtime with context reuse'}
     if ($using -and $script:loadedModel.PSObject.Properties['priming_runtime_id'] -and $script:loadedModel.priming_runtime_id -clike 'knc-decode3-*') {$label='Optimized runtime decode3'}
     $controls.RuntimeStatus.Text=if ($choice.optimized) {'Optimized for fast chat'} else {$label}
     $controls.RuntimeStatus.Foreground=if ($choice.optimized) {'#6DDC9F'} else {'#999999'}
