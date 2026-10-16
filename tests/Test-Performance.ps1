@@ -31,9 +31,10 @@ $state=[pscustomobject]@{modern_source_commit='61e97998bf49c2d425563920b7e83e52b
 foreach ($file in Get-ChildItem (Join-Path $AppRoot 'config/models') -Filter '*.yaml') {
     $model=Read-JsonFile $file.FullName
     $selected=Get-PrimingPayload $model $state
-    $qualified=$model.id -ceq 'huihui-step3-vl-10b-abliterated-q5_k_m'
-    Check (($selected.runner_file -ceq 'phi-prime-context-matrix-r2') -eq $qualified) ($model.id+': qualified runner pairing or decode3 fallback')
+    $qualified=$model.id -cin @('llama-3.3-8b-abliterated-q5_k_m','huihui-step3-vl-10b-abliterated-q5_k_m')
+    $visionTuning=$model.id -ceq 'huihui-step3-vl-10b-abliterated-q5_k_m'
+    Check (($selected.runner_file -ceq 'phi-prime-step3-tiles4') -eq $qualified) ($model.id+': qualified runner pairing or decode3 fallback')
     $options=Get-PerformanceOptions $model $profile $selected 240
-    Check ($options.q6_panel8 -eq [int]$qualified -and $options.f16_conv -eq [int]$qualified -and $options.f32_attn -eq [int]($model.id -ceq 'huihui-step3-vl-10b-abliterated-q5_k_m')) ($model.id+': attention tuning cannot leak to another model')
+    Check ($options.wide16 -eq [int]$qualified -and $options.text_pair -eq [int]$qualified -and $options.f32_tile -eq [int]$visionTuning -and $options.q6_panel8 -eq [int]$visionTuning -and $options.f16_conv -eq [int]$visionTuning -and $options.f32_attn -eq [int]($model.id -ceq 'huihui-step3-vl-10b-abliterated-q5_k_m')) ($model.id+': attention tuning cannot leak to another model')
 }
 Write-Output 'PASS: resident runtime integration policies; no card access.'

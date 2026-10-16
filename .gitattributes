@@ -13,3 +13,4 @@ tools/native-runner/priming/** text eol=lf
 
 tools/native-runner/decode3/** text eol=lf
 tools/native-runner/context-matrix/** text eol=lf
+tools/native-runner/tiles-r4/** text eol=lf

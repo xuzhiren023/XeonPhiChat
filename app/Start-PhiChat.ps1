@@ -105,6 +105,7 @@ function Update-ModelRuntimeStatus {
         $label=if ($revision -ceq '61e97998bf49c2d425563920b7e83e52b5ae57a6') {'Multimodal runtime 61e9799'} else {'Runtime '+$revision.Substring(0,7)}
     }
     if ($using -and $script:loadedModel.PSObject.Properties['priming_runtime_id'] -and $script:loadedModel.priming_runtime_id -clike 'knc-context-matrix-r2-*') {$label='Optimized runtime with context reuse'}
+    if ($using -and $script:loadedModel.PSObject.Properties['priming_runtime_id'] -and $script:loadedModel.priming_runtime_id -clike 'knc-step3-tiles-r4-*') {$label='R4 optimized runtime'}
     if ($using -and $script:loadedModel.PSObject.Properties['priming_runtime_id'] -and $script:loadedModel.priming_runtime_id -clike 'knc-decode3-*') {$label='Optimized runtime decode3'}
     $controls.RuntimeStatus.Text=if ($choice.optimized) {'Optimized for fast chat'} else {$label}
     $controls.RuntimeStatus.Foreground=if ($choice.optimized) {'#6DDC9F'} else {'#999999'}

@@ -1,12 +1,21 @@
 # Loaded only for an explicitly pinned, model-paired resident runner.
-for switch in "$Q6_PANEL8" "$F16_CONV" "$F32_ATTN"; do
+for switch in "$Q6_PANEL8" "$F16_CONV" "$F32_ATTN" "$WIDE16" "$TEXT_PAIR" "$F32_TILE" "$Q6_PANEL16" "$WIDE_TASKS"; do
     [[ $switch == 0 || $switch == 1 ]] || fail 'Invalid matrix switch'
 done
-if [[ $PRIME_RUNNER == phi-prime-context-matrix-r2 ]]; then
+if [[ $PRIME_RUNNER == phi-prime-context-matrix-r2 || $PRIME_RUNNER == phi-prime-step3-tiles4 ]]; then
     export GGML_KNC_Q6_PANEL8=$Q6_PANEL8 GGML_KNC_F16_CONV=$F16_CONV GGML_KNC_F32_ATTN=$F32_ATTN
 else
     [[ $Q6_PANEL8$F16_CONV$F32_ATTN == 000 ]] || fail 'Matrix settings require the paired runtime'
 fi
+# The optional image task repartition regressed text prompts. A resident worker
+# serves both, so keep it off; R4's panel and row kernels remain enabled.
+[[ $WIDE_TASKS == 0 ]] || fail 'Resident task repartition is not qualified'
+if [[ $PRIME_RUNNER == phi-prime-step3-tiles4 ]]; then
+    export GGML_KNC_WIDE16=$WIDE16 GGML_KNC_TEXT_PAIR=$TEXT_PAIR GGML_KNC_F32_TILE=$F32_TILE GGML_KNC_Q6_PANEL16=$Q6_PANEL16 GGML_KNC_WIDE_TASKS=0
+else
+    [[ $WIDE16$TEXT_PAIR$F32_TILE$Q6_PANEL16 == 0000 ]] || fail 'R4 settings require the paired runtime'
+fi
+printf 'wide16=%s\ntext_pair=%s\nf32_tile=%s\nq6_panel16=%s\nwide_tasks=0\n' "$WIDE16" "$TEXT_PAIR" "$F32_TILE" "$Q6_PANEL16" > "$job/report/r4-kernels.txt"
 printf 'runner=%s\nq6_panel8=%s\nf16_conv=%s\nf32_attn=%s\n' "$PRIME_RUNNER" "$Q6_PANEL8" "$F16_CONV" "$F32_ATTN" > "$job/report/context-matrix.txt"
 [[ $CORES == 61 && $PERFORMANCE_CAPABLE == 1 ]] || fail 'Unqualified performance profile'
 [[ $IMAGE_CACHE_MIB =~ ^[0-9]+$ && $IMAGE_MAX_TOKENS =~ ^[0-9]+$ && $VISION_THREADS =~ ^[0-9]+$ ]] || fail 'Invalid performance settings'

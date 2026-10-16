@@ -11,8 +11,13 @@ function Assert-ResidentReference([string]$Data,$Reference,[int]$Owner) {
 function Read-ResidentState([string]$Data,$Reference,[int]$Owner) {
     $directory=Assert-ResidentReference $Data $Reference $Owner
     $path=Join-Path $directory 'resident.json'
-    if (!(Test-Path -LiteralPath $path)) { return $null }
-    $state=Read-JsonFile $path
+    # ReadText retries the brief Windows ReplaceFile gap. An existence probe
+    # here could mistake that gap for a dead resident worker during Send.
+    try { $state=Read-JsonFile $path }
+    catch {
+        if ($_.Exception.GetBaseException() -is [IO.FileNotFoundException]) {return $null}
+        throw
+    }
     if ($state.token -cne $Reference.token -or $state.owner_pid -ne $Owner) { throw 'Primed session identity changed.' }
     if ($state.state -cne 'closed') {
         $worker=Get-Process -Id $state.worker_pid -ErrorAction SilentlyContinue

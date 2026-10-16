@@ -21,7 +21,7 @@ function Get-PrimingPayload($Model,$State) {
             }
         }
     }
-    if ($selected.runner_file -cnotin @('phi-prime','phi-prime-context-matrix-r2') -or $selected.runner_sha256 -cnotmatch '^[a-f0-9]{64}$') {throw 'Invalid resident runner pairing.'}
+    if ($selected.runner_file -cnotin @('phi-prime','phi-prime-context-matrix-r2','phi-prime-step3-tiles4') -or $selected.runner_sha256 -cnotmatch '^[a-f0-9]{64}$') {throw 'Invalid resident runner pairing.'}
     return $selected
 }
 function Set-ResidentState([string]$State,[string]$Message='') {
@@ -61,6 +61,7 @@ function Start-PrimeNative($BaseModel,$State,$Ready,$Pin) {
         RUNTIME_FAMILY='modern-knc'; MODERN_RUNTIME_ID=$State.modern_runtime_id; MODERN_SOURCE_COMMIT=$State.modern_source_commit; MODERN_ENGINE_VARIANT='shared';MODERN_TEST_MODE='none'
         MODEL_PATH=$remoteModel;MODEL_BYTES=$BaseModel.file_size_bytes;THREADS=$script:primeThreads.generation;PROMPT_THREADS=$script:primeThreads.prompt;CORES=$script:health.cores
         PRIME_RUNNER=$Pin.runner_file;Q6_PANEL8=$script:performance.q6_panel8;F16_CONV=$script:performance.f16_conv;F32_ATTN=$script:performance.f32_attn
+        WIDE16=$script:performance.wide16;TEXT_PAIR=$script:performance.text_pair;F32_TILE=$script:performance.f32_tile;Q6_PANEL16=$script:performance.q6_panel16;WIDE_TASKS=0
         PREDICT=0;BATCH=$script:primeResources.batch_tokens;CONTEXT=$script:primeResources.context_tokens;SEED=$script:cfg.seed;RUN_MODE='generate';MQ_ROWS=$script:performance.mq_rows;MQ_COLS=$script:performance.mq_cols;IMAGE_CACHE_MIB=$script:performance.cache_mib;IMAGE_MAX_TOKENS=$script:performance.image_max_tokens;VISION_THREADS=$script:performance.vision_threads;PERFORMANCE_CAPABLE=$(if ($Pin.PSObject.Properties['performance_capability']) {1} else {0})
         RUNTIME_ADMIT_MIB=$script:primeModel.estimated_peak_runtime_mib;RUNTIME_LIMIT_MIB=([int]$script:health.profile.safe_memory_budget_mib-[int][math]::Ceiling($BaseModel.file_size_bytes/1MB)-$(if ($script:primeModel.PSObject.Properties['extra_resident_mib']) {$script:primeModel.extra_resident_mib} else {0}))
         MEMORY_STOP_MIB=$script:health.profile.available_reserve_mib
@@ -116,7 +117,7 @@ function Stop-PrimeNative($Native) {
         }
         # Include startup failures before a process handle was returned.
         if ($remote) {
-            $null=Invoke-Card "for d in '$remote'/inputs/*; do case `"`$d`" in '$remote'/inputs/*) rm -f `"`$d/prompt.txt`" `"`$d/image-0.png`" `"`$d/image-1.png`" `"`$d/image-2.png`" `"`$d/image-3.png`";; esac; done; rm -f '$remote/prime/bin/phi-prime' '$remote/prime/bin/phi-prime-context-matrix-r2' '$remote/prime/lib/libgomp.so.1' '$remote/prime-7120P.tar'"
+            $null=Invoke-Card "for d in '$remote'/inputs/*; do case `"`$d`" in '$remote'/inputs/*) rm -f `"`$d/prompt.txt`" `"`$d/image-0.png`" `"`$d/image-1.png`" `"`$d/image-2.png`" `"`$d/image-3.png`";; esac; done; rm -f '$remote/prime/bin/phi-prime' '$remote/prime/bin/phi-prime-context-matrix-r2' '$remote/prime/bin/phi-prime-step3-tiles4' '$remote/prime/lib/libgomp.so.1' '$remote/prime-7120P.tar'"
             $script:primeRemote=''
         }
     } finally { try {Release-CardWorkloadLock} finally {$script:cleanupMode=$prior} }
@@ -225,6 +226,21 @@ function Read-PrimeFrame($Frame,$Native,$Active) {
     }
     return ''
 }
+function Get-PrimeFailureMessage($Native) {
+    $detail=[string]$Native.frames.Error
+    if ($Native.PSObject.Properties['errorTask']) {
+        try {
+            if ($Native.errorTask.Wait(2000)) {
+                $stderr=[string]$Native.errorTask.Result
+                $lines=@($stderr -split "`r?`n" | Where-Object {$_ -match '^FAIL:|^ERROR:|^ssh:|^Connection '})
+                if ($lines.Count) {$detail=$lines[-1]}
+                elseif (!$detail) {$detail=$stderr.Trim()}
+            }
+        } catch {}
+    }
+    if ($detail.Length -gt 2000) {$detail=$detail.Substring($detail.Length-2000)}
+    return ('Primed runtime stopped. '+$detail).Trim()
+}
 function Invoke-ResidentWorker($Model,$State,$Ready) {
     if ($script:request.prime_token -cnotmatch '^[a-f0-9]{32}$') {throw 'Invalid primed worker identity.'}
     $script:primeRuntimeId='';$script:primeResources=$null;$script:primeState=$State;$script:primeRemote=''
@@ -237,7 +253,7 @@ function Invoke-ResidentWorker($Model,$State,$Ready) {
         $native=Start-PrimeNative $Model $State $Ready $pin
         while ($true) {
             Assert-JobActive
-            if ($native.process.HasExited -or $native.frames.Error -or $native.frames.Complete) {throw ('Primed runtime stopped. '+$native.frames.Error)}
+            if ($native.process.HasExited -or $native.frames.Error -or $native.frames.Complete) {throw (Get-PrimeFailureMessage $native)}
             if ($native.watch.Elapsed.TotalSeconds -ge $native.nextHealth) {
                 $null=Read-CardHealth -DuringRun
                 $native.process.StandardInput.WriteLine('health-ok');$native.process.StandardInput.Flush()

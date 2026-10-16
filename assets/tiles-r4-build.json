@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "version": "1.6.11",
+  "base_source_commit": "61e97998bf49c2d425563920b7e83e52b5ae57a6",
+  "runtime_id": "knc-step3-tiles-r4-b52cb0584270b098",
+  "runner_sha256": "b52cb0584270b0987c34469e6dfcc41b551f88e7a8a76aaacde66233d76de098",
+  "runner_bytes": 14767811,
+  "profile": "xeon-phi-7120p",
+  "compiler": "MPSS 3.8.6 GCC 5.1.1 K1OM",
+  "artifact": "Native-tested incremental uninstrumented R4; not the clean rebuild",
+  "payload": {
+    "file": "prime-7120P.tar",
+    "profile": "xeon-phi-7120p",
+    "kind": "priming",
+    "bytes": 29358080,
+    "sha256": "32590b16e112ed7f8273658216174be67875c694efd5b91bc4231dd8337570a4",
+    "runner_sha256": "ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318",
+    "library_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
+    "base_runtime_id": "phichat142-modern-910493bed33a64fd",
+    "runtime_id": "knc-decode3-ecf5e24ef6c0a4f3",
+    "performance_capability": "knc-performance-v1",
+    "runner_file": "phi-prime",
+    "model_overrides": [
+      {
+        "model_id": "llama-3.3-8b-abliterated-q5_k_m",
+        "runner_file": "phi-prime-step3-tiles4",
+        "runner_sha256": "b52cb0584270b0987c34469e6dfcc41b551f88e7a8a76aaacde66233d76de098",
+        "runtime_id": "knc-step3-tiles-r4-b52cb0584270b098",
+        "conversation_reuse": true
+      },
+      {
+        "model_id": "huihui-step3-vl-10b-abliterated-q5_k_m",
+        "runner_file": "phi-prime-step3-tiles4",
+        "runner_sha256": "b52cb0584270b0987c34469e6dfcc41b551f88e7a8a76aaacde66233d76de098",
+        "runtime_id": "knc-step3-tiles-r4-b52cb0584270b098",
+        "conversation_reuse": true
+      }
+    ]
+  },
+  "application_model_ids": [
+    "llama-3.3-8b-abliterated-q5_k_m",
+    "huihui-step3-vl-10b-abliterated-q5_k_m"
+  ],
+  "app_hardware_acceptance": true,
+  "retained_files": {
+    "affinity-check.h": "a1ce871fb5fb3e493752a1e326b20759cf2e99330bc06269e2e5bc875ecc0ee9",
+    "backend.cmake": "fd85d3c6cf9b072835bda6f2a824c89f7ba72ef80450ace3940c359931a748ed",
+    "bench-dense.cpp": "30794f27fd69692309edf1774e97c0e54cb79d98f78d12cf7e5bae0456dbac02",
+    "decode3-runtime.patch": "ea12c58de3d89cb962cf87edab81df3846638a1d3187228817fc0cedad541728",
+    "dense.inc": "5b47943afc7047b91c36f54b4b9cef144e6b99fc9ca3aab6b520af9905433747",
+    "dense.S": "bbb79b43ed54fd886d9643e9f3cfe0c65f2be3634244bd6239561a76e355eb2e",
+    "ggml-cpu.c": "a9f796336191b3b1a828cd3ad5279210c2dc915c8f7592c999a48fef02a9b4de",
+    "half-table.inc": "35dee439a6bb7c06fefafa5a143f79ef9bc8bb6d9a50cfe8b025184a2c5a66d7",
+    "image-cache.h": "28b7aea7abd1f60340ae8107afea52c7dad2073578395489c86f6b5f7e51739a",
+    "knc-mq-panel8.c": "6ea459cc57d979b17e2ccee2e3269d611fcf1c162a7314c11dbe2bd2cb46cdb7",
+    "knc.cpp": "92c1cb4f3f5ad40dbca99d8d1596d7b44f162a175e2f3f868372bee7499a1950",
+    "matmul-panel8.inc": "a38526b1b7b18d48ea4b1e45b59800d2d1ff4cf281746a0fc79ce4a92e78b524",
+    "pair-sum.S": "6f120ade43c028dcbd5d7889c85a0cd33149a73914b80953926420251ffa7e82",
+    "panel16.S": "56b3c5bdd38e03c5e68f93a5c782adc6023276e2dfe1d1cdf833586d7e7a98fe",
+    "panel8.S": "38162228bd300482c00fa85523b1f9bc360c3518cb2eeef6c955273ea61d86a7",
+    "prefix-cache.h": "7c2c2258eb559b991cb47768355caef1d0febf7f87bd70ab4e3ce1be31d6f1c8",
+    "rebuild.py": "1d27f058f5aa85f13e6824ea2615f63b52dd9b7942a0415aa9ccb36db1937745",
+    "REBUILD.txt": "728ea71e3fe1a73ea700348040be7cb55ec003d4370d93a568703b38dad94967",
+    "SOURCE-STATUS.txt": "e83460b829b42eecb2133fbfa16d811fdada4757e54638b61f500394f51dea26",
+    "test-dense.cpp": "9f2fdfce5ec5f26b38843366cf099868f399c84e93d3e29ee9318e88ba1079d5",
+    "test-native-conversation.cpp": "15b043c153545b72b5dea045cd8387b1e4d7593296c1a5e3650f2291eb3c7b59",
+    "test-prefix.cpp": "c58b1da7bcbb2087e074cd7c7a49d58b4624d9fb704e0b522041d951a94d99d7",
+    "test-tasks.cpp": "be7dfe592cf5d06c651164958d9a6796e7c87319e797eabdaf1f30a05656ae00",
+    "test-tiles.cpp": "7c498eb5f938d3abe836dab1b1de327ece735c51209e40626e4fd7090605d1ae",
+    "test-trained-image.cpp": "f86b29048280444dc323802ff02388f86fd3607b11ded5af5fd2a84e83db36fd",
+    "tests.cmake": "8146bbf6a7ef80aff5a5a73970b29a6c9a88759154d24bccd275b35b7cc5144f",
+    "tile.S": "ac6f3658ecb58d79337c96e8074b76df5ea5409720ca8531ce94856a50e85386",
+    "verify-build.py": "ed5f993dae7f83bcabbd68078cf151ba9eb77579a3ee8199f0adcaa5dd201b8a",
+    "wide.S": "1358137d5c500aa55bd370c518e0f425fcfa2ce8dcfdde56d30dbd81a2cfb797"
+  },
+  "source_recipe": "tools/native-runner/tiles-r4/rebuild.py",
+  "source_recipe_status": "Producer clean cross-build passed 243 audits; rebuilt binary has no native acceptance.",
+  "resident_policy": "WIDE_TASKS=0. Existing model templates, image dimensions, automatic resources, guards and fallbacks preserved.",
+  "excluded_pairing_reason": "LFM2.5-2.6B Q5_K_M retains decode3: R4 at automatic 131072 context delayed first output by 0.9-1.3 seconds; generation gains were small. Other untested catalog models retain decode3.",
+  "app_hardware_acceptance_date": "2026-10-16",
+  "app_hardware_acceptance_scope": {
+    "profile": "xeon-phi-7120p",
+    "model_ids": [
+      "llama-3.3-8b-abliterated-q5_k_m",
+      "huihui-step3-vl-10b-abliterated-q5_k_m"
+    ],
+    "checks": [
+      "Llama cold/growing/edited text history",
+      "Step3 image/history/rejection/retry",
+      "Step3 Stop/re-prime/reload",
+      "Step3 and fallback LFM thinking preferences",
+      "existing thermal/memory/affinity/heartbeat monitoring and confirmed cleanup"
+    ],
+    "report": "docs/VALIDATION.md",
+    "limitations": "No new 3120A, other-model pairing, 720p image, or clean-rebuild native acceptance."
+  }
+}

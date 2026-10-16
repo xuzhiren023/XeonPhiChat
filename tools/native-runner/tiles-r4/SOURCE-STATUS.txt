@@ -1,0 +1,18 @@
+Isolated Step3 tiles R4; no installation performed.
+Pinned base: 61e97998bf49c2d425563920b7e83e52b5ae57a6.
+Compiler: MPSS 3.8.6 GCC 5.1.1 K1OM; strict floating-point rules.
+The supplied incremental binary and any clean rebuild are distinct artifacts.
+The clean rebuild needs its own native acceptance before deployment.
+Opt-in switches: GGML_KNC_F32_TILE, GGML_KNC_Q6_PANEL16,
+GGML_KNC_WIDE16, GGML_KNC_TEXT_PAIR, GGML_KNC_WIDE_TASKS.
+All switches default off. Preserve existing supported-layout fallbacks.
+Current test policy: WIDE_TASKS=0 for text; WIDE_TASKS=1 for large image
+matrices with at least twice as many row/panel tasks as worker threads.
+Image resolution, patches, context, and quantization are unchanged.
+Hardware acceptance and throughput evidence are reported separately.
+The clean 7120P cross-build completed with release test assertions enabled;
+that rebuilt artifact has not been run on the card. Only the incremental R4
+artifact has the producer's native numerical and throughput evidence.
+Application acceptance and its limits are in docs/VALIDATION.md; the exact
+packaged artifact is identified in assets/tiles-r4-build.json. Raw card
+evidence stays private. R5/R6/R7 experiments are not included here.

@@ -1,5 +1,47 @@
 # Validation
 
+## 1.6.11: R4 kernels and thinking-control investigation (2026-10-16)
+
+The release packages the producer's exact uninstrumented native-tested R4 binary (`b52cb0584270b0987c34469e6dfcc41b551f88e7a8a76aaacde66233d76de098`). It uses the existing `61e9799` base runtime, weights, projector, image detail, automatic allocation and hardware limits. The app was installed separately beside 1.6.10, reusing its connection without resetting the card or changing drivers, network configuration or trust. Tests used the same 61-core/16 GB 7120P, MPSS 3.7.53857.1 and card kernel `2.6.38.8+mpss3.7.1`; private identities and raw evidence remain outside Git.
+
+R4 is selected for Llama 3.3-8B Abliterated Q5_K_M and Huihui Step3-VL Q5_K_M. All resident requests use `WIDE_TASKS=0`; the other model-specific switches are recorded in [R4 policy](R4.md). Other models retain decode3 and 3120A retains its previous runtime. The producer's clean source rebuild passed 243 audits, but that separate rebuilt binary has no native acceptance and is not the packaged artifact.
+
+### Application comparison
+
+Times are resident-backend request metrics after Load; they exclude one-time model transfer/loading and the initial Windows worker launch.
+
+| Request | 1.6.10 completion | 1.6.11 completion |
+|---|---:|---:|
+| Llama first arithmetic reply | 13.98 s | 12.42 s |
+| Llama growing-history follow-up | 17.27 s | 4.54 s |
+| Llama edited history | 13.74 s | 3.62 s |
+| Step3 first image reply | 192.22 s | 158.46 s |
+| Step3 image follow-up | 29.20 s | 28.18 s |
+
+Llama used automatic context 33,792, batch 128 and 240/240 generation/prompt workers. All three answers were byte-identical. The follow-up reused 63 tokens and evaluated 22; the large latency gain includes newly enabled context reuse, not just kernel throughput. Cold first output was slightly later (10.88 to 12.07 s), despite earlier completion. These one-token replies are latency/behavior checks, not sustained generation benchmarks. Peak sampled temperature was 64 C for R4.
+
+Step3 used automatic context 2,080, batch 16 and 180/240 generation/prompt workers, with 240 vision workers and its existing 64 MiB image embedding cache. The unchanged 448x336 red-square/blue-circle fixture produced a byte-identical answer. Encoder time fell from 130.455 to 103.553 s (20.6%); image ingestion from 26.714 to 22.837 s; first output from 170.912 to 138.499 s. Both runs peaked at a sampled 74 C. The final R4 run retained at least 3,694 MiB allocatable GDDR. This is a small-fixture comparison, not a 720p or broad visual-quality benchmark.
+
+Step3's growing follow-up reused the image without encoding or ingesting it again. An oversized input was rejected while preserving readiness; retry still reused the image. Edited history returned the correct new answer. A preceding R4 cold/image-follow-up run also completed in 158.44/27.80 s, before a status-reading race interrupted the oversized-input test; it is not counted as full sequence acceptance.
+
+LFM2.5-2.6B Q5_K_M was screened at automatic context 131,072, batch 128 and 120/240 workers. R4's cold/follow-up/edited-history first outputs were 5.29/5.85/4.53 s versus decode3's 4.04/4.96/3.67 s. Total replies were 13.91/12.35/12.97 s versus 13.79/12.93/13.66 s, with identical answers. The small generation gain did not offset the recurrent-state reset's first-output penalty; LFM keeps decode3.
+
+### Loading and status fixes
+
+One unchanged 1.6.10 Step3 load failed because `/proc/smaps` reported no model mapping immediately before `/proc/status` included the newly populated shared model pages. The resulting 5,635 MiB apparent additional allocation exceeded a 4,900 MiB limit even though free GDDR barely changed. That failed run is excluded from performance results. A fresh unmodified baseline load subsequently passed.
+
+The new workers refresh both readings once before rejecting an apparent over-budget allocation. The memory limit, shared-mapping checks and low-free-memory stop are unchanged. Eight offline scenarios cover stale readings, actual copy allocations, unsafe mappings and low memory across both workers. The app now includes the native guard's detailed failure in its error message.
+
+A preliminary resident-file existence probe could also bypass the shared reader's retry during Windows atomic replacement and falsely report a stopped worker. Resident-state reads now use the existing retrying reader directly. A focused regression fixture and the subsequent native rejection/retry sequence passed. The host suite and focused priming regressions passed; no fixture contacted the card.
+
+### Thinking and lifecycle acceptance
+
+The installed backend completed Light, Standard and Extended requests on two questions for both LFM2.5-2.6B Q5_K_M (decode3) and Huihui Step3-VL Q5_K_M (R4). All twelve answers included a completed final answer and were correct. Complete outputs were allowed under automatic allocation; no fixed thinking-token budget was introduced. [Thinking controls](THINKING.md) records output counts, latency and the non-monotonic results on both models. Step3 thinking peaked at 77 C, below the unchanged 85 C cutoff.
+
+The final R4 Step3 lifecycle sequence passed Stop during output, re-prime in the same session, a correct answer, reload into a new worker and another correct answer. Both recovery answers reused zero stale tokens. Image, thinking and lifecycle workers confirmed cleanup. These are backend checks; interactive user acceptance is left to the user.
+
+After validation, the two test-staged model/projector files were removed from card RAM under exclusive ownership, after confirming that neither was mapped or open. Windows model copies were preserved. Free GDDR rose to 14,288,536 KiB (about 13.6 GiB); no test model cache was left on the card. This cleanup does not change the app's model-retention policy or remove its small runtime self-test fixture.
+
 ## 1.6.10: context reuse and model-specific runtime selection (2026-10-16)
 
 The app bundles context-matrix-r2 (`d1c53f7e174b05496837e6dbe9dfac2e909b55efb821b2386b618fed98f09784`) and retains decode3 (`ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318`). The base runtime, weights, image detail and projector are unchanged. The next-version app was installed separately using the existing connection; no card reset, driver change or network/trust reconfiguration was performed. Hardware was the same 61-core/16 GB 7120P with MPSS 3.7.53857.1 and kernel `2.6.38.8+mpss3.7.1`. Private serial/boot identity and raw evidence remain outside Git.

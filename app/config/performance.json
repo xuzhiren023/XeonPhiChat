@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "qualification": "7120P native runtime and LFM2.5 text/vision application checks passed; see docs/VALIDATION.md for exact scope",
+  "qualification": "7120P R4 Llama text and Huihui Step3 text/image application checks; other pairings retain previous runtimes. See docs/VALIDATION.md for scope.",
   "profiles": [
     {
       "profile": "xeon-phi-7120p",
@@ -15,6 +15,28 @@
           "q6_panel8": 1,
           "f16_conv": 1,
           "f32_attn": 1
+        }
+      ],
+      "r4_models": [
+        {
+          "model_id": "llama-3.3-8b-abliterated-q5_k_m",
+          "q6_panel8": 0,
+          "f16_conv": 0,
+          "f32_attn": 0,
+          "wide16": 1,
+          "text_pair": 1,
+          "f32_tile": 0,
+          "q6_panel16": 0
+        },
+        {
+          "model_id": "huihui-step3-vl-10b-abliterated-q5_k_m",
+          "q6_panel8": 1,
+          "f16_conv": 1,
+          "f32_attn": 1,
+          "wide16": 1,
+          "text_pair": 1,
+          "f32_tile": 1,
+          "q6_panel16": 1
         }
       ]
     }

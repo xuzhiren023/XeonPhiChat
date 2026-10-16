@@ -29,7 +29,7 @@ cleanup() {
         rmdir "$input" 2>/dev/null || true
     done
     rm -f "$job/request" "$job/request.pending"
-    rm -f "$job/prime/bin/phi-prime" "$job/prime/lib/libgomp.so.1"
+    rm -f "$job/prime/bin/phi-prime" "$job/prime/bin/phi-prime-context-matrix-r2" "$job/prime/bin/phi-prime-step3-tiles4" "$job/prime/lib/libgomp.so.1"
     printf 'exit_code=%s\n' "$rc" > "$job/report/exit-code.txt"
     if [[ -n $lock_owned ]] && [[ $(cat /tmp/knc-phase3-workload.lock/phi-chat-owner 2>/dev/null) == "$LOCK_TOKEN" ]]; then
         rm -f /tmp/knc-phase3-workload.lock/worker-pid /tmp/knc-phase3-workload.lock/phi-chat-owner
@@ -76,6 +76,8 @@ unset LD_LIBRARY_PATH LD_PRELOAD OMP_THREAD_LIMIT OMP_NUM_THREADS
 # 1.4.3.3: enable the supplied Q5 candidate only in its pinned historical
 # engine. Modern LFM/Llama binaries and their dispatch remain unchanged.
 unset GGML_KNC_Q6_PANEL8 GGML_KNC_F16_CONV GGML_KNC_F32_ATTN GGML_KNC_DENSE_TRACE
+unset GGML_KNC_WIDE16 GGML_KNC_TEXT_PAIR GGML_KNC_F32_TILE GGML_KNC_Q6_PANEL16 GGML_KNC_WIDE_TASKS
+unset GGML_KNC_WIDE8 GGML_KNC_WIDE_SUM GGML_KNC_TEXT_QUAD GGML_KNC_Q5_DIRECT BP_ACTIVITY_PATH BP_ACTIVITY_LOGITS
 unset PHI_KNC_Q5_MODE PHI_KNC_F32_MODE PHI_KNC_EXTENDED PHI_KNC_TRACE
 if [[ ${RUNTIME_FAMILY:-historical-knc} != modern-knc && -f $runtime/q5-repair.json ]]; then
     case $(cat "$runtime/runtime-id.txt") in
@@ -118,7 +120,7 @@ ln -s /dev/null main.log
 ln -s /dev/null llama.log
 # The host verified the pinned archive before SCP. No card hash utility is required.
 check_elf "$job/prime/lib/libgomp.so.1"
-[[ $PRIME_RUNNER == phi-prime || $PRIME_RUNNER == phi-prime-context-matrix-r2 ]] || fail 'Invalid resident runner'
+[[ $PRIME_RUNNER == phi-prime || $PRIME_RUNNER == phi-prime-context-matrix-r2 || $PRIME_RUNNER == phi-prime-step3-tiles4 ]] || fail 'Invalid resident runner'
 engine="$job/prime/bin/$PRIME_RUNNER"
 check_elf "$engine"
 args=(-m "$MODEL_PATH" -c "$CONTEXT" -b "$BATCH" -t "$THREADS" -tb "$PROMPT_THREADS" -n 0 --serve "$job")
@@ -140,12 +142,12 @@ fi
 model_pid=$!
 mapping_seen=''
 printf 'PHICHAT_PROGRESS init 0 0 0\n' >&2
-while kill -0 "$model_pid" 2>/dev/null; do
-    phi_capture_affinity "$model_pid"
+# BEGIN MODEL MEMORY SAMPLER
+phi_read_model_rss() {
     # smaps counts the model's mapped pages in RSS. Subtract them once from
     # process RSS: those physical pages already belong to the RAM-backed file.
     if ! map_info=$(awk -v path="$MODEL_PATH" -f "$job/model-map.awk" "/proc/$model_pid/smaps" 2>/dev/null); then
-        if ! kill -0 "$model_pid" 2>/dev/null || grep -q '^State:.*Z' "/proc/$model_pid/status" 2>/dev/null; then break; fi
+        if ! kill -0 "$model_pid" 2>/dev/null || grep -q '^State:.*Z' "/proc/$model_pid/status" 2>/dev/null; then return 1; fi
         fail 'Cannot read model mapping telemetry; no unmonitored copy-mode fallback'
     fi
     read -r mapped model_rss rss unsafe_maps <<< "$map_info"
@@ -157,13 +159,31 @@ while kill -0 "$model_pid" 2>/dev/null; do
     # the kernel's process counters for the total, with one bounded file credit.
     counters=$(awk '$1 == "VmRSS:" {r=$2} $1 == "VmHWM:" {h=$2} END {if (r != "" && h != "") print r, h}' "/proc/$model_pid/status" 2>/dev/null || true)
     if [[ ! $counters =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
-        if ! kill -0 "$model_pid" 2>/dev/null || grep -q '^State:.*Z' "/proc/$model_pid/status" 2>/dev/null; then break; fi
+        if ! kill -0 "$model_pid" 2>/dev/null || grep -q '^State:.*Z' "/proc/$model_pid/status" 2>/dev/null; then return 1; fi
         fail 'Cannot read process memory counters'
     fi
     read -r rss hwm <<< "$counters"
     model_cap_kib=$(((MODEL_BYTES + 4095) / 4096 * 4))
     ((model_rss <= model_cap_kib)) || model_rss=$model_cap_kib
     ((model_rss <= rss)) || model_rss=$rss
+    additional_rss=$((rss - model_rss))
+}
+phi_sample_model_memory() {
+    phi_read_model_rss || return 1
+    if ((additional_rss > RUNTIME_LIMIT_MIB * 1024)); then
+        # smaps and status are separate proc snapshots. During mmap population,
+        # the first can precede the mapping while the second includes its pages.
+        # Refresh both once before rejecting; never relax the actual budget.
+        read_memory
+        ((available >= MEMORY_STOP_MIB * 1024)) || fail "Low allocatable GDDR: $((available / 1024)) MiB; reserve $MEMORY_STOP_MIB MiB"
+        printf 'resample rss_kib=%s model_rss_kib=%s limit_mib=%s\n' "$rss" "$model_rss" "$RUNTIME_LIMIT_MIB" >> "$job/report/memory-resamples.txt"
+        phi_read_model_rss || return 1
+    fi
+}
+# END MODEL MEMORY SAMPLER
+while kill -0 "$model_pid" 2>/dev/null; do
+    phi_capture_affinity "$model_pid"
+    phi_sample_model_memory || break
     if ((mapped * 1024 >= MODEL_BYTES * 9 / 10)) && [[ -z $mapping_seen ]]; then
         mapping_seen=1
         cat "/proc/$model_pid/maps" > "$job/report/model-maps.txt" 2>/dev/null || true

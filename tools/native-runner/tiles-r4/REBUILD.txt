@@ -1,0 +1,40 @@
+Step3 tiles R4: isolated source and validation
+
+The tools/native-runner/tiles-r4 directory contains the complete candidate overlay, the preceding
+decode3 patch, numerical tests, and a clean cross-build entry point. The retained
+base is phichat-prime-source.tar (180,213,760 bytes), commit
+61e97998bf49c2d425563920b7e83e52b5ae57a6. Its previously recorded identity is
+ab529dee669f124b367c7f8770215ace4639045c4e094a995ccdb099d23151e5.
+The size check is an error check, not authentication of a new unknown archive.
+
+In the pinned MPSS 3.8.6 GCC 5.1.1 K1OM environment:
+
+python3 tools/native-runner/tiles-r4/rebuild.py /path/to/phichat-prime-source.tar \
+    /new/private/work /new/private/output --profile 7120P --jobs 4
+
+Both destinations must be new. No card contact, installation, model changes,
+driver changes, or repeated SHA scans are performed by this command.
+
+The incremental test artifact is phi-prime-step3-tiles4. A clean rebuild is a
+separate artifact and needs native qualification before deployment.
+Application results for the incremental artifact are in docs/VALIDATION.md;
+its exact identity and retained source hashes are in assets/tiles-r4-build.json.
+
+Enable only for candidate testing:
+  GGML_KNC_WIDE16=1        Q3/Q4/Q5/Q6 sixteen-column panels
+  GGML_KNC_TEXT_PAIR=1     two-row shared activation loads and integer reduction
+  GGML_KNC_F32_TILE=1      exact four-output FP32 attention tile
+  GGML_KNC_Q6_PANEL16=1    optional Q6-only sixteen-column path
+  GGML_KNC_WIDE_TASKS=1    optional large-matrix row/panel task partition
+
+The general wide path takes precedence over the Q6-only path. Keep WIDE_TASKS=0
+for text: measured small prompt workloads regressed with that policy. Use its
+guarded large-matrix path only with separately qualified image workloads.
+Preserve the existing Q6_PANEL8/F16_CONV/F32_ATTN switches, batch, context,
+thread affinity, thermal/memory guards, and supported-layout fallbacks.
+
+All new switches default off. No model datatype is hardcoded and unsupported
+tensor layouts continue through the existing backend. Image resolution,
+preprocessing, quantization and arithmetic rounding order remain unchanged.
+The 3120A/5110P profiles remain build options; this pass's hardware measurements
+apply only to the connected 7120P. Do not claim other-card or all-model speedups.

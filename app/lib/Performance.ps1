@@ -1,6 +1,6 @@
 # Candidate policy is used only by an explicitly pinned performance-capable runner.
 function Get-PerformanceOptions($Model,$Profile,$Pin,[int]$PromptThreads) {
-    $off=[pscustomobject]@{cache_mib=0;image_max_tokens=0;vision_threads=$PromptThreads;mq_cols=1;mq_rows=4;reserve_mib=0;q6_panel8=0;f16_conv=0;f32_attn=0}
+    $off=[pscustomobject]@{cache_mib=0;image_max_tokens=0;vision_threads=$PromptThreads;mq_cols=1;mq_rows=4;reserve_mib=0;q6_panel8=0;f16_conv=0;f32_attn=0;wide16=0;text_pair=0;f32_tile=0;q6_panel16=0}
     if (!$Pin.PSObject.Properties['performance_capability']) {return $off}
     if ($Pin.performance_capability -cne 'knc-performance-v1') {throw 'Unknown performance runtime capability.'}
     $config=Read-JsonFile (Join-Path $script:root 'config/performance.json')
@@ -21,14 +21,20 @@ function Get-PerformanceOptions($Model,$Profile,$Pin,[int]$PromptThreads) {
     if ($PromptThreads -lt $cores -or $PromptThreads -gt 4*$cores -or $PromptThreads%$cores -ne 0 -or $vision -gt $PromptThreads) {throw 'Vision/prompt worker count exceeds the configured affinity pool.'}
     $isImage=Test-ImageModel $Model
     $cache=if ($isImage) {[int]$policy.cache_mib} else {0}
-    $q6=0;$f16=0;$f32=0
-    if ($Pin.PSObject.Properties['conversation_reuse'] -and $Pin.conversation_reuse) {
+    $q6=0;$f16=0;$f32=0;$wide=0;$pair=0;$tile=0;$panel=0
+    if ($Pin.PSObject.Properties['runner_file'] -and $Pin.runner_file -ceq 'phi-prime-step3-tiles4') {
+        $tuning=@($policy.r4_models | Where-Object {$_.model_id -ceq $Model.id})
+        if ($tuning.Count -ne 1) {throw 'No qualified R4 policy for this model.'}
+        foreach ($field in @('q6_panel8','f16_conv','f32_attn','wide16','text_pair','f32_tile','q6_panel16')) {if ($tuning[0].$field -notin @(0,1)) {throw 'Invalid R4 tuning switch.'}}
+        $q6=$tuning[0].q6_panel8;$f16=$tuning[0].f16_conv;$f32=$tuning[0].f32_attn
+        $wide=$tuning[0].wide16;$pair=$tuning[0].text_pair;$tile=$tuning[0].f32_tile;$panel=$tuning[0].q6_panel16
+    } elseif ($Pin.PSObject.Properties['conversation_reuse'] -and $Pin.conversation_reuse) {
         $tuning=@($policy.context_matrix_models | Where-Object {$_.model_id -ceq $Model.id})
         if ($tuning.Count -ne 1) {throw 'No qualified context/matrix policy for this model.'}
         foreach ($field in @('q6_panel8','f16_conv','f32_attn')) {if ($tuning[0].$field -notin @(0,1)) {throw 'Invalid matrix tuning switch.'}}
         $q6=$tuning[0].q6_panel8;$f16=$tuning[0].f16_conv;$f32=$tuning[0].f32_attn
     }
-    return [pscustomobject]@{q6_panel8=$q6;f16_conv=$f16;f32_attn=$f32;cache_mib=$cache;image_max_tokens=$(if ($isImage) {[int]$policy.image_max_tokens} else {0});vision_threads=$vision;mq_cols=[int]$policy.mq_cols;mq_rows=[int]$policy.mq_rows;reserve_mib=$(if ($cache) {$cache+2} else {0})}
+    return [pscustomobject]@{q6_panel8=$q6;f16_conv=$f16;f32_attn=$f32;wide16=$wide;text_pair=$pair;f32_tile=$tile;q6_panel16=$panel;cache_mib=$cache;image_max_tokens=$(if ($isImage) {[int]$policy.image_max_tokens} else {0});vision_threads=$vision;mq_cols=[int]$policy.mq_cols;mq_rows=[int]$policy.mq_rows;reserve_mib=$(if ($cache) {$cache+2} else {0})}
 }
 function Add-PerformanceReserve($Model,$Options) {
     $copy=$Model.PSObject.Copy()

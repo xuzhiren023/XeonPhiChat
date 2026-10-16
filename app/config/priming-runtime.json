@@ -6,8 +6,8 @@
       "file": "prime-7120P.tar",
       "profile": "xeon-phi-7120p",
       "kind": "priming",
-      "bytes": 29020160,
-      "sha256": "6cb0bdd9a52e841d44a6bba1ed77e4a6465d45c4802e173871fe2a5ecdfeb1ea",
+      "bytes": 29358080,
+      "sha256": "32590b16e112ed7f8273658216174be67875c694efd5b91bc4231dd8337570a4",
       "runner_sha256": "ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318",
       "library_sha256": "89e7a6b598a2264d804e47aff046a452695f263bfd0cebdaaa38ac8959dcc331",
       "base_runtime_id": "phichat142-modern-910493bed33a64fd",
@@ -16,10 +16,17 @@
       "runner_file": "phi-prime",
       "model_overrides": [
         {
+          "model_id": "llama-3.3-8b-abliterated-q5_k_m",
+          "runner_file": "phi-prime-step3-tiles4",
+          "runner_sha256": "b52cb0584270b0987c34469e6dfcc41b551f88e7a8a76aaacde66233d76de098",
+          "runtime_id": "knc-step3-tiles-r4-b52cb0584270b098",
+          "conversation_reuse": true
+        },
+        {
           "model_id": "huihui-step3-vl-10b-abliterated-q5_k_m",
-          "runner_file": "phi-prime-context-matrix-r2",
-          "runner_sha256": "d1c53f7e174b05496837e6dbe9dfac2e909b55efb821b2386b618fed98f09784",
-          "runtime_id": "knc-context-matrix-r2-d1c53f7e174b0549",
+          "runner_file": "phi-prime-step3-tiles4",
+          "runner_sha256": "b52cb0584270b0987c34469e6dfcc41b551f88e7a8a76aaacde66233d76de098",
+          "runtime_id": "knc-step3-tiles-r4-b52cb0584270b098",
           "conversation_reuse": true
         }
       ]

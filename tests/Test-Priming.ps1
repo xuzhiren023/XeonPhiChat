@@ -7,6 +7,10 @@ $ErrorActionPreference='Stop'
 . (Join-Path $AppRoot 'lib/JobProtocol.ps1')
 function Check([bool]$Value,[string]$Message) {if (!$Value) {throw "FAIL: $Message"};Write-Output "PASS: $Message"}
 function Reject([scriptblock]$Code,[string]$Message) {$bad=$false;try {& $Code} catch {$bad=$true};Check $bad $Message}
+$diagnosticTask=New-Object 'Threading.Tasks.TaskCompletionSource[string]'
+$diagnosticTask.SetResult('FAIL: Additional runtime RSS exceeds the configured budget')
+$failedNative=[pscustomobject]@{frames=[pscustomobject]@{Error=''};errorTask=$diagnosticTask.Task}
+Check ((Get-PrimeFailureMessage $failedNative) -like '*Additional runtime RSS*') 'native guard failure reaches the app instead of an empty runtime-stopped message'
 $null=New-Item -ItemType Directory -Path $Scratch -Force
 $script:root=$AppRoot
 $script:primeRuntimeId='knc-decode3-fixture'
@@ -67,6 +71,16 @@ $script:sessionMetadata=[pscustomobject]@{boot='fixture-boot'}
 $reference=[pscustomobject]@{directory=$script:job;token=$script:request.prime_token;owner_pid=$PID}
 Set-ResidentState 'ready'
 Check ((Read-ResidentState $Scratch $reference $PID).state -ceq 'ready') 'ready belongs to a live worker and the owning chat window'
+& {
+    # Simulate the stale existence result seen during ReplaceFile publication.
+    # The normal shared reader can still obtain the complete resident document.
+    function Test-Path {
+        param([string]$LiteralPath,[string]$PathType)
+        if ($LiteralPath.EndsWith('resident.json')) {return $false}
+        return Microsoft.PowerShell.Management\Test-Path @PSBoundParameters
+    }
+    Check ((Read-ResidentState $Scratch $reference $PID).state -ceq 'ready') 'a transient resident-file existence result cannot report a live worker as stopped'
+}
 Set-ResidentState 'priming' 'Re-priming after Stop...'
 Check ((Read-ResidentState $Scratch $reference $PID).state -ceq 'priming') 'background re-priming is distinct from ready'
 Stop-ResidentSession $Scratch $reference $PID
