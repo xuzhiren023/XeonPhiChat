@@ -28,3 +28,17 @@ __pycache__/
 .venv/
 .vs/
 
+
+# Additional credentials and workstation-only configuration
+.env
+.env.*
+!.env.example
+.ssh/
+.aws/
+.codex/
+.agents/
+*.pfx
+*.p12
+id_rsa*
+id_ecdsa*
+id_dsa*
