@@ -118,12 +118,15 @@ function Complete-PrimeRequest($Active,[string]$State,[string]$Message,$Metrics=
     Remove-Item -LiteralPath (Join-Path $Active.job 'prime-input.json') -Force -ErrorAction SilentlyContinue
 }
 function Send-PrimeRequest($Active,$Native,[switch]$LatestOnly) {
-    $prompt=New-ChatPrompt $script:primeModel @($Active.request.messages) $script:cfg.system_prompt 0 -LatestOnly:$LatestOnly
+    $prompt=New-ChatPrompt $script:primeModel @($Active.request.messages) $script:cfg.system_prompt 0 -LatestOnly:$LatestOnly -ThinkingDepth (Get-ThinkingDepth $Active.request)
     $Active.prompt=$prompt;$Active.id=[Guid]::NewGuid().ToString('N');$Active.attempt++
     $remote=$Native.remote+'/inputs/'+$Active.id
     $local=Join-Path $Active.job ('prime-send-'+$Active.id)
     $null=New-Item -ItemType Directory -Path $local
     $files=@();$promptPath=Join-Path $local 'prompt.txt';Write-Utf8 $promptPath $prompt.text;$files+=@($promptPath)
+    # Keep the resident guard alive and observe this response's Stop flag while
+    # synchronous file transfer waits for either SCIF or its SCP fallback.
+    $script:transferOwner=[pscustomobject]@{active=$Active;native=$Native;nextHealth=0.0}
     try {
         foreach ($image in @($prompt.images)) {
             $source=Assert-StoredImage $script:data $image
@@ -136,7 +139,14 @@ function Send-PrimeRequest($Active,$Native,[switch]$LatestOnly) {
         if ($predict -lt 0 -or $predict -ge $script:primeResources.context_tokens) {Stop-ChatInput 'Reply budget exceeds the primed context.'}
         $count=@($prompt.images).Count
         $null=Invoke-Card "printf 'PHI_PRIME_V1\n$($Active.id)\n$predict\n$count\n' > '$($Native.remote)/request.pending' && mv '$($Native.remote)/request.pending' '$($Native.remote)/request'"
-    } finally {foreach ($file in $files) {Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue}}
+    } catch {
+        if (!$_.Exception.Data['PhiChatTransferCancelled']) {throw}
+        # The resident loop sees the same cancel file, stops any published
+        # request and re-primes through its normal response-cancellation path.
+    } finally {
+        $script:transferOwner=$null
+        foreach ($file in $files) {Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue}
+    }
 }
 function New-PrimeRequest($Envelope,$Native) {
     if ($Envelope.token -cne $script:request.prime_token -or $Envelope.id -cnotmatch '^[a-f0-9]{32}$' -or $Envelope.job -cnotmatch '^job-[0-9]{8}-[0-9]{6}-[a-f0-9]{8}$') {throw 'Invalid resident queue entry.'}

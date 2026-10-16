@@ -1,6 +1,7 @@
 . (Join-Path $PSScriptRoot 'Preparation.ps1')
 . (Join-Path $PSScriptRoot 'ModelCache.ps1')
 . (Join-Path $PSScriptRoot 'ModelFiles.ps1')
+. (Join-Path $PSScriptRoot 'ScifTransfer.ps1')
 function Write-LiveProgress($Capture,$Diagnostic,[double]$Seconds,[bool]$Complete) {
     $sample=if ($null -ne $Diagnostic) { $Diagnostic.Snapshot } else { $null }
     $bytes=if ($null -ne $Capture) { $Capture.BytesWritten } else { 0L }
@@ -53,6 +54,25 @@ function Assert-JobActive {
     }
     if ($script:request.owner_pid -gt 0 -and !(Get-Process -Id $script:request.owner_pid -ErrorAction SilentlyContinue)) { throw 'Chat window closed; stopping the card workload.' }
     if ($script:request.PSObject.Properties['owner_start_ticks'] -and (Get-Process -Id $script:request.owner_pid).StartTime.ToUniversalTime().Ticks -ne [long]$script:request.owner_start_ticks) {throw 'Chat window was replaced; stopping its primed worker.'}
+    if (Get-Variable transferOwner -Scope Script -ErrorAction SilentlyContinue) {
+        $owner=$script:transferOwner
+        if ($owner) {
+            if (Test-Path -LiteralPath (Join-Path $owner.active.job 'cancel')) {
+                $cancel=New-Object OperationCanceledException 'Response stopped during image transfer.'
+                $cancel.Data['PhiChatTransferCancelled']=$true;throw $cancel
+            }
+            if ($owner.native.watch.Elapsed.TotalSeconds -ge $owner.nextHealth) {
+                # Claim the next interval before the health check: it also calls
+                # Assert-JobActive, so this prevents recursive health sampling.
+                $owner.nextHealth=$owner.native.watch.Elapsed.TotalSeconds+5
+                try {
+                    Update-LoadTemperature
+                    if ($owner.native.process.HasExited) {throw 'Primed model stopped during image transfer.'}
+                    $owner.native.process.StandardInput.WriteLine('health-ok');$owner.native.process.StandardInput.Flush()
+                } catch {$_.Exception.Data['PhiChatTransferAbort']=$true;throw}
+            }
+        }
+    }
 }
 function Get-ChatCancellationStatus {
     if ($script:request -and $script:request.PSObject.Properties['action'] -and $script:operatorCancelled -and
@@ -99,7 +119,7 @@ function Invoke-JobProcess([string]$Exe,[string[]]$Arguments,[int]$Seconds=120,[
     $p.StartInfo.StandardOutputEncoding=New-Object Text.UTF8Encoding($false)
     $p.StartInfo.StandardErrorEncoding=New-Object Text.UTF8Encoding($false)
     $out=$null; $err=$null; $stream=$null; $capture=$null; $diagnostic=$null; $nextLive=0.0; $code=$null; $started=$false; $failure=''; $answer=''
-    $watch=[Diagnostics.Stopwatch]::StartNew(); $nextHealth=0.0; $nextTick=0.0
+    $watch=[Diagnostics.Stopwatch]::StartNew(); $nextHealth=0.0; $nextTick=0.0; $transferFailure=$null
     try {
         $started=$p.Start(); if (!$started) { throw 'Process did not start.' }
         if ($OutputPath) {
@@ -132,7 +152,10 @@ function Invoke-JobProcess([string]$Exe,[string[]]$Arguments,[int]$Seconds=120,[
             }
         }
         $code=$p.ExitCode
-    } catch { $failure=$_.Exception.Message }
+    } catch {
+        $failure=$_.Exception.Message
+        if ($_.Exception.Data['PhiChatTransferCancelled'] -or $_.Exception.Data['PhiChatTransferAbort']) {$transferFailure=$_}
+    }
     finally {
         if ($started) {
             try { $p.StandardInput.Close() } catch {}
@@ -161,6 +184,7 @@ function Invoke-JobProcess([string]$Exe,[string[]]$Arguments,[int]$Seconds=120,[
         $p.Dispose()
         Write-JsonFile ($prefix+'.exit.json') ([pscustomobject]@{exit_code=$code;elapsed_seconds=$watch.Elapsed.TotalSeconds;failure=$failure;guarded=[bool]$Guarded;executable=[IO.Path]::GetFileName($Exe);operation=$operation;stdout=$(if ($OutputPath) {$OutputPath} else {$prefix+'.stdout.txt'});stderr=($prefix+'.stderr.txt')})
     }
+    if ($null -ne $transferFailure) {throw $transferFailure}
     if ($failure -or $null -eq $code -or $code -ne 0) {
         $detail=''
         if (Test-Path -LiteralPath ($prefix+'.stderr.txt')) { $detail=(@(Get-Content -LiteralPath ($prefix+'.stderr.txt') | Where-Object { $_.Trim() } | Select-Object -Last 3) -join ' ') }
@@ -175,7 +199,20 @@ function Invoke-Card([string]$Command) {
     return Invoke-JobProcess $script:ssh ($script:sshOptions+@('-T',$script:target,$Command))
 }
 function Send-CardFiles([string[]]$Local,[string]$Remote) {
-    $null=Invoke-JobProcess $script:scp ($script:scpMode+$script:sshOptions+$Local+@($script:target+':'+$Remote)) 900
+    $small=@()
+    foreach ($path in $Local) {
+        $file=Get-Item -LiteralPath $path
+        if ($Remote.EndsWith('/') -and ($file.Length -ge 1MB -or $file.Extension -ieq '.png')) {
+            $destination=$Remote+$file.Name
+            $part=$destination+'.'+[Guid]::NewGuid().ToString('N')+'.part'
+            if (Try-SendScifFile $path $part $file.Length) {
+                $null=Invoke-Card "test `"`$(LC_ALL=C ls -ln '$part' | awk '{print `$5}')`" = '$($file.Length)' && mv '$part' '$destination'"
+                continue
+            }
+        }
+        $small+=@($path)
+    }
+    if ($small.Count) {$null=Invoke-JobProcess $script:scp ($script:scpMode+$script:sshOptions+$small+@($script:target+':'+$Remote)) 900}
 }
 function Receive-CardReport([string]$Remote,[string]$Local) {
     $null=Invoke-JobProcess $script:scp ($script:scpMode+$script:sshOptions+@('-r',($script:target+':'+$Remote),$Local)) 120
@@ -290,23 +327,34 @@ function Get-LocalModel($Model) {
 }
 function Send-ModelFile([string]$LocalPath,[string]$RemotePath,[long]$TotalBytes) {
     $watch=[Diagnostics.Stopwatch]::StartNew()
-    Set-LoadProgress 'Copying to Xeon Phi' 0 $TotalBytes 0
+    if (Try-SendScifFile $LocalPath $RemotePath $TotalBytes) {
+        Set-LoadProgress 'Copying via SCIF DMA' $TotalBytes $TotalBytes $watch.Elapsed.TotalSeconds -Complete
+        return
+    }
+    Send-ModelFileScp $LocalPath $RemotePath $TotalBytes
+}
+function Send-ModelFileScp([string]$LocalPath,[string]$RemotePath,[long]$TotalBytes) {
+    $watch=[Diagnostics.Stopwatch]::StartNew()
+    Set-LoadProgress 'Copying via SCP' 0 $TotalBytes 0
+    $poll=[pscustomobject]@{next=0.0}
     $tick={
         param([double]$ElapsedSeconds)
         Update-LoadTemperature
+        if ($ElapsedSeconds -lt $poll.next) {return}
+        $poll.next=$ElapsedSeconds+3.0
         # ls reads file metadata; it does not scan a growing multi-GB file.
         $command="if test -f '$RemotePath'; then ls -ln '$RemotePath' | awk '{print `$5}'; else echo 0; fi"
         # Bound progress polling too, so a stalled SSH query cannot hide the
         # temperature check for the normal two-minute command timeout.
         $bytes=(Invoke-JobProcess $script:ssh ($script:sshOptions+@('-T',$script:target,$command)) 10).Trim()
         if ($bytes -notmatch '^\d+$') { throw 'Cannot read model transfer progress from the Phi.' }
-        Set-LoadProgress 'Copying to Xeon Phi' ([long]$bytes) $TotalBytes $ElapsedSeconds
+        Set-LoadProgress 'Copying via SCP' ([long]$bytes) $TotalBytes $ElapsedSeconds
     }
     $null=Read-CardHealth
     $null=Invoke-JobProcess $script:scp ($script:scpMode+$script:sshOptions+@($LocalPath,($script:target+':'+$RemotePath))) 900 -OnTick $tick
     $actual=(Invoke-Card "LC_ALL=C ls -ln '$RemotePath' | awk '{print `$5}'").Trim()
     if ($actual -cne [string]$TotalBytes) { throw 'Model transfer did not complete; click Load model to retry.' }
-    Set-LoadProgress 'Copying to Xeon Phi' $TotalBytes $TotalBytes $watch.Elapsed.TotalSeconds -Complete
+    Set-LoadProgress 'Copying via SCP' $TotalBytes $TotalBytes $watch.Elapsed.TotalSeconds -Complete
 }
 function Acquire-CardWorkloadLock {
     $script:cardLockToken=[Guid]::NewGuid().ToString('N')
@@ -373,7 +421,7 @@ function Get-PreparedCardModel($Ready,$Model,$State) {
 }
 function Get-CheckedChatPrompt($Model,$State,[string]$RemoteModel,$Threads,[object[]]$Messages,[string]$System,[int]$Tokens) {
     $budget=Get-PromptBudget ([int]$Model.context_tokens) $Tokens
-    $prompt=New-ChatPrompt $Model $Messages $System $Tokens
+    $prompt=New-ChatPrompt $Model $Messages $System $Tokens -ThinkingDepth (Get-ThinkingDepth $script:request)
     $baseModel=Get-ModelProfile $script:root $script:request.model
     $automatic=($Tokens -eq 0)
     $allocationKey=Get-AllocationKey $Model $State $Threads
@@ -400,7 +448,7 @@ function Get-CheckedChatPrompt($Model,$State,[string]$RemoteModel,$Threads,[obje
             # One bounded retry with the newest turn, never one model reload per
             # historical message. The visible transcript remains intact.
             Set-JobStatus 'Conversation exceeds context; keeping the system message and your newest question.'
-            $prompt=New-ChatPrompt $Model $Messages $System $Tokens -LatestOnly
+            $prompt=New-ChatPrompt $Model $Messages $System $Tokens -LatestOnly -ThinkingDepth (Get-ThinkingDepth $script:request)
             continue
         }
         Stop-ChatInput ("Your newest message plus the system/template uses {0} tokens; {1} fit with a {2}-token reply in {3} context. Split the message or select a model with more available context. Your draft and loaded model are kept." -f $count,$budget,$Tokens,$Model.context_tokens)

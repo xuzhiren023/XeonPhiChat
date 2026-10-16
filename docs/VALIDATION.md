@@ -1,5 +1,39 @@
 # Validation
 
+## 1.6.9: Huihui Step3, SCIF DMA and thinking depth (2026-10-16)
+
+Huihui Step3-VL 10B Abliterated Q5_K_M replaces the official Step3 picker entry. The complete 5,851,113,152-byte language model was downloaded and verified against SHA-256 `a27779bac5bf94bc7b5e61748448bc204043ec5efda91b8b1a8d2abe9dafd7e1`, pinned to `2lains/Huihui-Step3-VL-10B-abliterated-GGUF` revision `0f521a92fbde66298e01a38ceb122f15b933923b`. All 399 tensor shapes/types and tokenizer metadata match the previous decoder; 70 of 254 sampled matrix prefixes differ. The old profile is retained only for cache cleanup with a verified Windows backup.
+
+After the user authorized hardware testing, the new app was installed separately from 1.6.8 using its saved identity. No card boot/reset, MPSS provisioning, driver update or network/trust reconfiguration was used. Native checks ran on a 61-core, 16 GB 7120P, Windows MPSS 3.7.53857.1 and card kernel `2.6.38.8+mpss3.7.1`; the reported PCIe link was x4 at 5 GT/s. Private serial/boot IDs and raw native evidence remain outside Git. The inference source is `61e97998bf49c2d425563920b7e83e52b5ae57a6`, runtime `phichat142-modern-910493bed33a64fd`, primed runner `knc-decode3-ecf5e24ef6c0a4f3` (binary SHA-256 `ecf5e24ef6c0a4f320956b660990975de4cd9f0ce917deb2222f98e08e977318`). Runtime binaries are unchanged.
+
+### Native SCIF results
+
+The Windows sender uses the installed System32 MPSS DLL; the receiver was cross-built with MPSS 3.8.6 GCC 5.1.1. Source/binary pins are recorded in `assets/scif-transfer-build.json`. A completion-close race found in the first card test was fixed: the receiver now keeps its endpoint open until the sender consumes DONE and closes it. Final native tests used receiver SHA-256 `112c520f03da94272f565a6ba71b8f734ad33437116bdc43695a11f1cb420f49` and sender SHA-256 `70c29a149f137302756d7ec0af08958983d9450de6ca4b4e63dc9344544cbbfe`.
+
+| Check | Result |
+| --- | --- |
+| 64 MiB + 129 bytes, SCIF | Readback identical, including the partial final window |
+| 256 MiB + 129 bytes, SCIF | 3.685 seconds end-to-end, 69.47 MiB/s; readback identical |
+| Same file, SCP | 18.841 seconds, 13.59 MiB/s; readback identical |
+| Huihui decoder, 5.85 GB | Sender completed in 26.375 seconds, about 212 MiB/s |
+| Step3 Q6_K projector, 1.89 GB | Sender completed in 8.849 seconds, about 204 MiB/s |
+| Stop during a 1 GiB transfer | Receiver exited, partial file removed, no SCP retry, workload lock released |
+| Injected sender file-open failure after handshake | Receiver cleanup confirmed; automatic SCP fallback completed with identical readback |
+
+The synthetic comparison includes helper bootstrap and cleanup; sender timings include negotiation but exclude the surrounding app checks. Readback hashing was performed only by the validation harness, not added to production transfers. Model and PNG uploads use DMA; small control/bootstrap files still use pinned SSH/SCP. The app discovers SCIF nodes and authenticates the selected card with a nonce-bound reverse connection, without assuming node 1 or Thunderbolt. Physical direct-slot and 3120A testing, and physical unplug during transfer, remain pending. No full Thunderbolt-bandwidth claim is made.
+
+### Native Huihui and thinking checks
+
+The existing Q6_K projector (`b4d777752a55a73c8b518dd35b1c34e0bf2324a6d66059be3b7da3d5a89a7bc8`) loaded successfully with Huihui. Text arithmetic completed correctly. A 448 x 336 PNG containing a red square and a blue circle was correctly described on both first and repeated requests. The first complete reply took 210.6 seconds (146.9 seconds image encoding); the repeat took 64.3 seconds with one image-cache hit and zero image encoding time. Generation was about 2.5 tokens/s. Automatic allocation selected 2,080 context tokens and batch 16 on this card; minimum free memory was about 4,698 MiB and peak measured temperature was 75 C, below the 85 C cutoff. These are small fixture checks, not broad visual accuracy or a 720p performance benchmark.
+
+Light and Extended thinking preferences both produced the correct answer to the same 17 x 23 question through the installed resident backend. Light generated 147 tokens in 78.3 seconds; Extended generated 246 tokens in 120.0 seconds and included an additional arithmetic cross-check. The preference is a system instruction, not a native enforced token budget; no fixed latency or accuracy gain is claimed. Standard leaves the prompt unchanged. LFM2.5 and Gaston use the same tested prompt routing, but did not receive a new native thinking comparison in this release. See [thinking controls](THINKING.md).
+
+Stop interrupted a running response, the same resident session re-primed, and subsequent generation resumed. Greeting checks with 64- and 256-token test allowances ended within the model's reasoning; this was not treated as a complete answer. The final same-session recovery test used the established arithmetic prompt and completed with the correct answer, 12. These test-only allowances are not app output caps. Controller cleanup receipts confirm release of the app's native worker and workload lock. Existing 1.6.8 files remain preserved.
+
+### Offline and packaging checks
+
+Windows PowerShell 5.1 host tests cover setup/update, exact model/runtime pairing, transfer success/fallback/Stop/thermal-error cleanup, resident heartbeats during image transfers, reasoning prompts, image/history preservation, per-chat preference persistence, actual WPF selection/Send wiring, reconnect and existing UI behavior. The thinking selector was also rendered and visually inspected. Linux receiver shim tests passed exact-byte copies, delayed completion consumption, wrong nonce, existing-file preservation, disconnect, controller EOF and bad-position cleanup without `/dev/scif`. Nine runtime-restoration Bash fixtures passed. Offline fixtures are not native acceptance. All release ZIP members are verified by `tools/Build-Release.ps1`.
+
 ## 1.6.8: reconnect and runtime restoration (2026-10-14)
 
 The 1.6.7 logs show successful SSH probes followed by runtime installation after a card reboot. Installation repeated the full numerical qualification suite, including slow quantizer initialization, while the UI kept displaying Connecting. The user cancelled that job after roughly 112 seconds. The later telemetry-connection-closed message followed guard cancellation; it was not evidence of an initial SSH failure or temperature cutoff.

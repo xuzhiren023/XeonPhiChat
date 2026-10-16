@@ -11,3 +11,5 @@ Each pack can contain a subset of the models listed in `optimized-models.json`. 
 
 
 Phi Chat 1.6.6 already includes the matching Step3 Q6_K projector in its Windows installer; the older Step3-Vision pack is no longer required. LFM2.5-VL downloads its official decoder and matching F16 projector automatically; it needs no separate pack.
+
+The optional `PhiChat-1.6.9-Huihui-Step3.zip` contains the verified Huihui Q5_K_M language weights. It can be imported using Add-Models.cmd when an offline model install is preferred. Normal Load model also downloads these exact weights automatically. The projector is already included in the Windows installer.

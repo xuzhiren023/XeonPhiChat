@@ -9,6 +9,7 @@ $root=Split-Path $PSScriptRoot -Parent
 . (Join-Path $root 'setup/lib/SetupCore.ps1')
 Add-Type -AssemblyName System.IO.Compression,System.IO.Compression.FileSystem
 $version=Get-PhiVersion $root
+if ((Get-PhiVersion (Join-Path $root 'app')) -cne $version) {throw 'Installer and application versions differ. Update both VERSION files before packaging.'}
 $dist=Join-Path $root 'dist'; New-Directory $dist
 if ($SourceOnly -and $ModelsOnly) { throw 'Choose source-only or models-only packaging, not both.' }
 if ($ModelsOnly -and !$ModelDirectory) { throw '-ModelsOnly requires -ModelDirectory.' }
@@ -59,7 +60,7 @@ foreach ($name in $allowed) {
         $sources+=@([pscustomobject]@{path=$file.FullName;name=('PhiChat-'+$version+'/'+$relative)})
     }
 }
-foreach ($name in @('VERSION','README.md','AGENTS.md','LICENSES.md','MIGRATION.json','.gitignore','.gitattributes','Setup.cmd','Setup.ps1','Start.cmd','Start.ps1','Add-Models.cmd','assets/runtime-manifest.json','assets/optimized-models.json','assets/upstream-runtime-build.json','assets/multimodal-runtime-build.json','assets/priming-runtime-build.json')) {
+foreach ($name in @('VERSION','README.md','AGENTS.md','LICENSES.md','MIGRATION.json','.gitignore','.gitattributes','Setup.cmd','Setup.ps1','Start.cmd','Start.ps1','Add-Models.cmd','assets/runtime-manifest.json','assets/optimized-models.json','assets/upstream-runtime-build.json','assets/multimodal-runtime-build.json','assets/priming-runtime-build.json','assets/scif-transfer-build.json')) {
     $path=Join-Safe $root $name
     if (!(Test-Path -LiteralPath $path)) { throw ('Required source file missing: '+$name) }
     $sources+=@([pscustomobject]@{path=$path;name=('PhiChat-'+$version+'/'+$name)})
@@ -94,6 +95,12 @@ if ($ModelDirectory) {
                 if ($relative -notmatch '^assets/model-provenance/[a-z0-9_.-]+\.json$') { throw 'Invalid model evidence path.' }
                 $entries+=@([pscustomobject]@{path=(Join-Safe $root $relative);name=$relative})
             }
+        }
+    }
+    if (@($models | Where-Object { $_.id -clike 'huihui-step3-*' }).Count) {
+        foreach ($name in @('LICENSE','HUIHUI-PROVENANCE.txt','PROVENANCE.txt')) {
+            $relative='licenses/step3/'+$name
+            $entries+=@([pscustomobject]@{path=(Join-Path $root $relative);name=$relative})
         }
     }
     New-PhiZip ('PhiChat-'+$version+'-'+$ModelPackName+'.zip') $entries

@@ -21,7 +21,7 @@ try {
     }
     $script:connection=[pscustomobject]@{project_dir=($current+'/app')}
     $script:data=$current+'/app/data'
-    $model=Get-ProjectorProfile (Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m')
+    $model=Get-ProjectorProfile (Get-ModelProfile $AppRoot 'huihui-step3-vl-10b-abliterated-q5_k_m')
     $source=Join-Path ($previous+'/app') $model.model_path
     Write-Utf8 $source 'GGUFfixture matching projector'
     $file=Get-Item -LiteralPath $source
@@ -51,7 +51,7 @@ try {
     }
     # A new installation already gets its projector from Setup. Missing decoder
     # weights still use the existing immutable automatic download path.
-    $decoder=Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m'
+    $decoder=Get-ModelProfile $AppRoot 'huihui-step3-vl-10b-abliterated-q5_k_m'
     $decoder.file_size_bytes=$file.Length; $decoder.sha256=$model.sha256
     function Receive-ModelDownload {
         param($Uri,$Path,$TotalBytes)

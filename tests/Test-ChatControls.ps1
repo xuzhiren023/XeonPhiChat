@@ -15,6 +15,8 @@ $script:nextProbe=[DateTime]::UtcNow.AddHours(1)
 $script:loadedModel=[pscustomobject]@{serial='TEST';resources=[pscustomobject]@{context_tokens=1000;batch_tokens=128}}
 $script:loadedSelection=$script:selectedModel
 function Start-PhiBackendJob {
+    param($AppRoot,$DataDirectory,$Request)
+    $script:lastSubmittedRequest=$Request
     $directory=Join-Path $Scratch ([Guid]::NewGuid().ToString('N')); $null=New-Item -ItemType Directory $directory
     $process=[pscustomobject]@{HasExited=$false;ExitCode=0}; $process | Add-Member ScriptMethod Dispose {}
     return [pscustomobject]@{process=$process;directory=$directory}
@@ -37,7 +39,10 @@ Check ($first.title -ceq 'My renamed chat') 'cancelled rename leaves the title u
 $rejected=$false; try { Rename-ChatSession $first '   ' } catch { $rejected=$true }
 Check $rejected 'empty titles are rejected'
 Rename-ChatSession $first 'New chat'
+$controls.ThinkingDepth.SelectedValue='light'
+Check ($first.thinking_depth -ceq 'light' -and $controls.ThinkingDepth.Visibility -eq 'Visible') 'thinking picker updates this chat preference'
 $controls.Input.Text='A different automatic title'; Update-ActionControls; Start-JobAction 'Chat'
+Check ($script:lastSubmittedRequest.thinking_depth -ceq 'light' -and !$controls.ThinkingDepth.IsEnabled -and $script:lastSubmittedRequest.output_tokens -eq 0) 'Send snapshots thinking preference without imposing a reply cap'
 Check ($first.title -ceq 'New chat' -and $first.locked) 'an explicitly chosen New chat name survives first-prompt naming'
 $job=$script:active
 Write-JsonFile (Join-Path $job.dir 'prompt-budget.json') ([pscustomobject]@{context_tokens=1000;prompt_tokens=200;omitted_pairs=2})
@@ -62,9 +67,11 @@ Check ($controls.StatisticsPanel.Visibility -eq 'Visible') 'statistics button op
 $controls.Statistics.RaiseEvent((New-Object Windows.RoutedEventArgs([Windows.Controls.Button]::ClickEvent)))
 Check ($controls.StatisticsPanel.Visibility -eq 'Collapsed') 'statistics button closes the panel'
 Reset-ChatConversation; $second=$script:conversation
+Check ($second.thinking_depth -ceq 'standard') 'new chat starts with standard thinking'
 Sample 14 222
 Check ($controls.StatsOutput.Text -ceq '--' -and $controls.ContextLabel.Text -ceq '0%') 'background telemetry does not leak into another chat'
 Select-Conversation $first
+Check ($controls.ThinkingDepth.SelectedValue -ceq 'light') 'chat navigation restores its thinking preference'
 Check ($controls.StatsOutput.Text -ceq '22') 'returning to a chat restores its own statistics'
 $status=[pscustomobject]@{state='done';result=[pscustomobject]@{generation_tokens=30;generation_tps=3.25;prompt_tps=15.5;context=1000}}
 Update-JobInsights $job $status $true; Update-ChatInsights

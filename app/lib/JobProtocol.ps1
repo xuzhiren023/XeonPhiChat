@@ -10,6 +10,7 @@ function Assert-PhiJobProtocol($Request) {
         throw 'Images belong to individual user messages.'
     }
     if ($Request.action -ceq 'Chat') {
+        $null=Get-ThinkingDepth $Request
         foreach ($message in @($Request.messages)) {
             if ($message.PSObject.Properties['attachments'] -or
                 $message.content -isnot [string]) {

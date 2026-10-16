@@ -92,6 +92,9 @@ try {
     Install-PhiAssets $fixture '' $install
     $prime=@($manifest.assets | Where-Object kind -CEQ 'priming')[0]
     Check (Test-Path -LiteralPath (Join-Path $install ('app/data/priming-runtime/payload-'+$prime.sha256+'/'+$prime.file))) 'priming dependency installs into its own pinned cache'
+    foreach ($scif in @($manifest.assets | Where-Object kind -CEQ 'scif-transfer')) {
+        Check (Test-Path -LiteralPath (Join-Path $install ('app/data/scif-transfer/payload-'+$scif.sha256+'/'+$scif.file))) ('SCIF dependency installs without a compiler: '+$scif.file)
+    }
     $vision=@($manifest.assets | Where-Object kind -CEQ 'vision-projector')[0]
     $visionFile=Get-Item -LiteralPath (Join-Path $install ('app/'+$vision.model_path))
     $visionReceipt=Read-Json (Join-Path $install ('app/data/model-'+$vision.model_id+'.json'))

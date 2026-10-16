@@ -52,5 +52,6 @@
   "experts_per_token": 4,
   "provenance_file": "assets/model-provenance/lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k.json",
   "required_runtime_feature": "knc-text-image-r1",
-  "required_runtime_version": "1.4.2"
+  "required_runtime_version": "1.4.2",
+  "thinking_depth": "prompt"
 }

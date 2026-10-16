@@ -8,5 +8,7 @@ The d57e0e6 rebase also retains the fork's [llama.cpp MIT license](licenses/llam
 
 Intel MPSS and Windows/OpenSSH system tools are supplied by the user's installed driver/Windows features. They are not copied from the developer PC into this release. Model weights are separate assets governed by upstream model licenses; see `docs/MODELS.md` and the pinned profiles.
 
-The 1.6.5 Windows installer includes the Step3 Q6_K vision projector under [Apache 2.0](licenses/step3/LICENSE). Its original model attribution and quantization changes are recorded in [projector provenance](licenses/step3/PROVENANCE.txt). Other model weights remain separate downloads or optional packs.
+The Windows installer includes the Step3 Q6_K vision projector under [Apache 2.0](licenses/step3/LICENSE). Its original model attribution and quantization changes are recorded in [projector provenance](licenses/step3/PROVENANCE.txt). The optional Huihui Step3-VL Q5_K_M weights retain the same Apache 2.0 license: StepFun supplies the base model, huihui-ai the abliterated checkpoint, and 2lains the GGUF quantization. Their pinned lineage is recorded in `assets/model-provenance/huihui-step3-vl-10b-q5_k_m.json`. Other model weights remain separate downloads or optional packs.
+
+The SCIF transfer helper sources are first-party Phi Chat code. They call the installed Intel MPSS API without copying Intel SDK headers, libraries or driver binaries into the repository or release.
 

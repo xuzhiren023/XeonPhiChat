@@ -1,20 +1,20 @@
 # Phi Chat
 
-Phi Chat 1.6.8 is a Windows desktop chat app for Intel Xeon Phi **Knights Corner** cards. It runs inference on the card, with recent chats, rename/delete, streaming responses, collapsible model reasoning, live token statistics, context usage, image attachments with drag-and-drop, and a Stop button that leaves the chat usable.
+Phi Chat 1.6.9 is a Windows desktop chat app for Intel Xeon Phi **Knights Corner** cards. It runs inference on the card, with recent chats, rename/delete, streaming responses, collapsible model reasoning, live token statistics, context usage, image attachments with drag-and-drop, and a Stop button that leaves the chat usable.
 
 This is the independent application repository. It has no runtime dependency on Project BluePower, a previous Phi Chat installation, Python, Git, WSL, or a compiler.
 
-Version 1.6.8 restores a previously accepted runtime after a card reboot with a short startup check, instead of repeating its numerical qualification suite. Connect and Restore runtime show progress and report cancellation clearly; Load model also restores a missing runtime automatically. This update has passed offline checks; hardware validation is pending. Setup keeps its result visible and reuses the saved configuration. Step3 loading, the optimized decode3 runtime, resident priming and image-embedding reuse remain available on 7120P. See [runtime details](docs/DECODE3.md) and [validation](docs/VALIDATION.md).
+Version 1.6.9 replaces official Step3 with **Huihui Step3-VL 10B Abliterated Q5_K_M** and uploads models, projectors, runtime archives and pictures through **SCIF DMA**, with automatic SCP fallback. The same path supports direct motherboard PCIe and Thunderbolt enclosures through the installed MPSS driver. Native 7120P checks passed for exact-byte DMA transfer, fallback, cancellation and Huihui image chat. Thinking models also offer Light, Standard and Extended preferences. Direct motherboard attachment uses the same SCIF path but has not been physically tested in this release. See [transfer details](docs/SCIF-TRANSFER.md) and [validation](docs/VALIDATION.md).
 
 ## Install
 
 1. Install your KNC card and its **full Intel MPSS Windows driver package**, including the virtual network driver, tools and boot filesystem. Supported profiles are 3120A and 7120P. Knights Landing is not supported. Use Windows 10 1803 or later with Windows PowerShell 5.1 and working MPSS drivers.
-2. Download **`PhiChat-1.6.8-Windows.zip`**, extract it to a folder, and double-click **`Setup.cmd`**. Use the Windows installer ZIP, not the source-only ZIP.
+2. Download **`PhiChat-1.6.9-Windows.zip`**, extract it to a folder, and double-click **`Setup.cmd`**. Use the Windows installer ZIP, not the source-only ZIP.
 3. If a completed Phi Chat installation exists, setup copies its saved connection into the new version without reconfiguring the card, then opens the app. The setup window stays open until you press a key. On a fresh PC, accept the Windows UAC prompt with the same Windows account. Setup displays the dedicated Phi adapter, proposed addresses, and installation folder. Save other work running on the card, then type `YES` to initialize it.
 4. On a fresh PC, setup installs the Windows OpenSSH client if missing, configures the dedicated Phi adapter, creates fresh SSH keys, backs up and rebuilds the MPSS boot image, and boots the card. It verifies the card identity and native runtime, then downloads and checks the first model (LFM2.5 Q5_K_M, about 2 GB).
-5. Open the **Phi Chat 1.6.8** desktop shortcut. Connect, load a model, and start chatting. Model downloads and runtime restoration are handled by the app.
+5. Open the **Phi Chat 1.6.9** desktop shortcut. Connect, load a model, and start chatting. Model downloads and runtime restoration are handled by the app.
 
-Internet access is needed for a missing Windows SSH feature and the initial model download. The Windows ZIP includes the 1.9 GB Step3 vision component. Allow disk space for the ZIP, extracted dependencies, model downloads, and a backup of the MPSS boot image. Install on a local NTFS disk. The default installation is `%LOCALAPPDATA%\Programs\PhiChat\1.6.8`.
+Internet access is needed for a missing Windows SSH feature and the initial model download. The Windows ZIP includes the 1.9 GB Step3 vision component. Allow disk space for the ZIP, extracted dependencies, model downloads, and a backup of the MPSS boot image. Install on a local NTFS disk. The default installation is `%LOCALAPPDATA%\Programs\PhiChat\1.6.9`.
 
 The installer does not ship another person's SSH keys, saved chats, host configuration, model approvals, Intel drivers, or Windows system tools. Your existing Project BluePower/Phi Chat copies remain in place.
 
@@ -26,9 +26,13 @@ The existing optimized LFM/Llama and Gaston packs remain compatible. Gaston is l
 
 ## Chat with images
 
-In a new chat, select **LFM2.5-VL 3B Q5_K_M**, then **Load model**. Its language weights and matching vision component download automatically (about 2.8 GB total). For **Step3-VL 10B Q5_K_M**, click **Load model**: the matching vision component is already included, and missing language weights download automatically (about 5.9 GB). Existing weights from previous Phi Chat versions are reused without a separate import. Click **+** or drag PNG/JPEG/BMP pictures into the window. Previews can be removed before sending or opened larger by clicking them. You can send an image without typing a message.
+In a new chat, select **LFM2.5-VL 3B Q5_K_M**, then **Load model**. Its language weights and matching vision component download automatically (about 2.8 GB total). For **Huihui Step3-VL 10B Abliterated Q5_K_M**, click **Load model**: the matching vision component is already included, and missing language weights download automatically (about 5.9 GB). Existing weights from previous Phi Chat versions are reused without a separate import. Click **+** or drag PNG/JPEG/BMP pictures into the window. Previews can be removed before sending or opened larger by clicking them. You can send an image without typing a message.
 
 Images stay with their original conversation and are replayed for follow-up questions. Image tokens count toward the context meter. The runtime accepts up to four images in one invocation; older complete turns are omitted when needed. Text-only models remain text-only. See [image support and memory requirements](docs/IMAGES.md).
+
+## Thinking depth
+
+Choose **Light**, **Standard** or **Extended** below the composer for a thinking model. This model-guided preference is saved per chat and applies to the next response without reloading. Token and context allocation stay automatic. See [thinking controls](docs/THINKING.md) for model support and limits.
 
 ## Source and releases
 
@@ -43,11 +47,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Host.ps1
 # Build the source ZIP
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Release.ps1 -SourceOnly
 
-# Build the Windows installer using the three pinned native payloads
+# Build the Windows installer using all pinned payloads
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Release.ps1 -AssetsDirectory C:\PhiChatAssets
 ```
 
-The four runtime payloads and the Step3 Q6_K projector, with their exact sizes and SHA-256 values, are listed in [runtime-manifest.json](assets/runtime-manifest.json). Place all five files in `assets/payloads` before building the Windows installer. The projector stays outside Git and the source-only ZIP. `-ModelDirectory` can add a separate local model pack from a folder containing the manifest's `models/...` paths. Use `-ModelsOnly` to package weights without rebuilding the Windows ZIP, `-ModelIds` to select an exact subset, and `-ModelPackName` to name the pack (default `LocalModels`). Every ZIP member is read back and hash-checked. The source-only checkout needs these release assets before installation; it does not silently fetch an unpinned runtime.
+The four runtime payloads, Step3 Q6_K projector and two SCIF helpers, with their exact sizes and SHA-256 values, are listed in [runtime-manifest.json](assets/runtime-manifest.json). Place all seven files in `assets/payloads` before building the Windows installer. The projector stays outside Git and the source-only ZIP. `-ModelDirectory` can add a separate local model pack from a folder containing the manifest's `models/...` paths. Use `-ModelsOnly` to package weights without rebuilding the Windows ZIP, `-ModelIds` to select an exact subset, and `-ModelPackName` to name the pack (default `LocalModels`). Every ZIP member is read back and hash-checked. The source-only checkout needs these release assets before installation; it does not silently fetch an unpinned runtime.
 
 The source repository is [xuzhiren023/XeonPhiChat](https://github.com/xuzhiren023/XeonPhiChat). Installer and model ZIPs are separate release assets; the GitHub source download does not include those payloads.
 

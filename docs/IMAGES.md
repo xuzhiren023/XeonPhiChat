@@ -1,12 +1,12 @@
 # Images and the multimodal runtime
 
-Phi Chat 1.6.6 uses the optimized [decode3 resident runtime](DECODE3.md), based on `61e9799`, on 7120P for all nine catalog models. LFM2.5-VL 3B and Step3-VL accept pictures. Gaston and the other LFM2/Llama models accept text only. The 3120A retains its pinned `d57e0e6` text runtime; no fixed and qualified multimodal build was supplied for that card.
+Phi Chat 1.6.9 uses the optimized [decode3 resident runtime](DECODE3.md), based on `61e9799`, on 7120P for all nine catalog models. LFM2.5-VL 3B and Step3-VL accept pictures. Gaston and the other LFM2/Llama models accept text only. The 3120A retains its pinned `d57e0e6` text runtime; no fixed and qualified multimodal build was supplied for that card.
 
 ## Use
 
 Select **LFM2.5-VL 3B Q5_K_M** and click **Load model** for automatic installation of the official Q5_K_M decoder and matching F16 projector (about 2.8 GB total). It uses the model's ChatML template without a thinking prefix. The artifacts are pinned to LiquidAI/LFM2.5-VL-3B-GGUF revision `6f730e9a2c454e8af9adc29db58e638e01e5957f`.
 
-In Phi Chat 1.6.6, select **Step3-VL 10B Q5_K_M** and click **Load model**. Setup installs its matching 1.9 GB Q6_K projector from the Windows ZIP. Load reuses language weights and projectors from earlier installations when available; otherwise it downloads the pinned 5.9 GB language weights. No separate vision-pack import is needed.
+In Phi Chat 1.6.9, select **Huihui Step3-VL 10B Abliterated Q5_K_M** and click **Load model**. Setup installs its matching 1.9 GB Q6_K projector from the Windows ZIP. Load downloads the pinned 5.9 GB Huihui language weights automatically, or uses the optional Huihui model pack. Earlier official Step3 weights are kept as distinct files and never substituted. The existing projector can be reused. No separate vision-pack import is needed.
 
 Click **+** or drop pictures into the window. Supported formats are PNG, JPEG and BMP, up to 32 MiB per source file. Larger dimensions are reduced to the runtime's 4096-pixel side limit. Images are copied into the app's session store; the original file is untouched. Click a thumbnail to see the full image or its **×** button to remove it before sending. An image without text sends “Describe this image.”
 
@@ -29,3 +29,5 @@ The older seanbailey projector has obsolete downsampler tensor names and cannot 
 The Q6_K conversion places 189 eligible matrices on the runtime's optimized K-quant paths. Its 475 F32 tensors and three F16 tensors retain position embeddings, normalization, biases and convolution weights. Q8 vision matrices use generic kernels in this build, so a Q8 projector is not the selected release artifact. Image encoding runs before token generation and is shown as **Processing images**; the resident runtime can reuse embeddings for identical retained pictures while the model, projector and preprocessing settings remain unchanged.
 
 In the original 1.6.0 Step3 test on 7120P, the small color-image check took about eight minutes to its first response text, then generated at about 1.18 tokens/s. See VALIDATION.md for later runtime measurements. The runtime still has generic attention/convolution work. The app stays responsive and Stop can interrupt image processing.
+
+Huihui changes the text component of Step3. The replacement GGUF is pinned to [2lains revision 0f521a92](https://huggingface.co/2lains/Huihui-Step3-VL-10B-abliterated-GGUF/tree/0f521a92fbde66298e01a38ceb122f15b933923b); its complete hash and offline tensor/tokenizer comparison are recorded in `assets/model-provenance/huihui-step3-vl-10b-q5_k_m.json`. The [upstream Huihui card](https://huggingface.co/huihui-ai/Huihui-Step3-VL-10B-abliterated/tree/82c3e704ed330acfcc37a1b01b5fde548ca29679) identifies the text-only change. A native 7120P smoke test correctly identified a red square and blue circle in a 448 x 336 image. The first reply took 210.6 seconds; repeating the image took 64.3 seconds with a vision-cache hit. This validates this pairing on that fixture, not broad visual accuracy.

@@ -26,7 +26,7 @@ function New-MessageText([string]$Text,[string]$Color='#ECECEC') {
     return $body
 }
 function Add-ChatBubble([string]$Role,[string]$Text,[object[]]$Images=@()) {
-    $item=[pscustomobject]@{role=$Role;text=$Text;images=$Images;state=$(if ($Role -ceq 'assistant') {'streaming'} else {'done'});starts_thinking=($script:selectedModel -like 'lfm2.5-2.6b*' -or $script:selectedModel -like 'step3*')}
+    $item=[pscustomobject]@{role=$Role;text=$Text;images=$Images;state=$(if ($Role -ceq 'assistant') {'streaming'} else {'done'});starts_thinking=(Test-PromptStartsThinking (Get-ModelProfile $script:appRoot $script:selectedModel))}
     $null=$script:conversation.bubbles.Add($item)
     $script:liveBubble=Render-ChatBubble $item
     return $item

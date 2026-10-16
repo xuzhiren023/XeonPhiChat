@@ -5,6 +5,7 @@ $root=Split-Path $PSScriptRoot -Parent
 $checks=0
 function Check([bool]$Value,[string]$Message) { $script:checks++; if (!$Value) { throw ('FAIL: '+$Message) }; Write-Output ('PASS: '+$Message) }
 function Read([string]$Relative) { Get-Content -LiteralPath (Join-Path $root $Relative) -Raw | ConvertFrom-Json }
+Check (([IO.File]::ReadAllText((Join-Path $root 'VERSION')).Trim()) -ceq ([IO.File]::ReadAllText((Join-Path $root 'app/VERSION')).Trim())) 'installer and application version stamps agree'
 $manifest=Read 'assets/optimized-models.json'
 foreach ($entry in $manifest.models) {
     if ($entry.PSObject.Properties['kind'] -and $entry.kind -ceq 'vision-projector') {
@@ -15,8 +16,15 @@ foreach ($entry in $manifest.models) {
 }
 $release=Read 'assets/runtime-manifest.json'
 $bundled=@($release.assets | Where-Object kind -CEQ 'vision-projector')
-$step=Read 'app/config/models/step3-vl-10b-q5_k_m.yaml'
+$step=Read 'app/config/models/huihui-step3-vl-10b-abliterated-q5_k_m.yaml'
 Check ($bundled.Count -eq 1 -and $step.projector.bundled -and $bundled[0].sha256 -ceq $step.projector.sha256 -and $bundled[0].bytes -eq $step.projector.file_size_bytes -and $bundled[0].file -ceq $step.projector.filename -and $bundled[0].model_id -ceq ($step.id+'-projector')) 'Windows release includes the exact projector expected by Step3 Load'
+$huihui=Read 'assets/model-provenance/huihui-step3-vl-10b-q5_k_m.json'
+Check ($step.repository -ceq $huihui.language_repo -and $step.revision -ceq $huihui.language_revision -and $step.sha256 -ceq $huihui.sha256 -and $step.file_size_bytes -eq $huihui.bytes -and !$huihui.native_execution) 'Huihui immutable weight pin matches offline provenance, without native acceptance'
+$scif=Read 'app/config/scif-transfer.json'
+foreach ($asset in $scif.assets) {
+    $shipped=@($release.assets | Where-Object file -CEQ $asset.file)
+    Check ($shipped.Count -eq 1 -and $shipped[0].sha256 -ceq $asset.sha256 -and $shipped[0].bytes -eq $asset.bytes) ('SCIF app and installer pins agree: '+$asset.file)
+}
 $id='lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k'
 $gaston=@($manifest.models | Where-Object id -CEQ $id)[0]
 $model=Read ('app/config/models/'+$id+'.yaml')

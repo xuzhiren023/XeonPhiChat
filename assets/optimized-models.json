@@ -25,15 +25,25 @@
       "audit_file": "assets/model-provenance/lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k.audit.json"
     },
     {
-      "id": "step3-vl-10b-q5_k_m-projector",
+      "id": "huihui-step3-vl-10b-abliterated-q5_k_m-projector",
       "kind": "vision-projector",
-      "model_id": "step3-vl-10b-q5_k_m",
+      "model_id": "huihui-step3-vl-10b-abliterated-q5_k_m",
       "label": "Step3-VL vision projector Q6_K",
       "path": "models/uniform-q5-k/mmproj-Step3-VL-10b-61e9799-Q6_K.gguf",
       "bytes": 1893755040,
       "sha256": "b4d777752a55a73c8b518dd35b1c34e0bf2324a6d66059be3b7da3d5a89a7bc8",
       "runtime_status": "experimental_step3vl",
       "native_acceptance": false
+    },
+    {
+      "id": "huihui-step3-vl-10b-abliterated-q5_k_m",
+      "label": "Huihui Step3-VL 10B Abliterated Q5_K_M",
+      "path": "models/uniform-q5-k/Huihui-Step3-VL-10B-Q5_K_M.gguf",
+      "bytes": 5851113152,
+      "sha256": "a27779bac5bf94bc7b5e61748448bc204043ec5efda91b8b1a8d2abe9dafd7e1",
+      "runtime_status": "experimental_step3vl",
+      "native_acceptance": false,
+      "provenance_file": "assets/model-provenance/huihui-step3-vl-10b-q5_k_m.json"
     }
   ]
 }

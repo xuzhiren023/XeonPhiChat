@@ -6,6 +6,7 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'Context.ps1')
 . (Join-Path $PSScriptRoot 'Images.ps1')
 . (Join-Path $PSScriptRoot 'Vision.ps1')
+. (Join-Path $PSScriptRoot 'Thinking.ps1')
 . (Join-Path $PSScriptRoot 'Forecast.ps1')
 . (Join-Path $PSScriptRoot 'CapturedProcess.ps1')
 if (!('PhiChat.LiveCapture' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'LiveText.cs') }
@@ -47,7 +48,7 @@ function Get-ModelProfile([string]$Root,[string]$Name) {
 function Assert-ModelRuntime($Model) {
     if ((($Model.id -ceq 'lfm2.5-8b-a1b-uncensored-gaston-matrices-q5_k' -and $Model.architecture -ceq 'lfm2moe') -or
          ($Model.id -ceq 'lfm2.5-vl-3b-q5_k_m' -and $Model.architecture -ceq 'lfm2' -and (Test-ImageModel $Model)) -or
-         ($Model.id -ceq 'step3-vl-10b-q5_k_m' -and $Model.architecture -ceq 'qwen3')) -and
+         ($Model.id -ceq 'huihui-step3-vl-10b-abliterated-q5_k_m' -and $Model.architecture -ceq 'qwen3')) -and
         $Model.required_source_commit -ceq '61e97998bf49c2d425563920b7e83e52b5ae57a6' -and
         $Model.required_runtime_feature -ceq 'knc-text-image-r1' -and $Model.availability -ceq 'experimental_native') { return }
     if ($Model.architecture -cin @('lfm2moe','qwen3')) { throw 'This model requires its pinned multimodal runtime profile.' }
@@ -93,7 +94,7 @@ function Get-ModelConversation([hashtable]$Sessions,[string]$Name) {
     if (!$Sessions.ContainsKey($Name)) { $Sessions[$Name]=New-ModelConversation }
     return $Sessions[$Name]
 }
-function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputTokens=128,[switch]$LatestOnly) {
+function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputTokens=128,[switch]$LatestOnly,[string]$ThinkingDepth='standard') {
     Assert-ModelRuntime $Model
     if ($OutputTokens -lt 0) { throw 'Invalid output token allocation.' }
     if ($Messages.Count -lt 1 -or $Messages[-1].role -cne 'user') { throw 'The last message must be from the user.' }
@@ -107,7 +108,8 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     if ($images.Count -gt 4) { Stop-ChatInput 'This runtime accepts up to four images per prompt.' }
     if ($images.Count -and !(Test-ImageModel $Model)) { Stop-ChatInput 'This model accepts text only. Choose LFM2.5-VL or Step3-VL for images.' }
     $sb = New-Object Text.StringBuilder
-    $entries = @([pscustomobject]@{role='system';content=$System}) + @($Messages[$start..($Messages.Count-1)])
+    $effectiveSystem=Get-ThinkingSystem $Model $System $ThinkingDepth
+    $entries = @([pscustomobject]@{role='system';content=$effectiveSystem}) + @($Messages[$start..($Messages.Count-1)])
     if ($Model.architecture -ceq 'llama' -and (Test-ModernTextModel $Model) -and $Model.chat_template -ceq 'gguf_metadata') {
         # Pinned checkpoint text-only Jinja defaults: no tools and fixed date.
         $null=$sb.Append("<|begin_of_text|><|start_header_id|>system<|end_header_id|>`n`nCutting Knowledge Date: December 2023`nToday Date: 30 Dec 2025`n`n"+$System.Trim()+'<|eot_id|>')
@@ -136,7 +138,7 @@ function New-ChatPrompt($Model,[object[]]$Messages,[string]$System,[int]$OutputT
     if ($text.IndexOf([char]0) -ge 0) { Stop-ChatInput 'The message contains a NUL character. Remove it and send again.' }
     $bytes=[Text.Encoding]::UTF8.GetByteCount($text)
     if ($bytes -gt 262144) {
-        if (!$LatestOnly -and $Messages.Count -gt 1) { return New-ChatPrompt $Model $Messages $System $OutputTokens -LatestOnly }
+        if (!$LatestOnly -and $Messages.Count -gt 1) { return New-ChatPrompt $Model $Messages $System $OutputTokens -LatestOnly -ThinkingDepth $ThinkingDepth }
         Stop-ChatInput 'The newest message exceeds the 256 KiB input safety limit. Split it into smaller messages.'
     }
     # Bytes are only a sufficient-fit shortcut for these byte-fallback

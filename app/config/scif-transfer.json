@@ -1,0 +1,21 @@
+{
+  "protocol": 1,
+  "transport": "scif-dma",
+  "fallback": "scp",
+  "window_bytes": 67108864,
+  "native_validation": "7120P transfer/readback, cancellation and SCP fallback passed; direct-slot physical testing pending",
+  "assets": [
+    {
+      "file": "phichat-scif-send.exe",
+      "kind": "scif-transfer",
+      "bytes": 10752,
+      "sha256": "70c29a149f137302756d7ec0af08958983d9450de6ca4b4e63dc9344544cbbfe"
+    },
+    {
+      "file": "phichat-scif-recv",
+      "kind": "scif-transfer",
+      "bytes": 21946,
+      "sha256": "112c520f03da94272f565a6ba71b8f734ad33437116bdc43695a11f1cb420f49"
+    }
+  ]
+}

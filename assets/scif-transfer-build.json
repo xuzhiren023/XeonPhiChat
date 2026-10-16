@@ -1,0 +1,42 @@
+{
+  "version": "1.6.9",
+  "status": "native_smoke_tested_7120p",
+  "hardware_validation": "2026-10-16: MPSS 3.7.53857.1, PCIe x4 5 GT/s; see docs/VALIDATION.md",
+  "protocol": 1,
+  "host": {
+    "target": "Windows x64 .NET Framework 4",
+    "driver_dependency": "Installed MPSS uSCIF.dll, loaded from System32",
+    "command": "tools/scif-transfer/Build-Sender.ps1 -OutputPath assets/payloads/phichat-scif-send.exe"
+  },
+  "card": {
+    "target": "K1OM EM_181",
+    "compiler": "MPSS 3.8.6 GCC 5.1.1",
+    "dependencies": [
+      "libscif.so.0 (SCIF_0.0)",
+      "libc.so.6 (GLIBC_2.14)"
+    ],
+    "command": "bash tools/scif-transfer/build-receiver.sh"
+  },
+  "sources": {
+    "tools/scif-transfer/build-receiver.sh": "454dfd9a1d673fb7eaefbf96243af56af7b4f0c62721454cb6bed4c5142a0619",
+    "tools/scif-transfer/Build-Sender.ps1": "94e5f00adf90bb8a95ebb6ef17623686c68ae572a07b550aa593ed20d6ecf64d",
+    "tools/scif-transfer/receiver.c": "776bc8ef0f4e17961a25a3e53fdd2f120c9a8a6ba337f5bb065619ccd19804bd",
+    "tools/scif-transfer/ScifSend.cs": "835d5ef47ead0cf2e4aa107117c820956f7e92fbec53926bd72e9c65625817f1",
+    "tools/scif-transfer/tests/fake-scif.c": "be866df5c6fcbeb52a15c001ee4300da4158d68e5ce3d1310faed4c3b8ddec73",
+    "tools/scif-transfer/tests/test-receiver.py": "680bb3f3cdaa8d7aa1cc04c5c55329c7414b765f74866e4e334bc4fb49f53f02"
+  },
+  "assets": [
+    {
+      "file": "phichat-scif-send.exe",
+      "kind": "scif-transfer",
+      "bytes": 10752,
+      "sha256": "70c29a149f137302756d7ec0af08958983d9450de6ca4b4e63dc9344544cbbfe"
+    },
+    {
+      "file": "phichat-scif-recv",
+      "kind": "scif-transfer",
+      "bytes": 21946,
+      "sha256": "112c520f03da94272f565a6ba71b8f734ad33437116bdc43695a11f1cb420f49"
+    }
+  ]
+}

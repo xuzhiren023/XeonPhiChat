@@ -1,6 +1,6 @@
 # Models
 
-Phi Chat 1.6.1 enables all nine pinned catalog models on 7120P through the shared multimodal runtime. LFM2.5-VL and Step3-VL accept images; the other seven accept text. Gaston is explicitly labeled **Text only**. The 3120A retains its previous runtime and eligible text models. TinyDolphin keeps its ChatML template and is distinct from the retired Dolphin-phi2 and TinyLlama models.
+Phi Chat 1.6.9 enables all nine pinned catalog models on 7120P through the shared multimodal runtime. LFM2.5-VL and Step3-VL accept images; the other seven accept text. Gaston is explicitly labeled **Text only**. The 3120A retains its previous runtime and eligible text models. TinyDolphin keeps its ChatML template and is distinct from the retired Dolphin-phi2 and TinyLlama models.
 
 Model profiles pin repositories, revisions, complete file sizes and SHA-256 values. Load downloads supported upstream language weights automatically. Generated Q5_K weights and the generated Q6_K vision projector use separately imported packs. [Image instructions](IMAGES.md).
 
@@ -21,7 +21,7 @@ These are generated quantizations, not upstream Hugging Face filenames. They are
 Model licenses belong to their upstream authors; app/kernel code licenses do not grant rights to model weights. The complete model profiles include `repository`, `revision` and `upstream_repository` provenance. Review the license/model card at the pinned repository before redistributing weights. The local pack is assembled from the existing approved local models; no public upload occurs during packaging.
 The first two models remain available in `PhiChat-1.5.1-OptimizedModels.zip`, compatible with 1.6.1. Gaston uses the separate `PhiChat-1.5.2-LFM2.5-8B-A1B-Gaston-Q5_K.zip` and runs text conversations through the same shared engine. All expert weights are included in memory accounting. [Gaston details](LFM2-MOE.md).
 
-The Step3-VL language model is 5,851,113,280 bytes. Its matching Q6_K projector is 1,893,755,040 bytes, generated from the pinned F16 projector. Both are required for images; the projector is included in the Phi Chat 1.6.6 Windows installer. Load model automatically reuses existing files or downloads missing language weights; no separate Step3 pack is required. Step3-VL is Apache-2.0; see the [upstream model card](https://huggingface.co/stepfun-ai/Step3-VL-10B). Full artifact identities and conversion provenance are in the app profile.
+The Huihui Step3-VL abliterated Q5_K_M language model is 5,851,113,152 bytes and replaces the official Step3 entry. Its matching Q6_K projector is 1,893,755,040 bytes, generated from the pinned F16 projector. Both are required for images; the projector is included in the Phi Chat 1.6.9 Windows installer. Load model automatically reuses existing files or downloads missing language weights; no separate Step3 pack is required. Step3-VL is Apache-2.0; see the [upstream model card](https://huggingface.co/huihui-ai/Huihui-Step3-VL-10B-abliterated). Full artifact identities and conversion provenance are in the app profile.
 
 To import just Gaston after extracting its ZIP:
 

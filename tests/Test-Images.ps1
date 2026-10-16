@@ -21,7 +21,7 @@ Check ((Assert-StoredImage $Scratch $im) -and $im.width -eq 120 -and $im.height 
     $badSize=$im.PSObject.Copy(); $badSize.bytes++
     Reject {Assert-StoredImage $Scratch $badSize} 'truncated attachment is still rejected without hashing'
 }
-$model=Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m'
+$model=Get-ModelProfile $AppRoot 'huihui-step3-vl-10b-abliterated-q5_k_m'
 $messages=@([pscustomobject]@{role='user';content='Look';images=@($im)},[pscustomobject]@{role='assistant';content='A picture'},[pscustomobject]@{role='user';content='What color?'})
 $prompt=New-ChatPrompt $model $messages '' 0
 Check ($prompt.images.Count -eq 1 -and $prompt.images[0].id -ceq $im.id -and ([regex]::Matches($prompt.text,'<__media__>')).Count -eq 1) 'follow-up replays image with its original user turn'

@@ -1,0 +1,17 @@
+Optional model pack: Huihui-Step3-VL-10B-Q5_K_M.gguf
+License: Apache License, Version 2.0 (see accompanying LICENSE)
+
+Base model: Step3-VL-10B by StepFun
+Abliteration: huihui-ai/Huihui-Step3-VL-10B-abliterated
+https://huggingface.co/huihui-ai/Huihui-Step3-VL-10B-abliterated/tree/82c3e704ed330acfcc37a1b01b5fde548ca29679
+Huihui states that only the text component was modified, not the image component.
+
+GGUF quantization: 2lains/Huihui-Step3-VL-10B-abliterated-GGUF
+https://huggingface.co/2lains/Huihui-Step3-VL-10B-abliterated-GGUF/tree/0f521a92fbde66298e01a38ceb122f15b933923b
+Quantization: Q5_K_M
+Bytes: 5851113152
+SHA-256: a27779bac5bf94bc7b5e61748448bc204043ec5efda91b8b1a8d2abe9dafd7e1
+
+Phi Chat distributes this pinned quantized file without modifying its bytes.
+The existing Q6_K vision projector is a separate component described in
+PROVENANCE.txt. This model license does not license the Phi Chat application.

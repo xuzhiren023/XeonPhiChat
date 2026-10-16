@@ -25,7 +25,7 @@ $policy=Get-ThreadChoice $p $tiny $runtime
 Check ($policy.prompt -eq 180 -and $policy.mq_rows -eq 4) 'Rebased TinyDolphin starts with the same conservative policy as other models'
 $prompt=New-ChatPrompt $tiny @([pscustomobject]@{role='user';content='hello'}) 'system'
 Check ($prompt.text.StartsWith('<|im_start|>system') -and !$prompt.text.Contains('<|start_header_id|>')) 'TinyDolphin retains ChatML on the new engine'
-$unknown=(Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m').PSObject.Copy(); $unknown.architecture='unsupported'
+$unknown=(Get-ModelProfile $AppRoot 'huihui-step3-vl-10b-abliterated-q5_k_m').PSObject.Copy(); $unknown.architecture='unsupported'
 $reject=$false;try{Get-ModelEngineVariant $unknown}catch{$reject=$true}
 Check $reject 'unsupported architecture cannot acquire an engine pairing'
 $choices=@(Get-ModelChoices $AppRoot $p)

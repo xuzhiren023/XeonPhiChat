@@ -38,5 +38,6 @@
     "normalization": 77,
     "short_convolution": 22
   },
-  "quantizer_commit": "23b0202a189c44a54625aadcb37a946dd1d6278d"
+  "quantizer_commit": "23b0202a189c44a54625aadcb37a946dd1d6278d",
+  "thinking_depth": "prompt"
 }

@@ -9,7 +9,7 @@ from test_job_fixture import ROOT, PWSH
 
 
 @pytest.mark.skipif(not PWSH, reason="PowerShell required")
-@pytest.mark.parametrize("model", ["step3-vl-10b-q5_k_m"])
+@pytest.mark.parametrize("model", ["huihui-step3-vl-10b-abliterated-q5_k_m"])
 @pytest.mark.parametrize("action", ["Load", "Chat"])
 def test_modern_worker_stops_before_card_and_download(tmp_path: Path, model: str, action: str) -> None:
     app = tmp_path / "app"

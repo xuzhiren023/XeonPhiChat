@@ -28,7 +28,7 @@ Reject { New-ChatPrompt $td @([pscustomobject]@{role='user';content=('x'*262145)
 Reject { New-ChatPrompt $td @([pscustomobject]@{role='assistant';content='Hi'}) 'Help' } 'message order enforced'
 Reject { Get-ModelProfile $root '../invalid' } 'model path traversal rejected'
 Reject { Assert-RemoteBase '/root/runtime;reboot' } 'unsafe runtime path rejected'
-$step=Get-ModelProfile $root 'step3-vl-10b-q5_k_m'
+$step=Get-ModelProfile $root 'huihui-step3-vl-10b-abliterated-q5_k_m'
 Assert-ModelRuntime $step
 Reject { Assert-ModelRuntimeFeatures $step ([pscustomobject]@{modern_features=@('shared-multi-quant-v1')}) } 'vision requires multimodal runtime'
 Check ((Get-ThreadChoice $a $lfm).generation -eq 168 -and (Get-ThreadChoice $p $lfm).generation -eq 180) 'modern SKU worker settings preserved'

@@ -1,6 +1,6 @@
 # Frontend conversation state, independent of WPF and card execution.
 function New-ChatSession([string]$Model) {
-    return [pscustomobject]@{id=[Guid]::NewGuid().ToString('N');model=$Model;locked=$false;title='New chat';custom_title=$false;metrics=$null;updated_utc=[DateTime]::UtcNow.ToString('o');messages=(New-Object Collections.ArrayList);bubbles=(New-Object Collections.ArrayList);images=@();draft='';transcript=''}
+    return [pscustomobject]@{id=[Guid]::NewGuid().ToString('N');model=$Model;thinking_depth='standard';locked=$false;title='New chat';custom_title=$false;metrics=$null;updated_utc=[DateTime]::UtcNow.ToString('o');messages=(New-Object Collections.ArrayList);bubbles=(New-Object Collections.ArrayList);images=@();draft='';transcript=''}
 }
 function Lock-ChatSession($Session,[string]$Model,[string]$Prompt) {
     if ($Session.locked -and $Session.model -cne $Model) { throw 'A conversation keeps its original model.' }
@@ -28,6 +28,7 @@ function Read-ChatSessions([string]$Path,[string]$Epoch,[string[]]$Models) {
             foreach ($row in @($saved.sessions)) {
                 if ($row.model -cnotin $Models -or $row.id -notmatch '^[a-f0-9]{32}$') { continue }
                 $session=New-ChatSession $row.model
+                if ($row.PSObject.Properties['thinking_depth'] -and $row.thinking_depth -cin @('light','standard','extended')) {$session.thinking_depth=$row.thinking_depth}
                 foreach ($name in @('id','locked','title','updated_utc','draft','transcript')) { $session.$name=$row.$name }
                 foreach ($name in @('custom_title','metrics','images')) { if ($row.PSObject.Properties[$name]) { $session.$name=$row.$name } }
                 if ($session.metrics -and !$session.metrics.complete) { $session.metrics.complete=$true; $session.metrics.phase='Interrupted' }

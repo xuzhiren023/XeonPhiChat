@@ -18,7 +18,7 @@ $reader=New-Object Xml.XmlNodeReader($xaml)
 $window=[Windows.Markup.XamlReader]::Load($reader)
 $window.Title='Phi Chat '+([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION')).Trim())
 $controls=@{}
-foreach ($name in @('Model','Connect','Load','Restore','LoadStatus','LoadProgress','ResourceInfo','ThermalStatus','MemoryStatus','Speed','Forecast','ChatScroll','ChatMessages','Transcript','Input','Send','Stop','New','Save','Evidence','Status','Recent','Welcome','ConnectionState','Statistics','StatisticsPanel','StatsState','PromptSpeed','StatsElapsed','StatsOutput','StatsPrompt','StatsContext','StatsNote','ContextUsage','ContextArc','ContextFull','ContextLabel','RuntimeStatus','Attach','Attachments','DropOverlay')) { $controls[$name]=$window.FindName($name) }
+foreach ($name in @('Model','Connect','Load','Restore','LoadStatus','LoadProgress','ResourceInfo','ThermalStatus','MemoryStatus','Speed','Forecast','ChatScroll','ChatMessages','Transcript','Input','Send','Stop','New','Save','Evidence','Status','Recent','Welcome','ConnectionState','Statistics','StatisticsPanel','StatsState','PromptSpeed','StatsElapsed','StatsOutput','StatsPrompt','StatsContext','StatsNote','ContextUsage','ContextArc','ContextFull','ContextLabel','RuntimeStatus','Attach','Attachments','DropOverlay','ThinkingDepth')) { $controls[$name]=$window.FindName($name) }
 $modelChoices=@(Get-ModelChoices $PSScriptRoot)
 $controls.Model.ItemsSource=$modelChoices
 $default=@($modelChoices | Where-Object { $_.name -ceq $cfg.default_model })
@@ -28,7 +28,7 @@ $script:sessions=@{}; $script:conversation=New-ChatSession $script:selectedModel
 $script:sessionEpoch=''; $script:sessionFile=Join-Path $connection.data_dir 'chat-sessions.json'; $script:historyLoaded=$false
 $script:connectedSerial=''; $script:connectedProfile=$null; $script:loadedModel=$null; $script:loadedSelection=''
 $script:active=$null; $script:probe=$null; $script:nextProbe=[DateTime]::MinValue; $script:lastJob=''; $script:liveBubble=$null
-$script:lastMemorySnapshot=$null; $script:updatingModels=$false; $script:updatingRecent=$false; $script:switching=$false; $script:dirty=$false; $script:lastSave=[DateTime]::MinValue
+$script:updatingThinking=$false; $script:lastMemorySnapshot=$null; $script:updatingModels=$false; $script:updatingRecent=$false; $script:switching=$false; $script:dirty=$false; $script:lastSave=[DateTime]::MinValue
 function Show-Problem([string]$Text) { [void][Windows.MessageBox]::Show($window,$Text,'Phi Chat') }
 function Save-Sessions {
     if (!$script:sessionEpoch) { return }
@@ -109,6 +109,16 @@ function Update-ModelRuntimeStatus {
     $controls.RuntimeStatus.Foreground=if ($choice.optimized) {'#6DDC9F'} else {'#999999'}
     $controls.RuntimeStatus.ToolTip=if ($using) {'Using '+$label.ToLowerInvariant()+'.'} else {'Selected: '+$label+'. Load the model to use it.'}
 }
+function Update-ThinkingControl([bool]$Idle) {
+    $model=Get-ModelProfile $script:appRoot $script:selectedModel
+    $supported=Test-ThinkingModel $model
+    $controls.ThinkingDepth.Visibility=if ($supported) {'Visible'} else {'Collapsed'}
+    if (!$supported) {$script:conversation.thinking_depth='standard'}
+    $script:updatingThinking=$true
+    try {$controls.ThinkingDepth.SelectedValue=$script:conversation.thinking_depth}
+    finally {$script:updatingThinking=$false}
+    $controls.ThinkingDepth.IsEnabled=$Idle
+}
 function Update-ActionControls {
     $idle=($null -eq $script:active)
     $available=($idle -and !$script:probe -and $script:connectedSerial -and $script:sessionEpoch -and $null -ne $controls.Model.SelectedItem -and $controls.Model.SelectedItem.enabled)
@@ -122,6 +132,7 @@ function Update-ActionControls {
     $controls.Stop.Visibility=if ($idle) {'Collapsed'} else {'Visible'}
     $controls.Send.Visibility=if ($idle) {'Visible'} else {'Collapsed'}
     $controls.Stop.IsEnabled=(!$idle -and !$script:active.stopRequested)
+    Update-ThinkingControl $idle
     Update-ModelRuntimeStatus
 }
 function Set-Busy([bool]$Busy) { Update-ActionControls }
@@ -174,7 +185,7 @@ function Start-JobAction([string]$Action) {
     if ($Action -eq 'Chat' -and (!$controls.Send.IsEnabled)) { return }
     if ($Action -in @('Load','Chat') -and (!$script:connectedSerial -or !$controls.Model.SelectedItem.enabled)) { return }
     $bubble=$null; $session=$script:conversation; $priorTranscript=$session.transcript; $priorMetrics=$session.metrics
-    $request=[pscustomobject]@{action=$Action;model=$script:selectedModel;automatic_resources=$true;session_epoch=$script:sessionEpoch;batch=0;context_tokens=0;output_tokens=0;owner_pid=$PID;connected_serial=$script:connectedSerial;ready=$script:loadedModel;messages=@()}
+    $request=[pscustomobject]@{action=$Action;model=$script:selectedModel;thinking_depth=$session.thinking_depth;automatic_resources=$true;session_epoch=$script:sessionEpoch;batch=0;context_tokens=0;output_tokens=0;owner_pid=$PID;connected_serial=$script:connectedSerial;ready=$script:loadedModel;messages=@()}
     if ($Action -eq 'Chat') {
         $submitted=$controls.Input.Text
         if (![string]::IsNullOrWhiteSpace($submitted)) { $submitted=$submitted.Trim() } else { $submitted='Describe this image.' }
@@ -202,6 +213,11 @@ function Start-JobAction([string]$Action) {
         $controls.Status.Text=$_.Exception.Message; Update-ActionControls
     }
 }
+$controls.ThinkingDepth.Add_SelectionChanged({
+    if ($script:updatingThinking -or !$controls.ThinkingDepth.SelectedItem) {return}
+    $script:conversation.thinking_depth=[string]$controls.ThinkingDepth.SelectedItem.Tag
+    $script:dirty=$true
+})
 $controls.Connect.Add_Click({ Start-JobAction 'Health' })
 $controls.Load.Add_Click({ Start-JobAction 'Load' })
 $controls.Send.Add_Click({ Start-JobAction 'Chat' })

@@ -27,6 +27,11 @@ function Get-CacheModel($Entry,[object[]]$Models,$State) {
 function Save-CardModelBackup($Entry,$Model,[switch]$VerifyRemote) {
     $backup=Find-LocalModel $Model
     $receipt=Join-Path $script:data ('model-'+$Model.id+'.json')
+    if (!$backup) {
+        foreach ($candidate in @(Get-PreviousModelSources $Model)) {
+            try { Assert-ModelFile $candidate.path $Model $receipt; $backup=$candidate.path; break } catch { Assert-JobActive }
+        }
+    }
     if ($backup) { Assert-ModelFile $backup $Model $receipt }
     if ($backup -and !$VerifyRemote) { return $backup }
     if ($Entry.bytes -ne $Model.file_size_bytes -or $Entry.path.EndsWith('.part')) {
@@ -58,6 +63,9 @@ function Remove-OtherCardModels($Selected,$State) {
     if (!$script:cardLockOwned) { throw 'Cache cleanup requires the workload lock.' }
     $tool='/tmp/phi-chat-cache-'+$script:cardLockToken+'.sh'
     $models=@(Get-ChildItem -LiteralPath (Join-Path $script:root 'config/models') -Filter '*.yaml' | ForEach-Object { Get-ModelProfile $script:root $_.BaseName })
+    # Retired profiles are cache identities only, never selectable models.
+    $retired=Join-Path $script:root 'config/retired-models'
+    if (Test-Path -LiteralPath $retired) { $models+=@(Get-ChildItem -LiteralPath $retired -Filter '*.yaml' | ForEach-Object {Read-JsonFile $_.FullName}) }
     $models+=@($models | Where-Object {Test-ImageModel $_} | ForEach-Object {Get-ProjectorProfile $_})
     $events=New-Object Collections.Generic.List[object]
     $removedBytes=0L; $removed=0; $before=$null; $after=$null

@@ -362,7 +362,7 @@ def test_transfer_progress_reports_actual_partial_bytes(tmp_path: Path) -> None:
     f=setup_app(tmp_path);change_fixture(f,slow_upload=True)
     status,job=load_model(f,'progress','fixture-medium')
     rows=[json.loads(line) for line in (job/'load-progress.jsonl').read_text().splitlines()]
-    assert all(row['stage']=='Copying to Xeon Phi' for row in rows)
+    assert all(row['stage']=='Copying via SCP' for row in rows)
     assert any(0<row['bytes']<row['total_bytes'] and 0<row['percent']<100 for row in rows),rows
     assert rows[-1]['percent']==100
     assert rows[-1]['bytes']==f['models']['fixture-medium']['file_size_bytes']

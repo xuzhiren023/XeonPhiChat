@@ -18,6 +18,7 @@ try {
     }
     Write-Output ('PASS: '+$files.Count+' PowerShell scripts parsed')
     Run-Test (Join-Path $root 'tests/Test-ModelManifest.ps1')
+    Run-Test (Join-Path $root 'tests/Test-ScifTransfer.ps1')
     Run-Test (Join-Path $root 'setup/tests/Test-SshPersistence.ps1')
     Run-Test (Join-Path $root 'setup/tests/Test-Setup.ps1')
     Run-Test (Join-Path $root 'setup/tests/Test-SetupEntry.ps1')
@@ -30,7 +31,7 @@ try {
     }
     $app=Join-Path $scratch 'app with spaces'
     Copy-Item -LiteralPath (Join-Path $root 'app') -Destination $app -Recurse
-    foreach ($name in @('Test-ChatControls','Test-ChatExperience','Test-ModelRuntimePairing','Test-AutoResources','Test-MoeCompatibility','Test-VisionModels','Test-ModelFiles','Test-Images','Test-Priming','Test-Performance')) {
+    foreach ($name in @('Test-ChatControls','Test-ChatExperience','Test-ModelRuntimePairing','Test-AutoResources','Test-MoeCompatibility','Test-VisionModels','Test-ModelFiles','Test-Images','Test-Priming','Test-Performance','Test-Thinking')) {
         Run-Test (Join-Path $root ('tests/'+$name+'.ps1')) @('-AppRoot',$app,'-Scratch',(Join-Path $scratch $name))
     }
     Run-Test (Join-Path $root 'tests/Test-StandaloneRuntimePins.ps1') @('-AppRoot',$app)

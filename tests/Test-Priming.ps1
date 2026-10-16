@@ -19,7 +19,7 @@ foreach ($file in Get-ChildItem (Join-Path $AppRoot 'config/models') -Filter '*.
 }
 $script:health.profile.profile_id='xeon-phi-3120a'
 & {
-    $step=Get-ModelProfile $AppRoot 'step3-vl-10b-q5_k_m'
+    $step=Get-ModelProfile $AppRoot 'huihui-step3-vl-10b-abliterated-q5_k_m'
     $profile=Read-JsonFile (Join-Path $AppRoot 'config/hardware/xeon-phi-7120p.yaml')
     $pin=(Read-JsonFile (Join-Path $AppRoot 'config/priming-runtime.json')).payloads[0]
     $envelope=Add-PerformanceReserve (Get-PrimingResourceModel $step) (Get-PerformanceOptions $step $profile $pin 240)

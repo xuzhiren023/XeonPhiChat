@@ -49,13 +49,13 @@ function Read-PhiAssetManifest([string]$Root) {
     if ($manifest.schema_version -ne 1 -or $manifest.version -cne (Get-PhiVersion $Root)) { throw 'Unsupported release asset manifest.' }
     $names=@{}
     foreach ($asset in $manifest.assets) {
-        if ($asset.file -notmatch '^(?:(?:runtime-(?:3120A|7120P)|baseline-runtime|prime-7120P)\.tar|mmproj-Step3-VL-10b-61e9799-Q6_K\.gguf)$' -or $asset.sha256 -notmatch '^[a-f0-9]{64}$' -or $asset.bytes -lt 1024 -or $names.ContainsKey($asset.file)) { throw 'Invalid release asset identity.' }
-        $kind=if ($asset.file.EndsWith('.gguf')) {'vision-projector'} elseif ($asset.file -ceq 'baseline-runtime.tar') {'guard-backup'} elseif ($asset.file -ceq 'prime-7120P.tar') {'priming'} else {'modern'}
+        if ($asset.file -notmatch '^(?:(?:runtime-(?:3120A|7120P)|baseline-runtime|prime-7120P)\.tar|mmproj-Step3-VL-10b-61e9799-Q6_K\.gguf|phichat-scif-(?:send\.exe|recv))$' -or $asset.sha256 -notmatch '^[a-f0-9]{64}$' -or $asset.bytes -lt 1024 -or $names.ContainsKey($asset.file)) { throw 'Invalid release asset identity.' }
+        $kind=if ($asset.file -clike 'phichat-scif-*') {'scif-transfer'} elseif ($asset.file.EndsWith('.gguf')) {'vision-projector'} elseif ($asset.file -ceq 'baseline-runtime.tar') {'guard-backup'} elseif ($asset.file -ceq 'prime-7120P.tar') {'priming'} else {'modern'}
         if ($asset.kind -cne $kind) {throw 'Release asset kind differs from its file identity.'}
-        if ($kind -ceq 'vision-projector' -and ($asset.model_id -cne 'step3-vl-10b-q5_k_m-projector' -or $asset.model_path -cne ('models/uniform-q5-k/'+$asset.file))) {throw 'Invalid bundled projector destination.'}
+        if ($kind -ceq 'vision-projector' -and ($asset.model_id -cne 'huihui-step3-vl-10b-abliterated-q5_k_m-projector' -or $asset.model_path -cne ('models/uniform-q5-k/'+$asset.file))) {throw 'Invalid bundled projector destination.'}
         $names[$asset.file]=$true
     }
-    if ($names.Count -ne 5) { throw 'The release must contain both hardware runtimes, the watchdog backup, the priming runtime and the Step3 vision component.' }
+    if ($names.Count -ne 7) { throw 'The release must contain both hardware runtimes, the watchdog backup, priming, the Step3 projector and both SCIF helpers.' }
     return $manifest
 }
 function Get-PhiAssets([string]$Root,[string]$AssetsDirectory) {
@@ -149,7 +149,7 @@ function Install-PhiAssets([string]$Root,[string]$AssetsDirectory,[string]$Desti
                 path=$file.FullName;bytes=$file.Length;modified_ticks=$file.LastWriteTimeUtc.Ticks;sha256=$asset.sha256})
             continue
         }
-        $relative=if ($asset.kind -ceq 'guard-backup') { 'dependencies/phase3/runtime.tar' } elseif ($asset.kind -ceq 'priming') { 'data/priming-runtime/payload-'+$asset.sha256+'/'+$asset.file } else { 'data/modern-runtime/payload-'+$asset.sha256+'/'+$asset.file }
+        $relative=if ($asset.kind -ceq 'scif-transfer') { 'data/scif-transfer/payload-'+$asset.sha256+'/'+$asset.file } elseif ($asset.kind -ceq 'guard-backup') { 'dependencies/phase3/runtime.tar' } elseif ($asset.kind -ceq 'priming') { 'data/priming-runtime/payload-'+$asset.sha256+'/'+$asset.file } else { 'data/modern-runtime/payload-'+$asset.sha256+'/'+$asset.file }
         $target=Join-Safe $app $relative
         New-Directory (Split-Path $target -Parent)
         Copy-Item -LiteralPath (Join-Safe $AssetsDirectory $asset.file) -Destination $target -Force
