@@ -1,0 +1,45 @@
+PORTABLE REBUILD VALIDATION — 2026-10-16
+
+PASS: complete clean 7120P cross-build from the retained base source archive,
+decode3 patch and the source files in this package. The runtime plus eight
+diagnostic executables linked successfully. No prebuilt producer libraries or
+historical producer command JSON were used by the recipe.
+
+Compiler: pinned MPSS 3.8.6 GCC 5.1.1, target k1om-mpss-linux. CMake 3.25.1.
+Two build jobs; existing compiler VM was neither reconfigured nor stopped.
+
+PASS: 214 source/compiler/linker/ELF checks, including exact overlay bytes,
+strict quant compiler flags, IMCI disassembly, K1OM executable headers and
+absence of references to historical build directories in generated commands.
+The assert-enabled diagnostic targets were rebuilt after the initial clean
+build; their -UNDEBUG setting is included in the final tests.cmake recipe.
+
+PASS: host prefix/history policy, 16,270 checks under AddressSanitizer and
+UndefinedBehaviorSanitizer. Existing destination refusal was also checked;
+the script rejected the request before creating the output or extracting files.
+
+Additional compiler fidelity evidence: .text bytes for dense.S.o, panel8.S.o,
+knc-mq.c.o and ggml-cpu.c.o exactly matched the retained candidate objects.
+This is instruction-section comparison, not whole-program native qualification.
+
+No target executable was run on the card, no model was transferred, no runtime
+was installed, and no repeated SHA-256 scan was performed. Rebuilt executables
+remain private build outputs. PhiChat ships the previously delivered binary
+that it tested; this source rebuild does not supersede that binary's identity.
+The fresh build receipt retains native_tested=false and installed=false.
+
+All three card profiles are selectable in the recipe. This clean rebuild was
+run for 7120P only; it does not qualify 3120A/5110P or every trained model.
+
+Raw evidence is retained beside the producer package in:
+  portable-build-validation.tar
+  portable-validation/build-receipt.json
+  portable-validation/portable-verification.json
+  portable-validation/instruction-section-comparison.json
+  portable-validation/commands.json
+  portable-validation/build.log
+  portable-validation/final-assert-enabled-build.log
+
+Application acceptance and runtime-selection feedback is separately recorded
+in APPLICATION-HANDOFF.txt. Do not combine an aborted baseline, changed airflow,
+or cached-token savings into a new matched fresh-token throughput claim.

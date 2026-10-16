@@ -98,8 +98,11 @@ correct recurrent_history_change fallback at its automatic 131072 context.
 Its first application pair found no total-latency benefit and slower first byte.
 Retain decode3 for that LFM application pairing in 1.6.10; the small-context
 producer settings above are a reproducibility reference, not a release default.
-Step3 passed PhiChat's separate application image and lifecycle acceptance.
-See docs/VALIDATION.md for final application scope and measurements.
+PhiChat subsequently reported Step3 image, prefix-reuse and history checks
+passing, followed by successful Stop/re-prime/reload checks, and is packaging
+the exact delivered R2 binary for that pairing. Its aborted baseline and changing
+airflow do not support a new paired speed claim. See APPLICATION-HANDOFF.txt for
+the reported application evidence and scope.
 
 This is a portable candidate source overlay, not an upstream-ready patch set or
 a claim that the 25% throughput objective has been reached. The retained base

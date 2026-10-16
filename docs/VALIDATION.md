@@ -46,6 +46,12 @@ Native Stop testing exposed a Windows PowerShell request-file cleanup race betwe
 
 The required host suite passed under Windows PowerShell 5.1. Focused checks cover model-specific selection and fallback, cached/new token accounting, live-rate sampling without cached-prefix inflation, real WPF statistics controls, thermal-error propagation, Stop/re-prime and request rejection. Updated scripts parse and shell wrappers pass syntax checks. Native binaries in the bundle match their exact pinned K1OM ELF identities. These host fixtures do not contact hardware.
 
+### Completed source rebuild handoff
+
+After the Windows release was packaged, the optimization task completed the clean 7120P rebuild from the retained base, patch and source overlays. Its runtime and eight diagnostics linked without producer prebuilt libraries or historical command JSON. The retained report records 214 source/compiler/linker/ELF checks, 16,270 host ASan/UBSan prefix checks, and exact instruction-section comparisons for four hot objects. The final recipe retains active diagnostic assertions and linker-command auditing. This is producer build evidence, not another hardware test.
+
+The updated source snapshot is distributed separately as `PhiChat-1.6.10-Source-verified-rebuild.zip`. The original Windows installer, tested runtime binaries and installed application remain unchanged. The fresh rebuilt binary stays private with `native_tested=false`; it does not inherit the shipped binary's native acceptance.
+
 ## 1.6.9: Huihui Step3, SCIF DMA and thinking depth (2026-10-16)
 
 Huihui Step3-VL 10B Abliterated Q5_K_M replaces the official Step3 picker entry. The complete 5,851,113,152-byte language model was downloaded and verified against SHA-256 `a27779bac5bf94bc7b5e61748448bc204043ec5efda91b8b1a8d2abe9dafd7e1`, pinned to `2lains/Huihui-Step3-VL-10B-abliterated-GGUF` revision `0f521a92fbde66298e01a38ceb122f15b933923b`. All 399 tensor shapes/types and tokenizer metadata match the previous decoder; 70 of 254 sampled matrix prefixes differ. The old profile is retained only for cache cleanup with a verified Windows backup.
@@ -126,9 +132,9 @@ Native checks used the 7120P and unchanged decode3 runtime `knc-decode3-ecf5e24e
 | First complete Load | 752.1 s, including backup/release of 2.6 GiB of previous card weights, transfer of both Step3 files, and priming |
 | Automatic resident allocation | Context 2,080; batch 16; generation/prompt workers 180/240; unchanged 12,288 MiB card budget |
 | Text streaming before/after reload | Prefill began 2.53/2.68 s after Send; approximately 2.60 generated tokens/s |
-| First picture, solid blue 120 × 80 | Correct final answer `Blue`; 191.7 s total, 146.2 s image encoding, 27.7 s image decoding into language context; one cache miss |
+| First picture, solid blue 120 Ã— 80 | Correct final answer `Blue`; 191.7 s total, 146.2 s image encoding, 27.7 s image decoding into language context; one cache miss |
 | Reload | 40.0 s; both card files reused, zero files evicted, no weight transfer |
-| Memory and temperature | Peak 69°C; minimum allocatable memory 3,305.4 MiB; peak additional RSS 2,812.6 MiB |
+| Memory and temperature | Peak 69Â°C; minimum allocatable memory 3,305.4 MiB; peak additional RSS 2,812.6 MiB |
 | Owned worker shutdown | Cleanup confirmed; no resident process or workload lease remained; card boot identity unchanged |
 
 Both resident workers retained shared-mapping and affinity evidence. The final raw free memory was about 6,534 MiB with Step3's files intentionally cached for the next load. The two text checks were bounded to 24 tokens and ended within model reasoning; they verify streaming/reuse, not completed-answer quality. The picture check reached its final answer. This is not a 720p speed comparison or broad visual-quality qualification. First-image encoding remains slow. No new runtime was introduced, no MPSS/card reset was performed, and unrelated card files were preserved. Native evidence is retained separately under the private `phichat-165` validation directory.
@@ -143,7 +149,7 @@ The isolated app ran the exact producer-qualified `knc-decode3-ecf5e24ef6c0a4f3`
 | LFM2.5 2.6B Q5_K_M | Resident Load passed; automatic context 131,072, batch 128, generation 120 / prompt 240 threads |
 | Two independent text requests | 40-token streams completed; decode 6.39 / 6.33 tokens/s; prompt 14.90 / 16.06 tokens/s; Send-to-prefill 2.55 / 2.56 s |
 | Switch to LFM2.5-VL 3B Q5_K_M | Prior worker and 1,850 MiB text weight file released; vision Load passed with context 32,768 and the same thread split |
-| First 120×80 blue image | Correct `Blue.` in 37.80 s; 27.80 s vision encoding; one cache miss |
+| First 120Ã—80 blue image | Correct `Blue.` in 37.80 s; 27.80 s vision encoding; one cache miss |
 | Repeat blue image | Correct `Blue.` in 9.69 s; one cache hit; zero vision-encoding time |
 | Independent red image | Correct red answer in 37.45 s; one miss; no reuse of blue embedding |
 | Return to blue | Correct `Blue.` in 9.86 s; one hit; zero vision-encoding time |
@@ -153,7 +159,7 @@ The isolated app ran the exact producer-qualified `knc-decode3-ecf5e24ef6c0a4f3`
 
 Image-cache data reached 1,146,880 bytes for the two images, within the 64 MiB reservation. The model/projector remain fixed within the resident session; switching or stopping the worker discards the cache. Image detail was unchanged. The native image helper creates cache identity from the already-read buffer; there were no transfer-verification SHA scans or checksum read-backs. Existing model receipts and recorded runtime identities/lengths were reused.
 
-All three resident sessions recorded read-only shared model mappings and valid affinity for the observed 120/240-worker pool. Peak temperature was 68°C; minimum sampled allocatable GDDR was 10,180.1 MiB and maximum additional runtime RSS 2,148.7 MiB. Final raw free memory was 11,659.7 MiB with the selected vision model/projector intentionally cached and the optimization task's retained files preserved.
+All three resident sessions recorded read-only shared model mappings and valid affinity for the observed 120/240-worker pool. Peak temperature was 68Â°C; minimum sampled allocatable GDDR was 10,180.1 MiB and maximum additional runtime RSS 2,148.7 MiB. Final raw free memory was 11,659.7 MiB with the selected vision model/projector intentionally cached and the optimization task's retained files preserved.
 
 Timings include launching the per-message Windows worker. The 40-token text requests are bounded streaming smoke tests and ended during model reasoning; they are not completed-answer quality evaluations. Automatic large context allocation was exercised with short prompts, not long-context stress. Model switching took 229.24 s including decoder/projector transfer; this is separate from warm message preparation.
 
@@ -169,7 +175,7 @@ The full Windows PowerShell 5.1 host suite passed (68 scripts parsed), including
 | --- | --- |
 | LFM2.5-VL 3B Q5_K_M prime | Ready in 36.55 s with already staged weights; automatic context 32,768, batch 128, 180 threads |
 | Two independent short text requests | Correct `4` and `8`; Send-to-prefill 2.71 / 3.33 s; first output 7.90 / 8.13 s |
-| 120Ã—80 blue picture | Correct `Blue.`; Send-to-vision 2.59 s; first output 47.51 s; completed 48.35 s |
+| 120Ãƒâ€”80 blue picture | Correct `Blue.`; Send-to-vision 2.59 s; first output 47.51 s; completed 48.35 s |
 | Stop and re-prime | Stopped after first streamed text; cancellation preserved readiness; re-primed 19.73 s after cancellation receipt |
 | Follow-up after Stop | Correct `12`; Send-to-prefill 2.56 s |
 | Switch to LFM2.5 2.6B Q5_K_M | Prior worker stopped; 2,664 MiB of vision model/projector file data released; text model uploaded and primed; automatic context 131,072, batch 128, 180 threads |
@@ -178,7 +184,7 @@ The full Windows PowerShell 5.1 host suite passed (68 scripts parsed), including
 
 Timings above start before launching the per-message Windows worker, so they include that startup overhead. Broker-only ACK times are smaller. The text model's eight-token smoke response ended during reasoning; this checks the stream/budget path, not completed-answer quality. The model switch took 192.96 s including its 1.85 GiB weight upload; this one-time Load cost is separate from warm Send latency.
 
-All three resident starts recorded read-only shared mappings and verified thread affinity. Across the run, peak temperature was 64Â°C, minimum sampled allocatable GDDR was 10,963.6 MiB, and maximum additional runtime RSS was 2,146.6 MiB. After worker shutdown, raw free GDDR was 13,247.3 MiB; the selected text model remained intentionally cached. Existing installations and the MPSS/card boot configuration were preserved.
+All three resident starts recorded read-only shared mappings and verified thread affinity. Across the run, peak temperature was 64Ã‚Â°C, minimum sampled allocatable GDDR was 10,963.6 MiB, and maximum additional runtime RSS was 2,146.6 MiB. After worker shutdown, raw free GDDR was 13,247.3 MiB; the selected text model remained intentionally cached. Existing installations and the MPSS/card boot configuration were preserved.
 
 Native scope is these two LFM models and this 7120P. Step3, Gaston, the other catalog models, and 3120A were not re-benchmarked here. Existing nine-model pin/dispatch host checks and prior synthetic correctness results remain separate. This fix does not accelerate Step3 image encoding.
 

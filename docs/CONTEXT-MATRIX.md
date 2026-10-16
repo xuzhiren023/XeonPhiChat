@@ -25,3 +25,5 @@ Application acceptance and installer checks are recorded separately in [VALIDATI
 ## Source rebuild
 
 The exact adapter, prefix cache and matrix sources plus a portable clean rebuild recipe are retained in `tools/native-runner/context-matrix`. See `REBUILD.txt` there and the source hashes in `assets/context-matrix-build.json`. The recipe applies the retained decode3 patch to the pinned base source archive, builds both new assembly units into the CPU backend, and links through CMake. End users do not need this toolchain: the installer contains the qualified binaries. A newly rebuilt binary is not automatically native-qualified.
+
+The producer completed the clean 7120P source rebuild on 2026-10-16: the runtime and eight diagnostics linked, all 214 source/compiler/linker/ELF checks passed, and 16,270 host prefix-policy checks passed under ASan/UBSan. Four hot instruction sections matched the delivered candidate objects. See `tools/native-runner/context-matrix/BUILD-VALIDATION.txt`. This is source/build validation; the fresh rebuilt binary was not run on the card or installed. The Windows installer continues to ship the exact R2 binary accepted by the app tests.

@@ -1,0 +1,79 @@
+PhiChat integration feedback, 2026-10-16
+
+Source: explicit report from the Improve Phi chat app task. This file records
+application evidence supplied by that task, not an independently rerun hardware
+test by the runtime task. All runtime-task work for this handoff is host/build
+only; PhiChat and the utilization-logging task coordinate the card slot.
+
+PhiChat reports fresh 7120P LFM checks passing exact generated answers, edited
+history, Stop, re-prime and reload. Its automatic context allocation is 131072;
+the producer's earlier small performance screen used context 512. Its template
+removes historical reasoning text, so follow-up safely returns
+recurrent_history_change and rebuilds the recurrent state.
+
+One reported matched application pair, 40-token first math input:
+                            decode3      context-matrix-r2
+prefill seconds               2.547          3.833
+candidate text-decode seconds                 2.569
+first-byte seconds            3.806          5.258
+total seconds                13.599         13.925
+decode tokens/second          6.424          6.363
+
+Follow-up first-byte seconds   4.939          6.127
+Follow-up total seconds      12.878         13.000
+
+Candidate memory clearing moved into request prefill. Separate cleanup and
+fresh text evaluation from cached work in metrics, but retain first-byte/total
+latency as the application selection criterion. One pair is a screen rather
+than a statistically established general regression. It does not invalidate
+the prior five-pair short-context producer results; the workloads differ.
+
+Decision coordinated with PhiChat: keep decode3 for the LFM application pairing
+in 1.6.10. Do not weaken history validation or silently alter reasoning-retention
+semantics to obtain reuse. Step3 remains pending separate application image,
+history and Stop/reload checks. No promotion or installed-runtime replacement
+was performed by the runtime task. Portable rebuild work does not supersede
+the delivered R2 binary's identity or expand its native qualification.
+
+Source-level lead for a separate optimization pass (not implemented here):
+candidate session::reset calls llama_memory_clear(..., true). The ordinary KV
+and recurrent cache clear paths zero their allocated data buffers, rather than
+only removing sequence metadata. This is consistent with reset cost growing
+with an oversized context allocation. Investigate avoiding provably redundant
+clears of already-clean state or accelerating the required zeroing, with exact
+state/lifecycle tests. Do not globally change the flag to false without proving
+initialization and stale-state safety for every supported memory architecture.
+
+Subsequent PhiChat report: its fresh decode3 Step3 application baseline reached
+the unchanged 85 C cutoff at about 114 seconds and cleaned up. That aborted run
+is excluded from throughput comparisons. PhiChat is handling a separate guarded
+R2 image attempt after cooling and has asked the user about airflow. No paired
+application image speed result or release acceptance is established by that
+report. The runtime task continues host/build-only work.
+
+Later PhiChat application update (short lifecycle repeat still pending):
+- Step3 cold image and follow-up passed with its model-specific R2 pairing.
+- Same 448x336 image: encode 130.710 s, image-token decode 26.829 s,
+  first byte 170.562 s.
+- Follow-up: 213 reused tokens, 30 evaluated tokens, image encode/decode both
+  zero; prefill 5.105 s, first byte 10.512 s, output 2.44 tokens/s.
+- Over-context rejection preserved the image prefix; retry and changed history
+  were correct. PhiChat also fixed an application Stop request-file deletion
+  race and is repeating lifecycle checks before releasing the card.
+- User improved airflow during the cold run; peak was 83 C, follow-up 69 C.
+  The earlier baseline thermal-aborted. These are functional/application timing
+  observations, not a valid new paired baseline/candidate speed comparison.
+- PhiChat plans to ship the exact previously delivered R2 binary for this
+  qualified application pairing, retaining decode3 for LFM. The clean portable
+  rebuild is source/build validation and is not the shipping replacement.
+
+Final PhiChat lifecycle report:
+- Step3 Stop cancelled correctly. Re-prime in the same session and reload into
+  a new worker each answered 12, reused zero tokens and peaked at 66 C.
+- The application request-file deletion race was fixed using idempotent deletion;
+  cleanup also covers the new runner process. This is a PhiChat application fix,
+  not a runtime source change in this handoff.
+- Card slot released to the utilization-logging task: unchanged boot, no active
+  lease or workers, 57 C. PhiChat is packaging locally only.
+- Final application acceptance does not turn the thermal-aborted baseline into
+  a valid speed comparison, and does not qualify a newly rebuilt binary.

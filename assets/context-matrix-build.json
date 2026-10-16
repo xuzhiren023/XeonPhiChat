@@ -30,8 +30,10 @@
   },
   "retained_files": {
     "affinity-check.h": "a1ce871fb5fb3e493752a1e326b20759cf2e99330bc06269e2e5bc875ecc0ee9",
+    "APPLICATION-HANDOFF.txt": "6abb4b689a8efab0d846ad2d4f3916feecff574d6300c024ade94d61309e4cb0",
     "backend.cmake": "855811b79c0843f49e88df5eeefa473bad0cd2458313d424bf36986e32a75cac",
     "bench-dense.cpp": "30794f27fd69692309edf1774e97c0e54cb79d98f78d12cf7e5bae0456dbac02",
+    "BUILD-VALIDATION.txt": "59cef094b4702cba8aebbfd9c4c40a65b09a10c3a1a783337c5478275799f3e6",
     "decode3-runtime.patch": "ea12c58de3d89cb962cf87edab81df3846638a1d3187228817fc0cedad541728",
     "dense.inc": "83ef29f4a8ef28e30deb44cbbe9c6145c3521ed768e322fe09c9354e8868629b",
     "dense.S": "bbb79b43ed54fd886d9643e9f3cfe0c65f2be3634244bd6239561a76e355eb2e",
@@ -43,13 +45,13 @@
     "panel8.S": "38162228bd300482c00fa85523b1f9bc360c3518cb2eeef6c955273ea61d86a7",
     "prefix-cache.h": "7c2c2258eb559b991cb47768355caef1d0febf7f87bd70ab4e3ce1be31d6f1c8",
     "rebuild.py": "862e1dcde92a4e85399f134b9ec951aeacf3021e95f0f8125cc9149d03ceda6d",
-    "REBUILD.txt": "fe3ed1239599c8ec67a9f9e156100606a9cc0bcdf09410fcbe2e2706beb41ea9",
+    "REBUILD.txt": "a10a4c6d1c18070bee708155ada0f18e7e4e06a7818fa981d96f4a85eb829bf4",
     "test-dense.cpp": "bbf64088df60df3e4a567944a772af82a1707f0a78e451d618241e188c817d58",
     "test-native-conversation.cpp": "15b043c153545b72b5dea045cd8387b1e4d7593296c1a5e3650f2291eb3c7b59",
     "test-prefix.cpp": "c58b1da7bcbb2087e074cd7c7a49d58b4624d9fb704e0b522041d951a94d99d7",
     "test-trained-image.cpp": "f86b29048280444dc323802ff02388f86fd3607b11ded5af5fd2a84e83db36fd",
     "tests.cmake": "b5cec8428ad3a7405323960ef773cb9a0efa3022269794518ec2147bfad369a5",
-    "verify-build.py": "e6a18a9532a7d4393df87df8703fedc220ae1773253c84e177bd04b885b3f140"
+    "verify-build.py": "6cf8ab078a402f5f944057aefd7e60eb5bee27c071ddcd4c32649db576970895"
   },
   "producer_scope": "See docs/CONTEXT-MATRIX.md; producer native evidence is distinct from application acceptance.",
   "app_hardware_acceptance": true,
@@ -62,7 +64,18 @@
   ],
   "excluded_pairing_reason": "LFM2.5-2.6B Q5_K_M retains decode3: native app check with automatic 131072-token context found no total-response benefit and about 1.3 seconds additional first-token latency from rebuilding recurrent state.",
   "source_recipe": "tools/native-runner/context-matrix/rebuild.py",
-  "source_recipe_status": "Clean patch/CMake configuration, host prefix policy and kernel instruction-section comparisons passed; full clean cross-build verification in progress in the optimization chat. Shipped binary is the separately qualified delivered R2 artifact, not the rebuild.",
+  "source_recipe_status": "PASSED: clean 7120P cross-build of runtime and eight diagnostics; 214 source/compiler/linker/ELF checks, 16,270 host ASan/UBSan prefix checks, and four exact kernel instruction-section comparisons. Producer verification completed 2026-10-16; no new card execution. The shipped runtime remains the separately native-qualified delivered R2 binary.",
   "app_hardware_acceptance_date": "2026-10-16",
-  "app_hardware_acceptance_scope": "7120P Huihui Step3 image, growing follow-up, over-context rejection/retry, changed history, Stop/re-prime and reload; final decode3 LFM fallback verified. See docs/VALIDATION.md. No catalog-wide or 3120A qualification claim."
+  "app_hardware_acceptance_scope": "7120P Huihui Step3 image, growing follow-up, over-context rejection/retry, changed history, Stop/re-prime and reload; final decode3 LFM fallback verified. See docs/VALIDATION.md. No catalog-wide or 3120A qualification claim.",
+  "source_recipe_validation": {
+    "date": "2026-10-16",
+    "profile": "7120P",
+    "producer_cross_build_passed": true,
+    "source_compiler_linker_elf_checks": 214,
+    "host_prefix_checks": 16270,
+    "instruction_sections_equal": 4,
+    "rebuilt_binary_native_tested": false,
+    "rebuilt_binary_installed": false,
+    "summary": "tools/native-runner/context-matrix/BUILD-VALIDATION.txt"
+  }
 }

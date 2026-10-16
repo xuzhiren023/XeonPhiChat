@@ -54,6 +54,12 @@ check('-UNDEBUG' in prefix and prefix.index('-UNDEBUG') > prefix.index('-DNDEBUG
 for c in commands:
     check('/knc-decode-next/' not in c['command'] and '/knc-performance-next/' not in c['command']
           and '/phichat-prime-162/' not in c['command'], 'no historical build dependency: ' + Path(c['file']).name)
+links = list(build.rglob('link.txt'))
+check(bool(links), 'generated link commands retained')
+for path in links:
+    text = path.read_text()
+    check(all(part not in text for part in ['/knc-decode-next/', '/knc-performance-next/', '/phichat-prime-162/']),
+          'no historical link dependency: ' + str(path.relative_to(build)))
 for binary in sorted((a.output / 'bin').iterdir()):
     with binary.open('rb') as f:
         header = f.read(20)
